@@ -1,7 +1,7 @@
 {
   "name": "akis-pi",
   "schemaVersion": 1,
-  "generatedAt": "2026-11-11T18:10:03.145Z",
+  "generatedAt": "2026-11-11T18:41:26.806Z",
   "generatedFrom": "live Pi configuration, read-only (see NEVER_COPIED in export-akis-pi.mjs)",
   "verifiedOn": {
     "os": "macOS 27.2.1",

@@ -18,10 +18,10 @@
 
 ```sh
 pi install npm:@cortexkit/pi-magic-context@0.49.50
-node ../../scripts/render.mjs --home "$HOME" --modules core,memory --apply   # 渲染 magic-context.jsonc
+# 先按 DEPLOY 第 4 步用完整 --set 参数渲染 core,memory（先 dry run，再写入）
 ```
 
-目标路径：`$HOME/.config/cortexkit/magic-context.jsonc`（等价于 `$XDG_CONFIG_HOME/cortexkit/magic-context.jsonc`）。
+目标路径：`$HOME/.config/cortexkit/magic-context.jsonc`（仅 XDG_CONFIG_HOME 为默认值时等价；自定义 XDG 路径需自行备份移动配置）。
 
 三个参数是本仓库的核心决定，别在没读理由的情况下改：
 
@@ -37,7 +37,7 @@ node ../../scripts/render.mjs --home "$HOME" --modules core,memory --apply   # �
 
 ```sh
 node ../../scripts/doctor.mjs --home "$HOME" --modules core,memory \
-  --mc-profile <另一份配置所在目录>
+  --mc-profile <另一份magic-context.jsonc文件>
 ```
 
 医生脚本会自动找 `<agent-dir>/mc-profiles/*/xdg/cortexkit/magic-context.jsonc`；找不到就只比对全局那一份（只有一份时这是正常的 WARN）。
@@ -75,10 +75,11 @@ node ../../scripts/doctor.mjs --home "$HOME" --modules core,memory \
 `RESIDENT.template.md` 只有格式与取舍规则，没有任何内容。写自己那份时：
 
 ```sh
-cp "$HOME/.pi/agent/memory/RESIDENT.template.md" "$HOME/.pi/agent/memory/RESIDENT.md"
+dst="$HOME/.pi/agent/memory/RESIDENT.md"
+if [ -e "$dst" ]; then echo "exists: $dst; 停止，不覆盖"; else cp -n "$HOME/.pi/agent/memory/RESIDENT.template.md" "$dst"; fi
 ```
 
-**只写会改变行为的事实**：一写进去就是每轮都付的固定成本。写完用 `/resident-memory` 看真实占用。
+**只写会改变行为的事实**：一写进去就是每轮都付的固定成本。写完在交互 TUI 用 `/resident-memory` 看真实占用；`--print` 模式 stdout 为空，脚本化检查可用 DEPLOY 文末 stub 捕获请求后 grep `<resident_memory>`。
 
 `RESIDENT.md` 属于用户。AI 不要替他写、不要替他删。
 
@@ -86,14 +87,14 @@ cp "$HOME/.pi/agent/memory/RESIDENT.template.md" "$HOME/.pi/agent/memory/RESIDEN
 
 ## pi-knowledge + 补丁
 
-`settings.json` 里的包条目指向 `{{HOME}}/.pi/vendor/pi-knowledge`，所以装在固定位置：
+先在仓库根目录设置 `export REPO="$(pwd)"`（DEPLOY 第 0 步），再切换目录构建。`settings.json` 里的包条目指向 `{{HOME}}/.pi/vendor/pi-knowledge`，所以装在固定位置：
 
 ```sh
 mkdir -p "$HOME/.pi/vendor" && cd "$HOME/.pi/vendor"
 git clone https://github.com/nczz/pi-knowledge
 cd pi-knowledge
 git checkout 558e8dd
-for p in <repo>/modules/memory/patches/*.patch; do git am "$p" || { git am --abort; break; }; done
+for p in "$REPO"/modules/memory/patches/*.patch; do git am "$p" || { git am --abort; break; }; done
 npm ci && npm run build
 ```
 
@@ -103,7 +104,7 @@ npm ci && npm run build
 2. **markdown chunk 的真实 source span**：索引记录真实行号，`ctx_expand` 之类的回读才不会指错位置。
 3. **复核修复**：针对前两个提交的边界问题。
 
-作者行已改写成 `AkiyamaRin <akir1n@outlook.com>`，`git am` 之后作者是谁不影响功能。
+作者行已改写成通用发布身份，`git am` 之后作者是谁不影响功能。
 
 **验证**：
 

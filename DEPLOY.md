@@ -1,78 +1,77 @@
 # 部署
 
-每一步都是四段：**做什么 → 检查命令 → 期望结果 → 失败怎么办**。一步一验，不要跳步合并。
-core 必装；memory / macos / magpie 按需，每块都能单独装、单独回滚。
+每一步按「做什么 → 检查命令 → 期望结果 → 失败怎么办」执行。先读 [AGENTS.md](AGENTS.md)，版本依据在 [manifest.json](manifest.json)，理由见 [docs/decisions.md](docs/decisions.md)。core 必装，memory / macos / magpie 按需。联网安装前说明，不覆盖用户已有配置，doctor FAIL 时停止。
 
-先读 [AGENTS.md](AGENTS.md)：那里是给 AI 的硬规则（不覆盖已有配置、密钥只问用户、失败就停）。
-版本依据在 [manifest.json](manifest.json)，参数理由在 [docs/decisions.md](docs/decisions.md)。
+## 0. 前置检查与路径
 
----
-
-## 0. 前置检查
-
-**做什么**：确认平台与已有安装。
+在仓库根目录记录绝对路径与所选模块，后面不要丢掉这些变量：
 
 ```sh
+export REPO="$(pwd)"
+# 默认目录；使用自定义目录时改这行
+export PI_CODING_AGENT_DIR="$HOME/.pi/agent"
+# 本文示例选择 core + memory；跳过 memory 就写 core，可追加 ,macos 或 ,magpie
+export MODULES=core,memory
 uname -sm; echo "HOME=$HOME"
 command -v pi && pi --version
 command -v node && node --version
 command -v git && git --version
 ```
 
-**期望**：macOS arm64 或 Linux x86_64/arm64；`HOME` 非空。`pi` 可能不存在（那就是干净安装）；已有 `pi` 时记下版本。
+期望：macOS arm64 或 Linux x86_64/arm64，HOME 非空，Git 可用；Linux 未实测。已有 Pi 时记下版本，缺 Pi 则在第 2 步安装。已有 settings.json / AGENTS.md / APPEND_SYSTEM.md 必须先备份、审阅 diff、让用户确认再覆盖。
 
-**失败怎么办**：
+render 与 doctor 的 `--agent-dir` 都需显式传入 `"$PI_CODING_AGENT_DIR"`；不传时默认 HOME/.pi/agent。模板的 `{{AGENT_DIR}}` 会跟随此参数。本文提到的 `~/.pi/agent` 在自定义部署中均换成该目录。搜索配置仍写 `$HOME/.pi/web-search.json`，MC 写 `$HOME/.config/cortexkit/magic-context.jsonc`。使用自定义 XDG_CONFIG_HOME 时需自行备份并移动 MC 配置到实际读取位置（脚本不跟随它）。resident-memory 默认读 HOME/.pi/agent/memory/RESIDENT.md，自定义 agent-dir 时另设 `PI_RESIDENT_MEMORY_FILE="$PI_CODING_AGENT_DIR/memory/RESIDENT.md"`。pi-web-access 的自定义 agent-dir 查找差异见第 6 步。
 
-- 已有 `pi` 但版本 ≠ 1.5.2：照第 2 步二选一，**不要**混装（见 2 的说明）。
-- 已有 `~/.pi/agent/settings.json`：先 `cp -p ~/.pi/agent/settings.json ~/.pi/agent/settings.json.before-akis-pi`，并让用户确认可以改动。**不要**在没有备份的情况下继续。
+## 1. Node 24.21.0、npmCommand 与 RTK
 
----
-
-## 1. Node 24.21.0（推荐 mise）
-
-**做什么**：
+推荐使用 mise：
 
 ```sh
-curl https://mise.run | sh          # 已有 mise 就跳过
+curl https://mise.run | sh       # 已有 mise 则跳过
 mise use -g node@24.21.0
 node --version
+# 第 2 步前确认模板 npmCommand 的依赖
+command -v mise
+/usr/bin/env mise exec node@24.21.0 -- npm --version
 ```
 
-**期望**：`v24.21.0`。
+期望 Node v24.21.0、npm 有版本输出。模板 npmCommand 通过 mise 调用 npm；隔离 HOME 时 mise 可能重新下载 Node，先运行检查避免把下载误认为插件行为。非 mise 用户运行 `node --version && npm --version`，并在第 4 步 apply 后删除部署目标的 npmCommand（有明确命令），否则 pi install 会报 `env: mise: No such file or directory`。不要用会漂移的 node/24 别名代替精确版本。
 
-**失败怎么办**：用任意包管理器装到 24.21.x 也可以，但要把 `config/settings.json` 里 `npmCommand` 的 `mise exec node@24.21.0` 改成你的实际路径，或者整段删掉 `npmCommand`（回退到普通 npm）。**注意**：mise 的 `node/24` 别名会指向最后一次装的 24.x，不要依赖它——第 10 步的 agent-browser 就踩过这个坑。
+安装 core bash rewrite 所需的 RTK，选择一种：
 
----
+```sh
+# Homebrew
+brew install rtk
+# 非 brew：有 Cargo 时，从 crates.io 安装（两种方式二选一）
+cargo install rtk --version 1.1.0 --locked
+# 均需检查
+rtk --version
+rtk rewrite --help
+```
 
-## 2. 装 Pi（两种方式，选一个）
+期望验证版本 1.1.0，至少支持 ≥0.23.0 的 rewrite。brew 可能给新版，记录差异；缺 RTK 时扩展会放行原 bash，doctor 给 WARN。非 brew / Linux 安装未实测，失败时查包管理器原始输出，不要报告已生效。
 
-**做什么（A：官方安装器，装最新）**：
+## 2. 装 Pi（二选一）
+
+A：官方安装器，安装最新：
 
 ```sh
 curl -fsSL https://pi.dev/install.sh | sh
 pi --version
 ```
 
-**做什么（B：严格复现 1.5.2，测试过的版本）**：
+B：严格复现测试版本：
 
 ```sh
 npm install -g --ignore-scripts @earendil-works/pi-coding-agent@1.5.2
 pi --version
 ```
 
-**期望**：A 得到 ≥ 1.5.2 的最新版；B 精确得到 `1.5.2`。两者的后续步骤相同。
+期望 B 精确为 1.5.2；A 可能是新版，doctor 对普通偏差 WARN，对 major 变化 FAIL（兼容性需要重新评估）。不要混装 managed 安装与 npm 全局安装；命令缺失时检查 PATH 的 agent-dir/bin 或 npm prefix 的 bin。不要为新版 WARN 自动降级或替换 pinned 组件。
 
-**失败怎么办**：
+## 3. models.json 与无 key 检查
 
-- A 装上的是更新的版本，而 `doctor.mjs` 报 `WARN pi version`：这是**预期**的。不要为此降级，先按新版跑一遍；真出问题再回到 B。
-- 两种方式不要同时用：managed 安装（A）在 `~/.pi/agent/install/releases/` 下，全局 npm 在 node 的 `lib/node_modules` 下，`PATH` 会决定谁生效，混装时行为不确定。
-- `pi --version` 找不到命令：检查 `PATH` 是否包含 `~/.pi/agent/bin`（A）或 `$(npm prefix -g)/bin`（B）。
-
----
-
-## 3. models.json：任意 OpenAI 兼容供应商
-
-**做什么**：新建 `~/.pi/agent/models.json`（**不要**提交进任何仓库，也不要从别处拷贝带 key 的文件）。最小示例：
+在 `$PI_CODING_AGENT_DIR/models.json` 新建供应商配置，不复制真实凭据，不替换已有文件。填好以下所有模型占位符；historian 可复用其中一个 id。
 
 ```json
 {
@@ -118,28 +117,29 @@ pi --version
 }
 ```
 
-`cost` 是必填项（USD / 百万 token），写成你的真实价格，否则用量统计是假的。`apiKey` 三种合法写法：字面值（不推荐）、`$ENV_VAR`、`!command` 输出。**只把 key 放在环境变量或钥匙串里**。
+cost 必填（USD / 百万 token），按真实价格填写。凭据只用 `!command` 或环境变量引用（例如 `$PI_PROVIDER_KEY`）；不要写明文。API 类型要与供应商匹配，responses 风格接口不能直接照用 openai-completions。magpie 模块单独注册图片/分类模型，chat 仍由 models.json 提供。
 
-装了 magpie 模块时，`magpie.ts` 会自己注册图片与分类模型；chat 模型仍由 `models.json`（或 Magpie 自己写的目录）提供，两者不冲突。
-
-**做什么（检查）**：
+检查模型目录与扩展加载（不请求模型）：
 
 ```sh
-pi --models '*' --print 'reply with the single word ok' 2>&1 | head -5
+pi --list-models > /tmp/pi-models.txt 2> /tmp/pi-models.stderr
+cat /tmp/pi-models.stderr
 ```
 
-**期望**：能列出模型并回 `ok`（或至少不报 “no models”）。
-
-**失败怎么办**：`pi auth --help` 与 `pi --help` 里对 `--provider/--model` 的说明优先；`openai-completions` 不适用于 `responses` 风格接口时改 `api` 字段。仍然不行就先只配一个模型（`{{MODEL}}`），把其余占位符先填成同一个 id，等跑通再拆。
-
----
-
-## 4. 渲染 core
-
-**做什么**：先 dry run，把输出（会写哪些文件、哪些占位符还没填）给用户看，确认后再 `--apply`。
+期望 exit 0、stderr 为空且目录有你填的模型。若报 no models / Failed to load extension，先修配置或扩展。有真实 key 时可额外执行：
 
 ```sh
-node scripts/render.mjs --home "$HOME" --modules core \
+pi --provider '<供应商 id>' --model '<主模型 id>' --print 'reply with the single word ok'
+```
+
+期望回 ok；没有 key 时用文末回环 stub 验证第 3、7、8 步。`--offline` 不阻止模型请求，不能用它保证离线。
+
+## 4. 按实际所需模块渲染
+
+先 dry run；MODULES 是第 0 步实际选择，选 memory 时必须包括 core,memory：
+
+```sh
+node "$REPO/scripts/render.mjs" --home "$HOME" --agent-dir "$PI_CODING_AGENT_DIR" --modules "$MODULES" --strict \
   --set PROVIDER='<供应商 id>' \
   --set MODEL='<主模型 id>' \
   --set MODEL_EXEC='<便宜执行模型>' \
@@ -148,24 +148,39 @@ node scripts/render.mjs --home "$HOME" --modules core \
   --set MODEL_HISTORIAN='<压缩模型>' \
   --set BRAVE_KEY_REF='!printenv BRAVE_API_KEY' \
   --set BOCHA_KEY_REF='!printenv BOCHA_API_KEY'
-
-# 看清楚了再写
-node scripts/render.mjs ... --apply
 ```
 
-**期望**：dry run 打印每个文件的 `create` / `unchanged` / `differs from line N`，并且 `WARNINGS` 为空。`--apply` 之后目标文件出现在 `$HOME/.pi/agent/`（以及 `$HOME/.pi/web-search.json`）。
+期望每个文件打印 create / unchanged / diff，WARNINGS 为空。审阅所有外部路径与覆盖 diff，用户同意后写入：
 
-**失败怎么办**：
+```sh
+node "$REPO/scripts/render.mjs" --home "$HOME" --agent-dir "$PI_CODING_AGENT_DIR" --modules "$MODULES" --strict --apply \
+  --set PROVIDER='<供应商 id>' \
+  --set MODEL='<主模型 id>' \
+  --set MODEL_EXEC='<便宜执行模型>' \
+  --set MODEL_REVIEW='<复核模型>' \
+  --set MODEL_PLAN='<规划模型>' \
+  --set MODEL_HISTORIAN='<压缩模型>' \
+  --set BRAVE_KEY_REF='!printenv BRAVE_API_KEY' \
+  --set BOCHA_KEY_REF='!printenv BOCHA_API_KEY'
+```
 
-- 有 `unresolved {{PLACEHOLDER}}`：补 `--set`。**不要**手工编辑模板文件绕过（模板是导出脚本的产物）。
-- 目标已存在且 diff 很大：先看 `<agent-dir>/backups/akis-pi-<时间戳>/` 里的备份，逐文件确认要哪个版本。`AGENTS.md` 与 `APPEND_SYSTEM.md` 会**替换**全局指令，覆盖前一定让用户读过。
-- 想只装一部分：`--modules core` 之外的模块文件不会被写；反过来说，不要手工把别的模块文件拷进 `extensions/`。
+strict 在任何写入前拒绝未解析占位符；非 strict 也警告并跳过含占位符的文件。JSON/JSONC 按字符串规则转义，凭据字段只接受引用。不要用手改导出模板绕过错误。
 
----
+渲染器将完成模块记到 `<agent-dir>/.akis-pi-render.json`。后续只渲染新增模块，不重写已完成 core，不移除已有模块；后加 memory 时只合并其 packages 到已有 settings，保留其它设置与过滤对象。重复传 core 也不更新它；需要更新已部署模板时先在独立 agent-dir 生成，人工审阅合并，不要删除状态文件冒险覆盖。
 
-## 5. 装插件
+写入范围、备份布局见 README；已有目标先备份到 `<agent-dir>/backups/akis-pi-<时间戳>/targets/<绝对目标路径去掉根斜杠>`。不替换 mcp.json、models.json、auth.json、RESIDENT.md。
 
-**做什么**：`config/settings.json` 里 `packages` 已经写好固定版本，装对应的包：
+非 mise 用户在 apply 后、装插件前执行（只改部署副本，不改模板）：
+
+```sh
+cp -p "$PI_CODING_AGENT_DIR/settings.json" "$PI_CODING_AGENT_DIR/settings.json.before-npm-command"
+node -e 'const fs=require("fs"),p=process.env.PI_CODING_AGENT_DIR+"/settings.json",s=JSON.parse(fs.readFileSync(p));delete s.npmCommand;fs.writeFileSync(p,JSON.stringify(s,null,2)+"\n")'
+npm --version
+```
+
+检查目标 settings 没有 npmCommand；Pi 将使用普通 npm。若删除失败停止，不要继续插件安装。
+
+## 5. 安装插件（必须先渲染）
 
 ```sh
 pi install npm:pi-web-access@0.47.0
@@ -181,271 +196,254 @@ pi install npm:pi-away@0.1.4
 pi install npm:pi-prompt-suggestion@0.1.2
 ```
 
-装出来的 `settings.json` 条目会与模板一致（`pi-atelier`、`pi-compact-tools` 的 `extensions` / `themes` 过滤要保留；`themes: []` 表示「这个包不加载主题」，不是冗余）。
+pi install 在空 settings 中只写字符串条目；资源过滤来自第 4 步渲染，已有过滤对象才会被保留。pi-atelier 的 extensions 与 pi-compact-tools 的 extensions/themes: [] 不能丢。
 
-**检查**：
+core-only 且所有声明包均在磁盘上时运行 `pi list`：期望 11 项、路径在 agent-dir/npm/node_modules，pi-atelier 与 pi-compact-tools 显示 `(filtered)`。第 4 步已选 memory 时 settings 声明 13 项，此时只装好 11 项，**暂不运行 pi list**；它会安装缺包，本地 pi-knowledge 尚未构建。等 9.3 完成再检查 13 项。doctor 永远不调用 pi list。
+
+npm 11 的 allowScripts 策略可能跳过 postinstall：警告 install-scripts 不等于安装完全可用。在实际执行 npm 的目录检查：
 
 ```sh
-pi list
+cd "$PI_CODING_AGENT_DIR/npm"
+npm install-scripts --help
+npm install-scripts ls
 ```
 
-**期望**：列出 11 个包，路径都在 `~/.pi/agent/npm/node_modules/` 下，没有 “(filtered)” 之外的异常。
+若当前 npm 支持该子命令，依据它的帮助审阅并 approve 被跳过的可信包，再按提示重跑脚本；不支持时检查安装日志与 npm 自己的脚本策略，不要直接放开所有包。
 
-**失败怎么办**：
+至少核验 pi-computer-use：postinstall 实际为 `node scripts/setup-helper.mjs --postinstall`，负责安装 helper，跳过会影响桌面控制。下面只读检查本机 helper 可执行文件；失败则按包 README 审阅并重新运行安装步骤（可能下载/签名，先说明），不要把包已安装当作 helper 可用：
 
-- `pi list` 报缺包：**它会顺手安装**（1.5.2 实测）。所以自检脚本默认不跑它，见第 12 步。
-- 版本与你装的不一致：`pi list` 显示的是 settings 里的声明；实际版本看 `~/.pi/agent/npm/node_modules/<包>/package.json`。两者不一致时以磁盘为准，并把 `settings.json` 改成磁盘版本（或反过来重装）。
-- 某个包装不上（网络/私有源）：先跳过它，继续后面的步骤，但在交付里明确列出「缺哪个、影响什么」。
+```sh
+cd "$PI_CODING_AGENT_DIR/npm/node_modules/@injaneity/pi-computer-use"
+node --input-type=module -e 'import fs from "node:fs";import os from "node:os";import path from "node:path";import {resolveMacosHelperAppPath} from "./src/platform/macos/helper-path.mjs";const p=process.platform==="darwin"?path.join(resolveMacosHelperAppPath(),"Contents/MacOS/bridge"):(process.env.PI_COMPUTER_USE_LINUX_HELPER_PATH||path.join(os.homedir(),".pi/agent/helpers/pi-computer-use/linux-bridge"));fs.accessSync(p,fs.constants.X_OK);console.log("helper executable exists:",p)'
+```
 
----
+此命令覆盖 macOS/Linux；未做权限授权与真实桌面操作仍记为未验证。MC 的 onnxruntime-node 安装脚本负责本机运行时，跳过可能影响本地 embedding。在 MC 安装后运行：
+
+```sh
+cd "$PI_CODING_AGENT_DIR/npm"
+node -e 'const {createRequire}=require("module"),r=createRequire(require.resolve("@cortexkit/pi-magic-context"));const ort=r("onnxruntime-node");console.log(ort.env.versions)'
+```
+
+若无法解析包入口，先在 node_modules 找到 MC 的实际入口，用该入口创建 require。期望能加载 native runtime；仅 require 成功不代表模型下载或 embedding 推理已验证。tree-sitter 等依赖也可能被跳过，构建/运行检查需记录。安装失败先看原始日志，不要把缺包改成随意新版。
 
 ## 6. 搜索与密钥
 
-**做什么**：把 key 放进环境变量或系统钥匙串，然后让 `web-search.json` **只引用、不含值**。
-
-macOS 钥匙串写法：
+key 放环境变量或钥匙串，只渲染引用。macOS 示例：
 
 ```sh
-security add-generic-password -a "$USER" -s pi-web-access-brave -w   # 交互输入 key，不进 shell 历史
-# 模板里的引用形如：
-# "braveApiKey": "!security find-generic-password -a \"$USER\" -s pi-web-access-brave -w"
+security add-generic-password -a "$USER" -s pi-web-access-brave -w
+# --set BRAVE_KEY_REF='!security find-generic-password -a "$USER" -s pi-web-access-brave -w'
 ```
 
-环境变量写法：`export BRAVE_API_KEY=...`，模板里写 `!printenv BRAVE_API_KEY`。
-
-**检查**：
+上面会交互输入 key，避免 shell 历史。环境变量引用可用 `!printenv BRAVE_API_KEY` / `!printenv BOCHA_API_KEY`。检查两个字段，不打印值：
 
 ```sh
-node -e 'const c=require(process.env.HOME+"/.pi/web-search.json");console.log(Object.keys(c));console.log(/^\{\{|^!/.test(c.braveApiKey||"")?"ref-ok":"LITERAL-VALUE")'
+node -e 'const c=require(process.env.HOME+"/.pi/web-search.json");console.log(Object.keys(c));for(const k of ["braveApiKey","bochaApiKey"])console.log(k,/^(?:!\S|\$(?:[A-Za-z_]|\{))/.test(c[k]||"")?"ref-ok":"MISSING-OR-LITERAL")'
 ```
 
-**期望**：键包含 `searchRouting`、`fetchRouting`、`pdf`；凭据字段是 `!` 或 `{{` 开头（引用），不是明文。
+期望 searchRouting/fetchRouting/pdf 存在、两个字段 ref-ok，无残留占位符。引用指向未设置变量时 pi-web-access 的行为**未验证**；不要当作有可用 key。没有 Brave/Bocha 时删掉对应字段与 providers 条目，保留 exa → gemini → degoog 回退。改变 routing 后重启 Pi。
 
-**失败怎么办**：
+pi-web-access 0.47.0 的源码明确：只要设置 PI_CODING_AGENT_DIR，就读该目录下 web-search.json（即使值等于默认 agent-dir）；未设置时才按 XDG / agent / legacy 查找。本文第 0 步已设置该变量，因此必须将渲染到 legacy 的文件同步到 agent-dir。先预览差异；已有目标确认后先备份，再复制：
 
-- pi-web-access 读的是 `~/.pi/web-search.json`（没有设 `PI_CODING_AGENT_DIR` 时的 legacy 路径），**不是** `~/.pi/agent/` 下。放错位置表现为「搜索工具不可用」。
-- 改完 `searchRouting` 必须重启 Pi（扩展进程内缓存），`/reload` 不一定够。
-- 没有 Brave/Bocha 也能跑：删掉对应 key 字段即可，`searchRouting.providers` 会降到剩下的 provider（`exa → gemini → degoog`）。eyeball 一下顺序，别留一个永远失败的 provider 在第一位。
+```sh
+src="$HOME/.pi/web-search.json"
+dst="$PI_CODING_AGENT_DIR/web-search.json"
+if [ -e "$dst" ]; then diff -u "$dst" "$src"; else echo "create: $dst"; fi
+# 审阅且用户确认后执行（仅路径不同才复制）
+if [ "$src" != "$dst" ]; then
+  if [ -e "$dst" ]; then cp -p "$dst" "$dst.before-search-sync-$(date +%Y%m%d%H%M%S)"; fi
+  cp "$src" "$dst"
+fi
+```
 
----
+doctor 同时扫描这两个位置的占位符，部署目录变化必须重新验证搜索。第 6 步检查引用时也将路径换为实际读取的 agent-dir/web-search.json。
 
 ## 7. 子代理角色
 
-**做什么**：core 已经渲染了 8 个角色到 `~/.pi/agent/agents/`，以及 `~/.pi/agent/extensions/subagent/config.json`。角色 md 的 `model:` 是第 4 步填的角色占位符，`extensions: {{AGENT_DIR}}/extensions/rtk.ts` 是同一个 rtk 扩展。
-
-**检查**：
+core 渲染 8 个角色、subagent/config.json 和 prompts。检查：
 
 ```sh
-grep -h '^model:' ~/.pi/agent/agents/*.md | sort | uniq -c
-pi --print 'delegate nothing; just list the subagent roles you can call' 2>&1 | tail -20
+grep -h '^model:' "$PI_CODING_AGENT_DIR"/agents/*.md | sort | uniq -c
+grep -R '{{' "$PI_CODING_AGENT_DIR/agents" "$PI_CODING_AGENT_DIR/prompts"
+# core-only 已安装完且有 key 时；选 memory 则等 9.3 完成后再执行：
+pi --print 'delegate nothing; just list the subagent roles you can call'
 ```
 
-**期望**：`model` 只有 3–4 种值，且都不是 `{{...}}`；主会话能报出角色名。
-
-**失败怎么办**：
-
-- 看到 `{{MODEL_...}}`：第 4 步没填，回到第 4 步重新渲染（`doctor.mjs` 也会 FAIL 这一项）。
-- 角色没被识别：确认文件在 `~/.pi/agent/agents/`（不是 `subagents/`）——pi-subagents 扫描的是 `agents/`。旧版目录名是历史遗留。
-- 子代理跑不起来且报模型错：它的模型 id 必须在 `models.json` 里存在，**且**主会话的 provider 一致；换供应商时三个角色都要改。
-
----
+期望无占位符，模型包含 inherit 与第 4 步填的角色 id；impl-sol 使用 MODEL_REVIEW，impl-flash 用 MODEL_EXEC，规划角色用 MODEL_PLAN。子代理模型 id 必须在 models.json 存在并使用正确 provider。角色不见时检查 agents/（不是 subagents/）。无 key 用 stub；这只验证请求配置，不验证真实委派质量。
 
 ## 8. 第一次启动验收
 
-**做什么**：新开一个 Pi 会话（不要用旧会话验收）。
+core-only 现在新开 Pi 会话（不要用旧会话或只看 /reload）。选 memory 时此步先记录命令，等 9.3 的所有包构建完成后再执行；此时启动 Pi 也可能解析/安装缺失包，不能提前用模型请求验收：
 
 ```sh
 pi --print 'answer with the number of tools you can call directly, and nothing else'
 ```
 
-**期望**：数字在 4–6 之间（codemode only 的模型面）；系统提示里不再有 50 多个工具声明。
+期望 **3 个直接工具**：codemode / ask_user / tool_search。pi-compact-tools 把 grep/find 等放入按需发现通道，其余经 tools.<name>() 调用。模型自报数字可能有误，以 stub 捕获的请求 tools 为准。若有约 50 个工具，检查 codemode.mode=only；若为 0，回第 5 步检查插件与 Pi 版本。
 
-**失败怎么办**：
-
-- 数字是 50 上下：`codemode.mode` 没生效。确认 `~/.pi/agent/settings.json` 里有 `{"codemode":{"mode":"only"}}`，然后退出重启（`/reload` 会重建 runtime，但为对比干净请重启）。
-- 0 个工具：插件没装上（第 5 步）或 Pi 版本过旧。
-
----
-
-## 9. memory 模块（可选）
+## 9. memory 模块（可选，选了才做）
 
 ### 9.1 Magic Context
 
-**做什么**：
-
 ```sh
 pi install npm:@cortexkit/pi-magic-context@0.49.50
-# 配置：modules/memory/magic-context.jsonc -> ~/.config/cortexkit/magic-context.jsonc
+node -e 'const fs=require("fs"),p=process.env.PI_CODING_AGENT_DIR+"/npm/node_modules/@cortexkit/pi-magic-context/package.json";console.log(JSON.parse(fs.readFileSync(p)).version)'
 ```
 
-`settings.json` 里已经有这个包条目；`magic-context.jsonc` 由第 4 步的 `--modules core,memory` 渲染到 `$HOME/.config/cortexkit/magic-context.jsonc`。
+期望 0.49.50，MC 配置已在第 4 步由 core,memory 渲染。此时磁盘 12 个 npm 包、settings 声明 13 项；本地 pi-knowledge 未装，**不运行 doctor 或 pi list，等 9.3 完成再查**。检查第 5 步的 onnxruntime-node 加载。
 
-三个关键参数（不要在没读理由的情况下改）：
+三个参数：execute_threshold_tokens.default=400000（小窗口钳到 90%）、memory.injection_budget_tokens=3000、historian_timeout_ms=600000。理由见 decisions.md。MC 的 `pi.subagent_extensions: []` 保持 historian 子进程不加载普通扩展。
 
-| 参数 | 值 | 为什么 |
-| --- | --- | --- |
-| `execute_threshold_tokens.default` | 400000 | 绝对阈值；模型窗口更小时 MC 自己钳到 90% |
-| `memory.injection_budget_tokens` | 3000 | 注入预算；1000 时几乎只剩标题 |
-| `historian_timeout_ms` | 600000 | 压缩不是快任务；180000 会大量超时且白付两次重试 |
-
-**检查**：
-
-```sh
-node scripts/doctor.mjs --home "$HOME" --modules core,memory
-```
-
-**期望**：`magic context parameters` 与 `magic context package` 都是 PASS；只有一个配置文件时 `magic context consistency` 是 WARN（正常，没有第二份可比）。
-
-**失败怎么办**：
-
-- 有多个入口（例如再挂一套 profile）：把每份配置都改到同样三个值，再用 `--mc-profile <dir>` 让医生脚本比对；不一致的配置会产生「有时记得有时不记得」的错觉。
-- MC 存储位置默认在 `~/.local/share/cortexkit/magic-context`；要换目录用 `MAGIC_CONTEXT_STORAGE_DIR`（必须是绝对路径），在启动 Pi 的 shell 里设，不要写进仓库。
-- 升级 MC 前**必须**读 release notes 的 database migration 段：它拥有项目记忆数据库，回滚不是换回旧包就完事。
+多入口时用 doctor 的 `--mc-profile <另一份magic-context.jsonc文件>`（文件，不是目录）逐份比较；单一配置 consistency WARN 是正常的。数据默认在 HOME/.local/share/cortexkit/magic-context，可用绝对路径 MAGIC_CONTEXT_STORAGE_DIR 覆盖；升级前读 database migration release notes，不能靠退包回滚数据库。
 
 ### 9.2 resident-memory
 
-**做什么**：第 4 步已经把 `modules/memory/resident-memory.ts` 渲染到 `~/.pi/agent/extensions/resident-memory.ts`（自动加载，无需 settings 条目）。它每轮注入 `~/.pi/agent/memory/RESIDENT.md`，硬上限 `PI_RESIDENT_MEMORY_BUDGET`（默认 6000 字符），文件不存在就什么都不注入。
-
-**做什么（写你自己的一份）**：
+扩展只读 RESIDENT，默认预算 6000 字符。由用户写自己的文件，已存在则停止，不覆盖：
 
 ```sh
-cp "$HOME/.pi/agent/memory/RESIDENT.template.md" "$HOME/.pi/agent/memory/RESIDENT.md"
-$EDITOR "$HOME/.pi/agent/memory/RESIDENT.md"   # 只写稳定的、可核对的事实
+dst="$PI_CODING_AGENT_DIR/memory/RESIDENT.md"
+if [ -e "$dst" ]; then
+  echo "exists: $dst; 停止，不覆盖"
+else
+  cp -n "$PI_CODING_AGENT_DIR/memory/RESIDENT.template.md" "$dst"
+fi
 ```
 
-**检查**：会话里执行 `/resident-memory`，看它打印**实际注入**的文本与预算占用。
-
-**期望**：几百到两三千字符；出现 `truncated` 说明你写得太长，删到只剩会改变行为的条目。
-
-**失败怎么办**：`PI_RESIDENT_MEMORY_OFF=1` 可关闭注入（压缩任务就是用它避免自我注入）。读取失败会有 error 通知——那说明文件权限或编码坏了，不要当成「没有记忆」。
+用户可自行编辑稳定、可核对的事实。检查用交互 TUI 的 `/resident-memory`，会显示实际注入文本和预算；`--print` 下该命令 stdout 为空。脚本验证用 stub 捕获请求，grep `<resident_memory>`。出现 truncated 应精简。PI_RESIDENT_MEMORY_OFF=1 关闭；仅 ENOENT 当空，其它读取错误要修。
 
 ### 9.3 pi-knowledge + 补丁
-
-**做什么**：
 
 ```sh
 mkdir -p "$HOME/.pi/vendor" && cd "$HOME/.pi/vendor"
 git clone https://github.com/nczz/pi-knowledge
 cd pi-knowledge && git checkout 558e8dd
-for p in /path/to/akis-pi/modules/memory/patches/*.patch; do git am "$p" || { git am --abort; break; }; done
+for p in "$REPO"/modules/memory/patches/*.patch; do git am "$p" || { git am --abort; break; }; done
 npm ci && npm run build
-```
-
-补丁是 3 个提交：搜索/更新的尾延迟优化、markdown chunk 的真实 source span、以及针对前两个的复核修复。作者行已改写成通用身份。
-
-**检查**：
-
-```sh
 ls "$HOME/.pi/vendor/pi-knowledge/dist/index.js"
 node -e 'console.log(require(process.env.HOME+"/.pi/vendor/pi-knowledge/package.json").version)'
-pi list | grep pi-knowledge
+# 现在所有声明包都已安装，才运行
+pi list
+node "$REPO/scripts/doctor.mjs" --home "$HOME" --agent-dir "$PI_CODING_AGENT_DIR" --modules core,memory
 ```
 
-**期望**：`dist/index.js` 存在；版本 `0.12.0`；`pi list` 里有一行 `{{HOME}}/.pi/vendor/pi-knowledge`（模板已指向该路径）。
-
-**失败怎么办**：
-
-- `git am` 冲突：说明你的 base 不是 `558e8dd`，或者上游改了同样的行。`git am --abort` 后回到干净 checkout，**不要**手工解决后继续（补丁会越修越偏）。
-- 想跳过补丁：可以，但要接受原本的 O(n³) 去重与「未变更文件也重算 embedding 输入」的开销。先跑一次大库索引再决定。
-- 知识库数据不在这个仓库里。要建库按 pi-knowledge 自己的 README 做；不要把它指向 `~/.pi/agent/memory/`（那里是 resident 记忆，属于另一套）。
-
----
+期望 dist/index.js 存在、版本 0.12.0、pi list **13 项**（11 core + MC + pi-knowledge），保留两个 filtered；此处仅检查 core,memory，doctor 应 0 FAIL；MODULES 中其它模块到第 12 步统一检查。现在再新开 Pi 完成第 7、8 步的动态验收（无 key 用回环 stub），此前的静态检查不能替代它。补丁为尾延迟优化、真实 source span、复核修复三份，作者已匿名化。git am 冲突则停止并检查 base，不要手工绕过。npm 脚本警告按第 5 步检查。真实小库还需建库检索确认命中行；这里仅构建不证明检索质量。不要将知识库指向 resident memory 目录。
 
 ## 10. macos 模块（可选）
 
-### 10.1 herdr 面板状态
+### 10.1 追加渲染与 herdr
+
+若第 4 步没选 macos，现在只追加 macos，不用重渲染 core/memory：
 
 ```sh
-node scripts/render.mjs --home "$HOME" --modules core,macos --apply   # 渲染 herdr-agent-state.ts 与 ego-gc.ts
+node "$REPO/scripts/render.mjs" --home "$HOME" --agent-dir "$PI_CODING_AGENT_DIR" --modules macos --strict \
+  --set PROVIDER='<供应商 id>' \
+  --set MODEL='<主模型 id>' \
+  --set MODEL_EXEC='<便宜执行模型>' \
+  --set MODEL_REVIEW='<复核模型>' \
+  --set MODEL_PLAN='<规划模型>' \
+  --set MODEL_HISTORIAN='<压缩模型>' \
+  --set BRAVE_KEY_REF='!printenv BRAVE_API_KEY' \
+  --set BOCHA_KEY_REF='!printenv BOCHA_API_KEY'
+# 审阅后
+node "$REPO/scripts/render.mjs" --home "$HOME" --agent-dir "$PI_CODING_AGENT_DIR" --modules macos --strict --apply \
+  --set PROVIDER='<供应商 id>' \
+  --set MODEL='<主模型 id>' \
+  --set MODEL_EXEC='<便宜执行模型>' \
+  --set MODEL_REVIEW='<复核模型>' \
+  --set MODEL_PLAN='<规划模型>' \
+  --set MODEL_HISTORIAN='<压缩模型>' \
+  --set BRAVE_KEY_REF='!printenv BRAVE_API_KEY' \
+  --set BOCHA_KEY_REF='!printenv BOCHA_API_KEY'
+# 同步 MODULES（已含 macos 时不必重复追加）
+export MODULES="$MODULES,macos"
 ```
 
-`herdr-agent-state.ts` 由 herdr 生成并管理，重装 herdr 会覆盖它；它只在 `HERDR_ENV=1`、`HERDR_SOCKET_PATH`、`HERDR_PANE_ID` 都存在时才发消息，否则完全不活动。装完在 herdr 里跑一次 Pi，看状态是否随会话变化。
+herdr-agent-state.ts 由 herdr 管理，仅 HERDR_ENV、HERDR_SOCKET_PATH、HERDR_PANE_ID 都存在时工作。检查需在 herdr 中跑 Pi 看面板状态。manifest 的 herdr source 仅是扩展来源描述，没有公开下载 URL，本仓库无法提供经核实的获取链接。
 
 ### 10.2 ego 窗口回收
 
-`ego-gc.ts` 在会话结束/启动时清理 ego-browser 留下的 task space（每个都是真实浏览器窗口）。它只在 `ego lite` 已运行时才动手，绝不主动拉起 app；`PI_EGO_GC=off` 关闭，`PI_EGO_GC_DEBUG=1` 打日志到 `/tmp/pi-ego-gc.log`。
+ego-gc.ts 只在 ego lite 已运行时清理窗口，不主动启动 app；PI_EGO_GC=off 关闭、PI_EGO_GC_DEBUG=1 输出日志。ego-browser/ego-search 技能由第三方 app 安装，不在本仓库分发。manifest 的 ego-lite source 是 `external app, not redistributed`，**没有可核实的获取 URL**；请向提供 app 的渠道获取，未取得则跳过该能力，不编造链接。不用时用 settings 的 -path 排除扩展，不删除用户文件。
 
-ego-browser / ego-search 技能属于第三方 app，**不在这个仓库里**。装 ego lite 后由它自己安装技能；本仓库只提供那个回收扩展。不装 ego 时把 `ego-gc.ts` 从 extensions 里删掉即可（对其它功能无影响）。
-
-### 10.3 本地 PDF→Markdown 端点
+### 10.3 本地 PDF→Markdown
 
 ```sh
-node scripts/render.mjs --home "$HOME" --modules core,macos --apply  # 已写 server.py / requirements.txt / plist
+# macos 渲染已写 server.py / requirements.txt / LaunchAgent，默认仅回环
 python3 -m venv "$HOME/.local/share/pi-pdf-parse/venv"
 "$HOME/.local/share/pi-pdf-parse/venv/bin/pip" install -r "$HOME/.local/share/pi-pdf-parse/requirements.txt"
 launchctl bootstrap gui/"$(id -u)" "$HOME/Library/LaunchAgents/com.example.pipdfparse.plist"
 curl --noproxy '*' http://127.0.0.1:8791/health
 ```
 
-**期望**：`{"ok": true}`。pi-web-access 的 `pdf.provider: "auto"` 链是「本地端点 → Gemini → unpdf」；本地端点返回 422（扫描版）时自动落到 OCR。
+期望 {"ok":true}。本地端点 → Gemini → unpdf，扫描 PDF 422 走 OCR。端口改动要同步 PI_PDF_PARSE_PORT 与 web-search.json 的 pdf.endpointUrl。停用用 launchctl bootout；launchd 不展开 ~，移动 HOME 后需审阅重装绝对路径 plist。
 
-**失败怎么办**：
+### 10.4 agent-browser
 
-- 端口占用：改 `PI_PDF_PARSE_PORT` 与 `web-search.json` 的 `pdf.endpointUrl`，两处必须一起改。
-- 不想常驻：`launchctl bootout gui/"$(id -u)"/com.example.pipdfparse`，并把 `pdf.provider` 改成 `auto` 保留——端点不可用时链会自动跳过它。
-- plist 里的路径是 `{{HOME}}` 渲染的绝对路径；移动目录后要重装 plist（launchd 不展开 `~`）。
-
-### 10.4 agent-browser 与 mise 别名漂移
+npx 成功不证明全局 CLI 安装；实际安装并检查：
 
 ```sh
-npx --yes agent-browser@0.41.2 --version || npm install -g agent-browser@0.41.2
-$(npm prefix -g)/bin/agent-browser --version
+npm install -g agent-browser@0.41.2
+command -v agent-browser
+"$(npm prefix -g)/bin/agent-browser" --version
 ```
 
-扩展经 `mise exec node@24` 解析 node，而 `node/24` 指向最后一次安装的 24.x。**CLI 必须装在同一个 node 树里**，否则报 `could not be validated`。装上新的 24.x 之后重新确认一次。这不是美观问题：漂移后浏览器工具直接不可用。
-
----
+期望 0.41.2 且路径在扩展解析的同一 Node 树。mise node/24 别名会漂移，新增 24.x 后重新确认，否则浏览器工具可能报 could not be validated。获取来源为 manifest 的 npm -g agent-browser。
 
 ## 11. magpie 模块（可选）
 
-**做什么**：装 Magpie app 并打开它，然后把 `modules/magpie/mcp.json.example` 里的两个 server **合并**进 `~/.pi/agent/mcp.json`（如果已经存在，只加缺的条目，不要整体替换）。
+从 manifest 的 [Magpie source](https://github.com/yetone/magpie) 获取 app 并打开。确保第 4 步已选 magpie（若追加，沿用第 10.1 步完整参数，仅将 --modules macos 改为 magpie 并先 dry run），再将 modules/magpie/mcp.json.example 的两个服务器合并到 agent-dir/mcp.json，不整体替换。
 
 ```sh
-pi mcp list           # 用 Pi 自己的视图核对，不要用 curl
+pi mcp list
 ```
 
-**期望**：Pi 侧能看到 `magpie-web-search__web_search` / `__web_fetch`（hub）与 `generate_image` / `generate_video` / `generation_result`（独立 stdio server）。
+期望 Pi 看到 hub web_search/web_fetch 与独立 stdio 的 generate_image/generate_video/generation_result。hub 按 Sec-Fetch-Mode: cors / 浏览器 UA 过滤，Pi 的 Node fetch 自带头，所以 curl 看见 6 个工具不证明 Pi 可见。斜杠命令技能必须 direct，不能全部搬到 hub。新增 server 后重启 Pi，生图先 n:1 再轮询 generation_result，失败查 Magpie 日志。完整说明见 modules/magpie/README.md。
 
-**两个必须知道的坑**（`modules/magpie/README.md` 有完整说明）：
+## 12. 收尾自检与回滚
 
-1. **hub 按请求头过滤**：请求带 `Sec-Fetch-Mode: cors` 或浏览器 UA 时只列 web-search 两个工具。Pi 的 Node fetch 自带该头，所以经 hub 永远只有 2 个；用 curl/Python 直连看到的 6 个不代表 Pi 能用。需要图片工具就单独配 stdio server（模板已配）。
-2. **需要斜杠命令的技能必须 direct**：`/skill:...` 一类手动技能（保存话题、写个人笔记那种）如果被路由进 hub 的技能索引，Pi 就不再注册对应命令。这类技能保持直连，不要图省事全部路由。
-
-**失败怎么办**：
-
-- `pi mcp list` 里没有 magpie：MCP 元数据在启动时缓存，装了新 server 要重启 Pi。
-- 生图工具在但不出图：先 `n: 1` 试一张，再用 `generation_result` 轮询；失败信息通常在 Magpie 自己的日志里。
-- 没有 Magpie 也不想装：把 `models.json` 的 `baseUrl` 指到你自己的网关即可；`APPEND_SYSTEM.md` 里 Magpie 相关行都标了「仅 Magpie 模块」，可以整段删。
-
----
-
-## 12. 收尾自检与回滚点
-
-**做什么**：
+只传实际已渲染且完成安装的模块，用第 0 步的 MODULES（core-only 为 core，memory 为 core,memory，追加模块时同步变量）：
 
 ```sh
-node scripts/doctor.mjs --home "$HOME" --modules core,memory,macos,magpie
+node "$REPO/scripts/doctor.mjs" --home "$HOME" --agent-dir "$PI_CODING_AGENT_DIR" --modules "$MODULES"
 ```
 
-**期望**：`0 FAIL`。WARN 允许存在，但每一条都要能解释（例如「pi 版本比测试版新」「只有一个 MC 配置」）。
+期望 0 FAIL，WARN 逐条解释。doctor 只读 settings/node_modules，**不调用 pi list、不安装包**。对照 manifest：版本相同 PASS；普通偏差 WARN；Pi/MC 的 major 偏差 FAIL；缺声明包 FAIL。settings 与磁盘一起改错仍会被发现。RTK 缺失或无 rewrite 为 WARN。core 11 个包、core+memory 13 个包，macos/magpie 不额外增加 packages。
 
-**失败怎么办**：
-
-- 先看 FAIL 的 label：`packages resolve on disk` → 回第 5 步；`placeholders resolved` → 回第 4 步；`magic context parameters` → 回 9.1；`<module> files` → 回对应模块。
-- 直到 FAIL 清零再收工。WARN 写进交付说明。
-
-**回滚**：
+FAIL packages resolve on disk 回第 5 步（memory 在 9），placeholders 回第 4 步，MC parameters 回 9.1。FAIL 清零才交付。回滚先用 -path 停用新增扩展，再退插件，最后退 Pi；已有文件备份按绝对路径镜像在 targets/ 下，先找到目标再人工恢复：
 
 ```sh
-# 配置：渲染时自动备份
-ls ~/.pi/agent/backups/akis-pi-*/
-cp -p ~/.pi/agent/backups/akis-pi-<stamp>/.pi/agent/settings.json ~/.pi/agent/settings.json
-
-# 插件：逐个移除（settings.json 里的条目也要删）
+find "$PI_CODING_AGENT_DIR/backups" -path '*/targets/*/settings.json'
+# 审阅后将找到的备份 cp -p 到 "$PI_CODING_AGENT_DIR/settings.json"
+# 插件回滚示例（同时影响 settings）：
 pi remove npm:pi-away@0.1.4
-
-# Pi 本体（用 B 方式装的）
-npm uninstall -g @earendil-works/pi-coding-agent
 ```
 
-回滚顺序建议：先停掉新增扩展（把文件移出 `extensions/`），再退插件，最后退 Pi。升级路径与回滚点见 [docs/upgrade.md](docs/upgrade.md)。
+数据库回滚另看 docs/upgrade.md，不能用配置备份冒充数据恢复。
+
+## 无 key 的本机回环验收
+
+先跑第 3 步 pi --list-models，exit 0 且 stderr 为空，证明目录和扩展没有加载错误。再在**独立临时 HOME 与 agent-dir** 复制本次渲染/安装的非凭据配置，创建仅有 stub provider 的 models.json（不要修改真实配置）。示例内容：
+
+```json
+{"providers":{"stub":{"baseUrl":"http://127.0.0.1:8899/v1","api":"openai-completions","apiKey":"dummy","models":[{"id":"stub-model","name":"Stub","cost":{"input":0,"output":0,"cacheRead":0,"cacheWrite":0},"contextWindow":200000,"maxTokens":1000}]}}}
+```
+
+这是回环 stub 的假值，不是真实凭据。隔离副本的 settings.enabledModels 若仍列出原供应商/其它角色模型，pi --list-models 会给模式未命中的 stderr。只在临时副本里将默认模型与 enabledModels 改成 stub，再运行目录检查：
+
+```sh
+# 此时 HOME 与 PI_CODING_AGENT_DIR 必须已经指向独立临时副本
+node -e 'const fs=require("fs"),d=process.env.PI_CODING_AGENT_DIR;if(!/^\/(?:private\/)?tmp\//.test(d||""))throw Error("requires temporary agent-dir");const p=d+"/settings.json",s=JSON.parse(fs.readFileSync(p));s.defaultProvider="stub";s.defaultModel="stub-model";s.enabledModels=["stub/stub-model"];fs.writeFileSync(p,JSON.stringify(s,null,2)+"\n")'
+pi --list-models > /tmp/pi-stub-models.txt 2> /tmp/pi-stub-models.stderr
+cat /tmp/pi-stub-models.stderr
+```
+
+期望 stderr 为空。复制的 packages 若含绝对本地路径，需在临时副本中指向隔离构建产物；不要复制 auth.json、真实 models.json 或会话/记忆。独立终端启动仅监听 127.0.0.1 的脚本（日志含系统提示，只保存在临时目录，别提交）：
+
+```sh
+node "$REPO/scripts/stub-provider.mjs" --port 8899 --log /tmp/pi-stub-requests.jsonl
+# 另一终端，在隔离环境里，明确选 stub，避免调用真实供应商
+pi --provider stub --model stub-model --print --no-session 'hi'
+node -e 'const fs=require("fs"),rows=fs.readFileSync("/tmp/pi-stub-requests.jsonl","utf8").trim().split("\n").map(JSON.parse);for(const r of rows){console.log((r.tools||[]).map(t=>t.function?.name));console.log((r.messages||[]).filter(m=>["system","developer"].includes(m.role)).map(m=>m.content).join("\n"))}'
+grep '<resident_memory>' /tmp/pi-stub-requests.jsonl
+```
+
+期望 stdout stub-ok，tools 为 codemode/ask_user/tool_search，系统提示含已选模块注入（写过用户自己的 RESIDENT 才有 resident_memory）。Ctrl-C 关闭 stub。这只验证扩展、请求体、系统提示；不证明真实模型、桌面控制、embedding 推理、长会话压缩或 Linux 工作。隔离环境不要设置真实 provider key，也不要用 --offline 代替隔离。

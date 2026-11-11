@@ -2,17 +2,15 @@
 // Portable self-check for an akis-pi deployment.
 //
 //   node scripts/doctor.mjs --home <your-home>
-//   node scripts/doctor.mjs --home <your-home> --modules core,memory --run-pi-list
+//   node scripts/doctor.mjs --home <your-home> --modules core,memory
 //
 // It answers one question: does this machine actually run the configuration that DEPLOY.md
 // describes? Every check is read-only. Nothing here installs, downloads or edits anything, which
-// is also why 'pi list' is only run when every declared package already resolves on disk: on Pi
-// 1.5.2 'pi list' INSTALLS missing packages, and a self-check that mutates the machine is not a
-// self-check.
+// is why it never calls 'pi list': on Pi 1.5.2 that command installs missing packages.
 
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
-import os from 'node:os';
+import { parseJsonc, versionStatus } from './config-utils.mjs';
 import path from 'node:path';
 
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
@@ -42,13 +40,12 @@ const USAGE = [
   '  --home DIR          home directory of this machine (required)',
   '  --agent-dir DIR     Pi agent directory (default: <your-home>/.pi/agent)',
   '  --modules LIST      modules expected to be installed (default: core)',
-  '  --mc-profile DIR    extra Magic Context profile config to compare, repeatable',
-  '  --run-pi-list       force the pi list check even when packages are missing',
+  '  --mc-profile FILE   extra Magic Context JSONC config file to compare, repeatable',
   '  --json              print the result as JSON',
 ].join('\n');
 
 function parseArgs(argv) {
-  const opts = { modules: ['core'], mcProfiles: [], runPiList: false, json: false };
+  const opts = { modules: ['core'], mcProfiles: [], json: false };
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i];
     const value = () => {
@@ -61,7 +58,6 @@ function parseArgs(argv) {
     else if (arg === '--agent-dir') opts.agentDir = value();
     else if (arg === '--modules') opts.modules = value().split(',').map((s) => s.trim()).filter(Boolean);
     else if (arg === '--mc-profile') opts.mcProfiles.push(value());
-    else if (arg === '--run-pi-list') opts.runPiList = true;
     else if (arg === '--json') opts.json = true;
     else if (arg === '--help' || arg === '-h') opts.help = true;
     else throw new Error('unknown argument: ' + arg);
@@ -78,43 +74,6 @@ const read = (file) => {
 };
 
 const exists = (file) => fs.existsSync(file);
-
-/** jsonc -> object. Pi and Magic Context both allow comments; JSON.parse does not. */
-function parseJsonc(text) {
-  let out = '';
-  let inString = false;
-  let escaped = false;
-  for (let i = 0; i < text.length; i += 1) {
-    const char = text[i];
-    const next = text[i + 1];
-    if (inString) {
-      out += char;
-      if (escaped) escaped = false;
-      else if (char === '\\') escaped = true;
-      else if (char === '"') inString = false;
-      continue;
-    }
-    if (char === '"') {
-      inString = true;
-      out += char;
-      continue;
-    }
-    if (char === '/' && next === '/') {
-      while (i < text.length && text[i] !== '\n') i += 1;
-      out += '\n';
-      continue;
-    }
-    if (char === '/' && next === '*') {
-      i += 2;
-      while (i < text.length && !(text[i] === '*' && text[i + 1] === '/')) i += 1;
-      i += 1;
-      continue;
-    }
-    out += char;
-  }
-  // Trailing commas are accepted by jsonc and rejected by JSON.parse.
-  return JSON.parse(out.replace(/,(\s*[}\]])/g, '$1'));
-}
 
 function parseSource(source) {
   if (typeof source !== 'string') return { kind: 'unknown', name: String(source) };
@@ -158,6 +117,9 @@ function main() {
     process.exit(2);
   }
 
+  const unknown = opts.modules.filter((m) => !ALL_MODULES.includes(m));
+  if (unknown.length) { console.error('unknown module(s): ' + unknown.join(', ')); process.exit(2); }
+
   const home = path.resolve(opts.home);
   const agent = path.resolve(opts.agentDir || path.join(home, '.pi', 'agent'));
   const enabled = new Set(opts.modules);
@@ -192,11 +154,10 @@ function main() {
       add('WARN', 'pi version', actual + ' (manifest has no pi component)');
       return;
     }
-    if (actual === expected.version) add('PASS', 'pi version', actual);
-    else add('WARN', 'pi version', 'installed ' + actual + ', tested ' + expected.version + ' (docs/upgrade.md)');
+    add(versionStatus(actual, expected.version, true), 'pi version', 'installed ' + actual + ', manifest ' + expected.version + ' (major drift FAIL, other drift WARN)');
   });
 
-  // 2. Package resolution, then optionally pi list
+  // 2. Package resolution and manifest version comparison (never pi list)
   const settingsText = read(path.join(agent, 'settings.json'));
   let settings = {};
   guard(() => {
@@ -222,7 +183,7 @@ function main() {
       if (parsed.kind === 'npm') {
         const version = installedVersion(agent, parsed.name);
         if (version === undefined) unresolvedPackages.push(parsed.name + ' (not installed)');
-        else if (parsed.version && version !== parsed.version) unresolvedPackages.push(parsed.name + ' (' + version + ' installed, ' + parsed.version + ' pinned)');
+        else if (parsed.version && version !== parsed.version) add('WARN', 'settings package version', parsed.name + ': installed ' + version + ', settings ' + parsed.version);
       } else {
         const target = source.replace('{{HOME}}', home).replace('{{AGENT_DIR}}', agent);
         if (!exists(target)) unresolvedPackages.push(source + ' (path missing)');
@@ -233,29 +194,22 @@ function main() {
   });
 
   guard(() => {
-    if (unresolvedPackages.length > 0 && !opts.runPiList) {
-      add(
-        'WARN',
-        'pi list',
-        'skipped: on Pi 1.5.2 pi list installs what is missing, so this must not run during a read-only check. Install first (DEPLOY.md step 4), then re-run with --run-pi-list',
-      );
-      return;
+    // Inspect every selected npm component, even if settings and disk drift together.
+    for (const component of manifest.components || []) {
+      if (!enabled.has(component.module) || component.id === 'pi' || !component.source.startsWith('npm:')) continue;
+      const parsed = parseSource(component.source);
+      const actual = installedVersion(agent, parsed.name);
+      add(actual ? versionStatus(actual, component.version, component.id === 'pi-magic-context') : 'FAIL',
+        'manifest version ' + component.id, 'installed ' + (actual || 'missing') + ', manifest ' + component.version + (actual ? '' : '; install in DEPLOY.md step 5 (memory: step 9)'));
     }
-    let output;
+  });
+
+  guard(() => {
     try {
-      output = execFileSync('pi', ['list'], {
-        encoding: 'utf8',
-        timeout: 180000,
-        env: { ...process.env, HOME: home, PI_CODING_AGENT_DIR: agent },
-      });
-    } catch (error) {
-      add('FAIL', 'pi list', 'command failed: ' + String(error.message).split('\n')[0]);
-      return;
-    }
-    const listed = (output.match(/^\s{2}\S/gm) || []).length;
-    const expected = (settings.packages || []).length;
-    if (listed >= expected) add('PASS', 'pi list', listed + ' package entries listed');
-    else add('WARN', 'pi list', 'listed ' + listed + ' entries, settings declares ' + expected);
+      const version = execFileSync('rtk', ['--version'], { encoding: 'utf8', timeout: 5000 }).trim();
+      execFileSync('rtk', ['rewrite', '--help'], { stdio: 'pipe', timeout: 5000 });
+      add('PASS', 'rtk rewrite', version);
+    } catch { add('WARN', 'rtk rewrite', 'rtk missing or rewrite unavailable; install/check in DEPLOY.md step 1'); }
   });
 
   // 3. Required files for the selected modules
@@ -282,8 +236,11 @@ function main() {
   // 4. No unresolved placeholders in deployed config
   guard(() => {
     const offenders = [];
-    for (const rel of PLACEHOLDER_TARGETS) {
-      const text = read(path.join(agent, rel));
+    const targets = [...PLACEHOLDER_TARGETS.map((rel) => path.join(agent, rel)), path.join(home, '.pi/web-search.json'), path.join(agent, 'web-search.json'), path.join(home, '.config/cortexkit/magic-context.jsonc'), ...opts.mcProfiles];
+    const profileRoot = path.join(agent, 'mc-profiles');
+    for (const name of exists(profileRoot) ? fs.readdirSync(profileRoot) : []) targets.push(path.join(profileRoot, name, 'xdg/cortexkit/magic-context.jsonc'));
+    for (const rel of targets) {
+      const text = read(rel);
       if (text === undefined) continue;
       const found = text.match(/\{\{[A-Z0-9_]+\}\}/g);
       if (found) offenders.push(rel + ': ' + [...new Set(found)].join(' '));
@@ -293,7 +250,7 @@ function main() {
       const found = (read(path.join(agent, 'agents', name)) || '').match(/\{\{[A-Z0-9_]+\}\}/g);
       if (found) offenders.push('agents/' + name + ': ' + [...new Set(found)].join(' '));
     }
-    if (offenders.length === 0) add('PASS', 'placeholders resolved', PLACEHOLDER_TARGETS.length + ' files checked');
+    if (offenders.length === 0) add('PASS', 'placeholders resolved', targets.filter(exists).length + ' files checked');
     else add('FAIL', 'placeholders resolved', offenders.join('; '));
   });
 
@@ -372,7 +329,8 @@ function main() {
         return;
       }
       const version = JSON.parse(packageJson).version;
-      add('PASS', 'magic context package', version);
+      const expected = manifest.components.find((c) => c.id === 'pi-magic-context')?.version;
+      add(expected ? versionStatus(version, expected, true) : 'WARN', 'magic context package', 'installed ' + version + ', manifest ' + (expected || 'missing'));
     });
 
     guard(() => {

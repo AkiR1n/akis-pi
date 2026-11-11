@@ -38,5 +38,8 @@
       "enabled": false
     }
   },
+  "pi": {
+    "subagent_extensions": []
+  },
   "historian_timeout_ms": 600000
 }

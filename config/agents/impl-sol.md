@@ -1,7 +1,7 @@
 ---
 name: impl-sol
 description: Core implementation worker for architecture-sensitive backend modules.
-model: {{MODEL_PLAN}}
+model: {{MODEL_REVIEW}}
 thinking: high
 tools: read, grep, find, ls, edit, write, bash, codemode
 extensions: {{AGENT_DIR}}/extensions/rtk.ts

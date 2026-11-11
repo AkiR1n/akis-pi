@@ -8,14 +8,14 @@
 //   - Dry run by default. Nothing is written without --apply.
 //   - An existing target is backed up to <agent-dir>/backups/akis-pi-<stamp>/<mirrored path>
 //     before it is replaced, and the difference is printed first.
-//   - Unresolved {{PLACEHOLDER}}s do not stop the write, but every one of them is listed as a
-//     WARNING: a config with a literal {{MODEL}} in it will not start, and the operator has to
-//     see that before running pi.
+//   - Unresolved placeholders are checked before any write; strict mode rejects the whole plan.
+//     Non-strict mode warns and skips affected files. Credential literals are always rejected.
+//   - Completed modules are recorded; later runs only render new modules.
 //   - Files that cannot be merged mechanically (mcp.json) are printed as guidance instead of
 //     written. Overwriting a user's MCP registry is not a renderer's decision.
 
 import fs from 'node:fs';
-import os from 'node:os';
+import { parseJsonc, assertCredentialReferences } from './config-utils.mjs';
 import path from 'node:path';
 
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
@@ -138,16 +138,31 @@ function expandSources(from) {
 function resolver(values, sets) {
   // values must be plain strings: a path helper here would stringify a function into the config.
   const known = { ...values, ...sets };
-  return (text) => {
+  return (text, format = '') => {
     const missing = new Set();
-    const out = text.replace(/\{\{([A-Z0-9_]+)\}\}/g, (match, key) => {
+    const replace = (text) => text.replace(/\{\{([A-Z0-9_]+)\}\}/g, (match, key) => {
       const value = known[key];
       if (value === undefined || value === '') {
         missing.add(match);
         return match;
       }
-      return value;
+      return String(value);
     });
+    let out;
+    if (/\.jsonc?$/.test(format)) {
+      const walk = (value) => {
+        if (typeof value === 'string') return replace(value);
+        if (Array.isArray(value)) return value.map(walk);
+        if (value && typeof value === 'object') return Object.fromEntries(Object.entries(value).map(([k, v]) => [replace(k), walk(v)]));
+        return value;
+      };
+      const config = walk(parseJsonc(text));
+      assertCredentialReferences(config);
+      out = JSON.stringify(config, null, 2) + '\n';
+    } else if (format.endsWith('.plist')) {
+      out = text.replace(/\{\{([A-Z0-9_]+)\}\}/g, (match) => replace(match).replace(/[&<>"']/g, (c) => ({'&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&apos;'}[c])));
+    } else out = replace(text);
+    for (const token of out.match(/\{\{[A-Z0-9_]+\}\}/g) || []) missing.add(token);
     return { text: out, missing: [...missing] };
   };
 }
@@ -171,8 +186,9 @@ function diffSummary(before, after) {
   return lines;
 }
 
-function backup(relFromHome, target, backupRoot) {
-  const destination = path.join(backupRoot, relFromHome);
+function backup(target, backupRoot) {
+  // Mirror absolute paths beneath the backup directory, including external agent directories.
+  const destination = path.join(backupRoot, 'targets', path.resolve(target).slice(path.parse(target).root.length));
   fs.mkdirSync(path.dirname(destination), { recursive: true });
   fs.copyFileSync(target, destination);
   return destination;
@@ -211,12 +227,21 @@ function main() {
     agent: (...parts) => path.join(agent, ...parts),
   };
   const resolve = resolver({ HOME: home, AGENT_DIR: agent }, opts.sets);
-  const enabled = new Set(opts.modules);
+  const stateFile = paths.agent('.akis-pi-render.json');
+  let previous = [];
+  const stateText = read(stateFile);
+  if (stateText !== undefined) {
+    try { previous = JSON.parse(stateText).modules; if (!Array.isArray(previous) || previous.some((m) => !ALL_MODULES.includes(m))) throw new Error(); }
+    catch { console.error('invalid render module state; refusing to overwrite'); process.exit(2); }
+  }
+  const selected = new Set([...previous, ...opts.modules]);
+  const enabled = new Set(opts.modules.filter((m) => !previous.includes(m)));
 
   console.log('akis-pi render');
   console.log('  home       ' + home);
   console.log('  agent dir  ' + agent);
-  console.log('  modules    ' + opts.modules.join(', '));
+  console.log('  modules    ' + [...selected].join(', '));
+  console.log('  new modules ' + [...enabled].join(', '));
   console.log('  mode       ' + (opts.apply ? 'apply' : 'dry run'));
   console.log('');
 
@@ -253,11 +278,37 @@ function main() {
         text = JSON.stringify(settings, null, 2) + '\n';
         if (removed.length > 0) console.log('memory module not selected, dropped: ' + removed.join(', ') + '\n');
       }
-      const resolved = resolve(text);
+      let resolved;
+      try { resolved = resolve(text, from); }
+      catch (error) { console.error(from + ': ' + (/credential field/.test(error.message) ? error.message : 'invalid configuration; refusing write')); process.exit(2); }
       for (const placeholder of resolved.missing) warnings.push(from + ': unresolved ' + placeholder);
-      actions.push({ from, target: item.to(paths, path.basename(from)), content: resolved.text });
+      if (resolved.missing.length) continue;
+      actions.push({ from, module: item.module, target: item.to(paths, path.basename(from)), content: resolved.text });
     }
   }
+
+  // Adding memory to a completed core never re-renders the user's core files.
+  // Only add missing memory package entries to the existing settings.
+  if (enabled.has('memory') && !enabled.has('core')) {
+    const target = paths.agent('settings.json');
+    const before = read(target);
+    if (before === undefined) { console.error('install core before adding memory'); process.exit(2); }
+    let settings;
+    try { settings = parseJsonc(before); assertCredentialReferences(settings); }
+    catch { console.error('existing settings contain invalid JSON or literal credentials; refusing memory merge'); process.exit(2); }
+    const template = JSON.parse(resolve(read(path.join(ROOT, 'config/settings.json')), 'config/settings.json').text);
+    const sourceOf = (entry) => typeof entry === 'string' ? entry : entry.source;
+    settings.packages ||= [];
+    for (const entry of template.packages.filter((e) => /pi-knowledge|pi-magic-context/.test(sourceOf(e)))) {
+      if (!settings.packages.some((e) => sourceOf(e).replace(/@[^/@]+$/, '') === sourceOf(entry).replace(/@[^/@]+$/, ''))) settings.packages.push(entry);
+    }
+    const content = JSON.stringify(settings, null, 2) + '\n';
+    if (/\{\{[A-Z0-9_]+\}\}/.test(content)) warnings.push('memory package merge: unresolved placeholders in existing settings; skipped');
+    else actions.push({ from: 'memory package merge', module: 'memory', target, content });
+  }
+
+  // State is also reviewable and backed up with the same write plan.
+  if (warnings.length === 0) actions.push({ from: 'render module state', target: stateFile, content: JSON.stringify({ modules: [...selected] }, null, 2) + '\n' });
 
   for (const action of actions) {
     const before = read(action.target);
@@ -294,9 +345,13 @@ function main() {
     console.log('');
   }
 
+  if (opts.strict && warnings.length > 0) {
+    console.error('Strict mode: refused before writing any files.');
+    process.exit(1);
+  }
+
   if (!opts.apply) {
     console.log('Dry run: nothing written. Re-run with --apply.');
-    if (opts.strict && warnings.length > 0) process.exit(1);
     return;
   }
 
@@ -306,8 +361,7 @@ function main() {
     const before = read(action.target);
     if (before === action.content) continue;
     if (before !== undefined) {
-      const rel = path.relative(home, action.target);
-      backups.push(backup(rel, action.target, backupRoot));
+      backups.push(backup(action.target, backupRoot));
     }
     fs.mkdirSync(path.dirname(action.target), { recursive: true });
     fs.writeFileSync(action.target, action.content, { mode: 0o644 });
@@ -326,7 +380,6 @@ function main() {
     console.log('Backed up ' + backups.length + ' existing file(s) to ' + backupRoot + ':');
     for (const file of backups) console.log('  ' + file);
   }
-  if (opts.strict && warnings.length > 0) process.exit(1);
 }
 
 main();
