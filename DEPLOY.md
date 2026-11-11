@@ -31,11 +31,14 @@ curl https://mise.run | sh       # 已有 mise 则跳过
 mise use -g node@24.21.0
 node --version
 # 第 2 步前确认模板 npmCommand 的依赖
-command -v mise
-/usr/bin/env mise exec node@24.21.0 -- npm --version
+if command -v mise >/dev/null; then
+  /usr/bin/env mise exec node@24.21.0 -- npm --version   # 用 mise：期望打印 npm 版本
+else
+  node --version && npm --version                          # 不用 mise：走下文「非 mise」分支
+fi
 ```
 
-期望 Node v24.21.0、npm 有版本输出。模板 npmCommand 通过 mise 调用 npm；隔离 HOME 时 mise 可能重新下载 Node，先运行检查避免把下载误认为插件行为。非 mise 用户运行 `node --version && npm --version`，并在第 4 步 apply 后删除部署目标的 npmCommand（有明确命令），否则 pi install 会报 `env: mise: No such file or directory`。不要用会漂移的 node/24 别名代替精确版本。
+用 mise 时期望 Node v24.21.0、npm 有版本输出；`command -v mise` 无输出说明你不用 mise，此时 mise 那条命令一定报 `env: mise: No such file or directory`，属于预期，按下面的非 mise 分支处理。模板 npmCommand 通过 mise 调用 npm；隔离 HOME 时 mise 可能重新下载 Node，先运行检查避免把下载误认为插件行为。非 mise 用户运行 `node --version && npm --version`，并在第 4 步 apply 后删除部署目标的 npmCommand（有明确命令），否则 pi install 会报 `env: mise: No such file or directory`。不要用会漂移的 node/24 别名代替精确版本。
 
 安装 core bash rewrite 所需的 RTK，选择一种：
 
@@ -126,7 +129,7 @@ pi --list-models > /tmp/pi-models.txt 2> /tmp/pi-models.stderr
 cat /tmp/pi-models.stderr
 ```
 
-期望 exit 0、stderr 为空且目录有你填的模型。若报 no models / Failed to load extension，先修配置或扩展。有真实 key 时可额外执行：
+期望 exit 0、stderr 为空且目录有你填的模型。唯一允许的 stderr 是 rtk 未装时的一行 `[rtk] rtk binary not found in PATH — extension disabled`：说明 rtk 还没进 PATH，装好后再跑应为空。若报 no models / Failed to load extension，先修配置或扩展。有真实 key 时可额外执行：
 
 ```sh
 pi --provider '<供应商 id>' --model '<主模型 id>' --print 'reply with the single word ok'
@@ -208,7 +211,7 @@ npm install-scripts --help
 npm install-scripts ls
 ```
 
-若当前 npm 支持该子命令，依据它的帮助审阅并 approve 被跳过的可信包，再按提示重跑脚本；不支持时检查安装日志与 npm 自己的脚本策略，不要直接放开所有包。
+判据：被跳过脚本的包，只要下面的加载/可执行检查通过（多数自带 prebuilt，例如 better-sqlite3、sharp、tree-sitter），就**不需要** approve；不要 `approve --all`。只有检查失败的包才审阅后 approve，approve 不会自动重跑脚本，需要执行 `npm rebuild <包名>`（例如 `npm rebuild @injaneity/pi-computer-use`）。不支持该子命令时检查安装日志与 npm 自己的脚本策略。
 
 至少核验 pi-computer-use：postinstall 实际为 `node scripts/setup-helper.mjs --postinstall`，负责安装 helper，跳过会影响桌面控制。下面只读检查本机 helper 可执行文件；失败则按包 README 审阅并重新运行安装步骤（可能下载/签名，先说明），不要把包已安装当作 helper 可用：
 
@@ -217,14 +220,7 @@ cd "$PI_CODING_AGENT_DIR/npm/node_modules/@injaneity/pi-computer-use"
 node --input-type=module -e 'import fs from "node:fs";import os from "node:os";import path from "node:path";import {resolveMacosHelperAppPath} from "./src/platform/macos/helper-path.mjs";const p=process.platform==="darwin"?path.join(resolveMacosHelperAppPath(),"Contents/MacOS/bridge"):(process.env.PI_COMPUTER_USE_LINUX_HELPER_PATH||path.join(os.homedir(),".pi/agent/helpers/pi-computer-use/linux-bridge"));fs.accessSync(p,fs.constants.X_OK);console.log("helper executable exists:",p)'
 ```
 
-此命令覆盖 macOS/Linux；未做权限授权与真实桌面操作仍记为未验证。MC 的 onnxruntime-node 安装脚本负责本机运行时，跳过可能影响本地 embedding。在 MC 安装后运行：
-
-```sh
-cd "$PI_CODING_AGENT_DIR/npm"
-node -e 'const {createRequire}=require("module"),r=createRequire(require.resolve("@cortexkit/pi-magic-context"));const ort=r("onnxruntime-node");console.log(ort.env.versions)'
-```
-
-若无法解析包入口，先在 node_modules 找到 MC 的实际入口，用该入口创建 require。期望能加载 native runtime；仅 require 成功不代表模型下载或 embedding 推理已验证。tree-sitter 等依赖也可能被跳过，构建/运行检查需记录。安装失败先看原始日志，不要把缺包改成随意新版。
+此命令覆盖 macOS/Linux；未做权限授权与真实桌面操作仍记为未验证。MC（memory 模块）的 onnxruntime-node 检查放在 9.1 装完 MC 之后，见那里。仅 require 成功不代表模型下载或 embedding 推理已验证。tree-sitter 等依赖也可能被跳过，构建/运行检查需记录。安装失败先看原始日志，不要把缺包改成随意新版。
 
 ## 6. 搜索与密钥
 
@@ -295,6 +291,15 @@ node -e 'const fs=require("fs"),p=process.env.PI_CODING_AGENT_DIR+"/npm/node_mod
 三个参数：execute_threshold_tokens.default=400000（小窗口钳到 90%）、memory.injection_budget_tokens=3000、historian_timeout_ms=600000。理由见 decisions.md。MC 的 `pi.subagent_extensions: []` 保持 historian 子进程不加载普通扩展。
 
 多入口时用 doctor 的 `--mc-profile <另一份magic-context.jsonc文件>`（文件，不是目录）逐份比较；单一配置 consistency WARN 是正常的。数据默认在 HOME/.local/share/cortexkit/magic-context，可用绝对路径 MAGIC_CONTEXT_STORAGE_DIR 覆盖；升级前读 database migration release notes，不能靠退包回滚数据库。
+
+
+装完 MC 后核验 onnxruntime-node（本地 embedding 的运行时；MC 是纯 ESM，`require.resolve` 解析不了它的入口，所以从 package.json 建 require）：
+
+```sh
+node -e 'const {createRequire}=require("module");const r=createRequire(process.env.PI_CODING_AGENT_DIR+"/npm/node_modules/@cortexkit/pi-magic-context/package.json");console.log(r("onnxruntime-node").env.versions)'
+```
+
+期望打印 `{ common: "…", node: "…" }`。这只说明 native runtime 能加载，不代表 embedding 模型已下载或推理可用。tree-sitter 等依赖的跳过脚本按第 5 步的判据处理。
 
 ### 9.2 resident-memory
 
@@ -442,6 +447,9 @@ cat /tmp/pi-stub-models.stderr
 node "$REPO/scripts/stub-provider.mjs" --port 8899 --log /tmp/pi-stub-requests.jsonl
 # 另一终端，在隔离环境里，明确选 stub，避免调用真实供应商
 pi --provider stub --model stub-model --print --no-session 'hi'
+# 第 7、8 步的验收同样换成 stub：
+pi --provider stub --model stub-model --print --no-session 'delegate nothing; list the subagent roles you can use'
+pi --provider stub --model stub-model --print --no-session 'answer with the number of tools you can call directly'
 node -e 'const fs=require("fs"),rows=fs.readFileSync("/tmp/pi-stub-requests.jsonl","utf8").trim().split("\n").map(JSON.parse);for(const r of rows){console.log((r.tools||[]).map(t=>t.function?.name));console.log((r.messages||[]).filter(m=>["system","developer"].includes(m.role)).map(m=>m.content).join("\n"))}'
 grep '<resident_memory>' /tmp/pi-stub-requests.jsonl
 ```
