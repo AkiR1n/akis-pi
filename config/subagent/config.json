@@ -1,0 +1,14 @@
+{
+  "defaultSessionDir": "{{AGENT_DIR}}/subagent-sessions",
+  "scheduledRuns": {
+    "enabled": false
+  },
+  "missions": {
+    "enabled": false
+  },
+  "inlineToolDisplay": "summary",
+  "fleetView": true,
+  "asyncWidget": false,
+  "toolActivation": "eager",
+  "pinToolDeclarations": true
+}

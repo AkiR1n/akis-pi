@@ -1,0 +1,387 @@
+{
+  "name": "akis-pi",
+  "schemaVersion": 1,
+  "generatedAt": "2026-11-11T18:10:03.145Z",
+  "generatedFrom": "live Pi configuration, read-only (see NEVER_COPIED in export-akis-pi.mjs)",
+  "verifiedOn": {
+    "os": "macOS 27.2.1",
+    "arch": "arm64",
+    "pi": "1.5.2",
+    "node": "v24.21.0"
+  },
+  "levels": {
+    "pinned": "exact version required for the documented behaviour",
+    "pinned-reason": "version chosen deliberately; check the stated reason before upgrading",
+    "float-ok": "any recent version is expected to work"
+  },
+  "placeholders": {
+    "{{HOME}}": "absolute home directory of the deployment machine",
+    "{{AGENT_DIR}}": "Pi agent directory, default {{HOME}}/.pi/agent",
+    "{{PROVIDER}}": "provider id from models.json used for the chat models",
+    "{{MODEL}}": "main/default model id",
+    "{{MODEL_EXEC}}": "cheap execution model (tests, scaffolding, routine edits)",
+    "{{MODEL_REVIEW}}": "independent review model",
+    "{{MODEL_PLAN}}": "planning/architecture model",
+    "{{MODEL_HISTORIAN}}": "model the memory historian uses to compact sessions",
+    "{{BRAVE_KEY_REF}}": "credential reference for Brave Search: \"!printenv VAR\" or \"!security find-generic-password ...\"",
+    "{{BOCHA_KEY_REF}}": "credential reference for Bocha Search, same forms as {{BRAVE_KEY_REF}}"
+  },
+  "components": [
+    {
+      "id": "pi",
+      "source": "npm:@earendil-works/pi-coding-agent@1.5.2",
+      "version": "1.5.2",
+      "level": "pinned",
+      "module": "core",
+      "platforms": [
+        "macos"
+      ],
+      "lastVerified": "2026-11-12",
+      "note": "tested 1.5.2. The official installer installs the newest release; the npm command in DEPLOY.md reproduces 1.5.2 exactly."
+    },
+    {
+      "id": "node",
+      "source": "mise node@24.21.0",
+      "version": "24.21.0",
+      "level": "pinned-reason",
+      "module": "core",
+      "platforms": [
+        "macos"
+      ],
+      "lastVerified": "2026-11-12",
+      "note": "the mise node/24 alias follows whatever 24.x was installed last; pin the version where the agent CLIs live."
+    },
+    {
+      "id": "rtk",
+      "source": "homebrew rtk",
+      "version": "1.1.0",
+      "level": "pinned-reason",
+      "module": "core",
+      "platforms": [
+        "macos",
+        "linux"
+      ],
+      "lastVerified": "2026-11-12",
+      "note": "extensions/rtk.ts delegates to rtk rewrite and needs >= 0.23.0 for that subcommand; it fails open otherwise."
+    },
+    {
+      "id": "pi-magic-context",
+      "source": "npm:@cortexkit/pi-magic-context@0.49.50",
+      "version": "0.49.50",
+      "level": "pinned-reason",
+      "module": "memory",
+      "platforms": [
+        "macos",
+        "linux"
+      ],
+      "lastVerified": "2026-11-12",
+      "note": "read the release notes for database migrations before upgrading; MC owns the project-memory store."
+    },
+    {
+      "id": "pi-knowledge",
+      "source": "https://github.com/nczz/pi-knowledge @ 558e8dd + modules/memory/patches",
+      "version": "0.12.0+patches",
+      "level": "pinned",
+      "module": "memory",
+      "platforms": [
+        "macos",
+        "linux"
+      ],
+      "lastVerified": "2026-11-12",
+      "note": "3 patch commits on top of 558e8dd; apply with git am, then npm ci and npm run build."
+    },
+    {
+      "id": "pi-web-access",
+      "source": "npm:pi-web-access@0.47.0",
+      "version": "0.47.0",
+      "level": "pinned",
+      "module": "core",
+      "platforms": [
+        "macos",
+        "linux"
+      ],
+      "lastVerified": "2026-11-12"
+    },
+    {
+      "id": "pi-agent-browser-native",
+      "source": "npm:pi-agent-browser-native@0.9.18",
+      "version": "0.9.18",
+      "level": "pinned",
+      "module": "core",
+      "platforms": [
+        "macos",
+        "linux"
+      ],
+      "lastVerified": "2026-11-12"
+    },
+    {
+      "id": "pi-atelier",
+      "source": "npm:pi-atelier@0.18.0",
+      "version": "0.18.0",
+      "level": "pinned",
+      "module": "core",
+      "platforms": [
+        "macos",
+        "linux"
+      ],
+      "lastVerified": "2026-11-12",
+      "resourceFilters": {
+        "extensions": [
+          "+extensions/index.ts"
+        ]
+      }
+    },
+    {
+      "id": "pi-ask-user",
+      "source": "npm:pi-ask-user@0.17.2",
+      "version": "0.17.2",
+      "level": "pinned",
+      "module": "core",
+      "platforms": [
+        "macos",
+        "linux"
+      ],
+      "lastVerified": "2026-11-12"
+    },
+    {
+      "id": "pi-powerpoint",
+      "source": "npm:pi-powerpoint@1.0.0",
+      "version": "1.0.0",
+      "level": "pinned",
+      "module": "core",
+      "platforms": [
+        "macos",
+        "linux"
+      ],
+      "lastVerified": "2026-11-12"
+    },
+    {
+      "id": "pi-subagents",
+      "source": "npm:pi-subagents@0.88.0",
+      "version": "0.88.0",
+      "level": "pinned",
+      "module": "core",
+      "platforms": [
+        "macos",
+        "linux"
+      ],
+      "lastVerified": "2026-11-12"
+    },
+    {
+      "id": "pi-compact-tools",
+      "source": "npm:pi-compact-tools@0.17.0",
+      "version": "0.17.0",
+      "level": "pinned",
+      "module": "core",
+      "platforms": [
+        "macos",
+        "linux"
+      ],
+      "lastVerified": "2026-11-12",
+      "resourceFilters": {
+        "extensions": [
+          "+extensions/compact-tools.ts"
+        ],
+        "themes": []
+      }
+    },
+    {
+      "id": "pi-mobile",
+      "source": "npm:pi-mobile@0.4.0",
+      "version": "0.4.0",
+      "level": "pinned",
+      "module": "core",
+      "platforms": [
+        "macos",
+        "linux"
+      ],
+      "lastVerified": "2026-11-12"
+    },
+    {
+      "id": "pi-computer-use",
+      "source": "npm:@injaneity/pi-computer-use",
+      "version": "0.5.1",
+      "level": "pinned",
+      "module": "core",
+      "platforms": [
+        "macos",
+        "linux"
+      ],
+      "lastVerified": "2026-11-12"
+    },
+    {
+      "id": "pi-away",
+      "source": "npm:pi-away",
+      "version": "0.1.4",
+      "level": "pinned",
+      "module": "core",
+      "platforms": [
+        "macos",
+        "linux"
+      ],
+      "lastVerified": "2026-11-12"
+    },
+    {
+      "id": "pi-prompt-suggestion",
+      "source": "npm:pi-prompt-suggestion",
+      "version": "0.1.2",
+      "level": "pinned",
+      "module": "core",
+      "platforms": [
+        "macos",
+        "linux"
+      ],
+      "lastVerified": "2026-11-12"
+    },
+    {
+      "id": "herdr",
+      "source": "extensions/herdr-agent-state.ts (installed by herdr)",
+      "version": "integration 9",
+      "level": "pinned",
+      "module": "macos",
+      "platforms": [
+        "macos"
+      ],
+      "lastVerified": "2026-11-12",
+      "note": "only active when HERDR_ENV, HERDR_SOCKET_PATH and HERDR_PANE_ID are set; inert otherwise."
+    },
+    {
+      "id": "ego-lite",
+      "source": "external app, not redistributed",
+      "version": "unpinned",
+      "level": "float-ok",
+      "module": "macos",
+      "platforms": [
+        "macos"
+      ],
+      "lastVerified": "2026-11-12",
+      "note": "ego-gc.ts shells out to the ego-browser CLI; the ego skills are third-party and are not copied into this repo."
+    },
+    {
+      "id": "agent-browser",
+      "source": "npm -g agent-browser",
+      "version": "0.41.2",
+      "level": "float-ok",
+      "module": "macos",
+      "platforms": [
+        "macos"
+      ],
+      "lastVerified": "2026-11-12",
+      "note": "must live in the node tree the extension resolves; the mise node/24 alias can drift away from it."
+    },
+    {
+      "id": "magpie",
+      "source": "https://github.com/yetone/magpie",
+      "version": "0.1.3788",
+      "level": "float-ok",
+      "module": "magpie",
+      "platforms": [
+        "macos"
+      ],
+      "lastVerified": "2026-11-12",
+      "note": "optional module: gateway, MCP hub and image generation. Not required for core or memory."
+    }
+  ],
+  "modules": {
+    "core": {
+      "description": "Pi settings, global rules, subagent roles, prompts, rtk rewrite hook",
+      "required": true
+    },
+    "memory": {
+      "description": "Magic Context, resident memory and pi-knowledge with patches",
+      "required": false
+    },
+    "macos": {
+      "description": "herdr agent state, ego window GC, local PDF endpoint, Keychain credentials",
+      "required": false
+    },
+    "magpie": {
+      "description": "Magpie gateway: local OpenAI-compatible provider, MCP hub, images",
+      "required": false
+    }
+  },
+  "excluded": [
+    {
+      "id": "local clean-up tool",
+      "reason": "local-only clean-up tool, pinned deliberately on this machine"
+    },
+    {
+      "id": "private workflow engine",
+      "reason": "private workflow engine kept as an explicit fallback"
+    },
+    {
+      "id": "display layer patch",
+      "reason": "CC display layer, package entry disabled"
+    },
+    {
+      "id": "personal sensor integration",
+      "reason": "personal sensor integration"
+    },
+    {
+      "id": "personal marketplace skill",
+      "reason": "personal marketplace skill"
+    },
+    {
+      "id": "personal extensions",
+      "reason": "notification, terminal-integration and status extensions written for one machine"
+    },
+    {
+      "id": "pi-maintenance, pi-memory",
+      "reason": "maintenance and personal-data systems; this repo only documents their output"
+    },
+    {
+      "id": "personal skills",
+      "reason": "personal or provider-specific skills stay out of a shareable config"
+    }
+  ],
+  "neverCopied": [
+    {
+      "path": "auth.json",
+      "reason": "provider credentials; restore by logging in, never by copying"
+    },
+    {
+      "path": "models.json, models-store.json",
+      "reason": "generated model catalog and store"
+    },
+    {
+      "path": "mcp-auth.json",
+      "reason": "MCP OAuth tokens"
+    },
+    {
+      "path": "secrets/**",
+      "reason": "credential store"
+    },
+    {
+      "path": "sessions/**, subagent-sessions/**",
+      "reason": "conversation transcripts"
+    },
+    {
+      "path": "memory/**",
+      "reason": "personal memory data, RESIDENT.md content included"
+    },
+    {
+      "path": "trust.json",
+      "reason": "project trust decisions"
+    },
+    {
+      "path": "qoder-machine-id",
+      "reason": "machine identifier"
+    },
+    {
+      "path": "~/.config/magpie/settings.json",
+      "reason": "gateway credential (lanKey)"
+    },
+    {
+      "path": "pi-mobile/**, pi-speech/**",
+      "reason": "mobile pairing data and credentials"
+    },
+    {
+      "path": "runs/**",
+      "reason": "maintenance evidence, may contain machine output"
+    },
+    {
+      "path": "personal extensions and private skills",
+      "reason": "written for one machine or one provider; not published"
+    }
+  ]
+}

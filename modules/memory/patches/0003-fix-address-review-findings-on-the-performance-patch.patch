@@ -1,0 +1,625 @@
+From 6b32b68ff66dfc17d31bd5cb3295c1f698a101c1 Mon Sep 17 00:00:00 2001
+From: AkiyamaRin <akir1n@outlook.com>
+Date: Sat, 24 Oct 2026 00:44:56 +0800
+Subject: [PATCH 3/3] fix: address review findings on the performance patch
+
+- Take the KB lock and the indexing claim inside the protected region and release
+  on every path; a configuration error during setup used to leak the lock file with
+  a live pid, which wedged the KB until the lock looked stale.
+- Make the vector/chunk mismatch guard fail closed in hybrid mode: the misaligned
+  vectors no longer reach redundancy scoring, only a warning does.
+- Detect truncated sidecars: searchVectorFile reports a short read, and search skips
+  that KB's vector half instead of silently pairing what it could read.
+- Narrow the no-op update optimisation to skipping the sidecar rewrite only. Symbols,
+  counts, source options and status still run, because they derive from the source
+  and can change while every chunk hash stays the same (e.g. a renamed heading in a
+  too-short-to-chunk section).
+- Create idx_chunks_kb_file on every open, not just for fresh databases, so existing
+  installations pick it up.
+- Make the lock ownership-safe: publish by link() from a written staging file, treat
+  unreadable locks as reclaimable only after a grace period, and only delete a lock
+  whose token still matches.
+- Fix consecutive headings: a heading now owns the lines after it even when the
+  preceding section was empty.
+- Add regression tests for spans, no-op sidecar reuse, the mismatch guard and the
+  cross-process lock.
+---
+ src/engine.ts                 |  94 ++++++++++++++++-------------
+ src/indexer/chunker.ts        |  25 ++------
+ src/search/vector.ts          |  15 ++++-
+ src/storage/kb-lock.ts        |  88 ++++++++++++++++++---------
+ src/storage/sqlite.ts         |  14 ++++-
+ test/unit/perf-guards.test.ts | 110 ++++++++++++++++++++++++++++++++++
+ 6 files changed, 251 insertions(+), 95 deletions(-)
+ create mode 100644 test/unit/perf-guards.test.ts
+
+diff --git a/src/engine.ts b/src/engine.ts
+index c138656..d0dd47e 100644
+--- a/src/engine.ts
++++ b/src/engine.ts
+@@ -3,7 +3,6 @@ import { join, resolve } from "node:path";
+ import type Database from "better-sqlite3";
+ import { type DiagnosticResult, diagnoseKB } from "./diagnostics/health.ts";
+ import type { EmbeddingConfig } from "./embedding/provider.ts";
+-import { acquireKnowledgeLock } from "./storage/kb-lock.ts";
+ import {
+ 	dispose as disposeEmbedding,
+ 	embedDocuments,
+@@ -54,9 +53,11 @@ import {
+ 	summarizeSearchTuning,
+ } from "./search/tuning.ts";
+ import { searchVectorFile, type VectorFileSearchResult } from "./search/vector.ts";
++import { acquireKnowledgeLock } from "./storage/kb-lock.ts";
+ import {
+ 	type Chunk,
+ 	type ChunkInsert,
++	claimKBForIndexing,
+ 	countSymbols,
+ 	createKB,
+ 	deleteChunksByIds,
+@@ -84,7 +85,6 @@ import {
+ 	updateKBCounts,
+ 	updateKBEmbeddingMetadata,
+ 	updateKBSourceOptions,
+-	claimKBForIndexing,
+ 	updateKBStatus,
+ } from "./storage/sqlite.ts";
+ 
+@@ -1327,17 +1327,6 @@ export class KnowledgeEngine {
+ 	): Promise<{ added: number; removed: number; unchanged: number }> {
+ 		if (!this.db) throw new Error("Engine not initialized");
+ 		throwIfAborted(signal);
+-		const lock = acquireKnowledgeLock(this.knowledgeDir, kb.id, `update:${kb.name}`);
+-		if (!lock) {
+-			throw new Error(
+-				`Knowledge base "${kb.name}" is being updated by another process; retry after that run finishes`,
+-			);
+-		}
+-		if (!claimKBForIndexing(this.db, kb.id)) {
+-			lock.release();
+-			throw new Error(`Knowledge base "${kb.name}" is already being indexed; retry after that run finishes`);
+-		}
+-		startIndexingJob(this.db, kb.id, "update", `Starting update for "${kb.name}"`);
+ 		const scanOptions = toScanOptions(parseAddOptions(kb.source_options));
+ 		const embeddingConfig = resolveEmbeddingConfig();
+ 		const embeddingBatchSize = resolveIndexEmbedBatchSize();
+@@ -1352,7 +1341,18 @@ export class KnowledgeEngine {
+ 		const insertedChunkIds: string[] = [];
+ 		const stagedSymbols: KnowledgeSymbolInsert[] = [];
+ 
++		// Everything that can throw happens after the lock is held and inside the try, so the
++		// finally below always releases it: a leaked lock would wedge the KB until it looks
++		// stale, long after the caller has given up.
++		const lock = acquireKnowledgeLock(this.knowledgeDir, kb.id, `update:${kb.name}`);
++		if (!lock) {
++			throw new Error(`Knowledge base "${kb.name}" is being updated by another process; retry after that run finishes`);
++		}
+ 		try {
++			if (!claimKBForIndexing(this.db, kb.id)) {
++				throw new Error(`Knowledge base "${kb.name}" is already being indexed; retry after that run finishes`);
++			}
++			startIndexingJob(this.db, kb.id, "update", `Starting update for "${kb.name}"`);
+ 			const vectorPath = this.vectorPathFor(kb.id);
+ 			addedVectorPath = tempVectorPath(`${vectorPath}.added`);
+ 			addedVectorWriter = openVectorWriter(addedVectorPath);
+@@ -1458,8 +1458,7 @@ export class KnowledgeEngine {
+ 			// measurement under this KB's policy. Only genuinely new chunks need measuring;
+ 			// finalization is skipped entirely for the rest.
+ 			const measurementReuseAllowed =
+-				storedSourcePolicyVersion(kb.source_options, "embedding_input_policy") ===
+-				CURRENT_EMBEDDING_INPUT_POLICY;
++				storedSourcePolicyVersion(kb.source_options, "embedding_input_policy") === CURRENT_EMBEDDING_INPUT_POLICY;
+ 
+ 			const processChunks = async (chunks: Awaited<ReturnType<typeof chunkFile>>): Promise<void> => {
+ 				const freshChunks: Awaited<ReturnType<typeof chunkFile>> = [];
+@@ -1606,33 +1605,22 @@ export class KnowledgeEngine {
+ 				}
+ 			};
+ 
+-			if (addedCount === 0 && idsToRemove.length === 0 && storedVectorsAreComplete()) {
+-				// Nothing changed and the stored vectors are all readable, so the vector file
+-				// and the symbol rows are already correct. Rewriting 43k vectors and re-inserting
+-				// every symbol row would cost seconds for no benefit.
+-				if (addedVectorPath) rmSync(addedVectorPath, { force: true });
++			// Nothing changed and every stored vector reads back: the existing sidecar can be
++			// kept as-is instead of being rewritten chunk by chunk (~220 ms on 43k chunks).
++			// Everything else still runs, because symbols, counts and policy metadata are
++			// derived from the source rather than from the chunks and can change without the
++			// chunk hashes moving.
++			const skipVectorRebuild = addedCount === 0 && idsToRemove.length === 0 && storedVectorsAreComplete();
++			const addedVectorsPath = addedVectorPath;
++			if (skipVectorRebuild && addedVectorPath) {
++				rmSync(addedVectorPath, { force: true });
+ 				addedVectorPath = undefined;
+-				updateKBSourceOptions(this.db, kb.id, serializeAddOptions(parseAddOptions(kb.source_options)));
+-				updateKBStatus(this.db, kb.id, "ready");
+-				const readyMessage = `Ready: no changes (=${unchanged} unchanged)`;
+-				updateIndexingJob(this.db, kb.id, {
+-					phase: "ready",
+-					message: readyMessage,
+-					processed_files: scannedFiles,
+-					processed_chunks: kb.chunk_count,
+-					added_chunks: 0,
+-					removed_chunks: 0,
+-					unchanged_chunks: unchanged,
+-				});
+-				finishIndexingJob(this.db, kb.id, "succeeded", readyMessage);
+-				onProgress?.(readyMessage);
+-				return { added: 0, removed: 0, unchanged };
+ 			}
+ 
+ 			replacementVectorPath = tempVectorPath(vectorPath);
+ 			const vectorWriter = openVectorWriter(replacementVectorPath);
+ 			const oldVectorReader = openVectorReader(vectorPath);
+-			const newVectorReader = openVectorReader(addedVectorPath);
++			const newVectorReader = openVectorReader(addedVectorsPath);
+ 			let finalChunkCount = 0;
+ 			const takeVectorIndex = (indexesByHash: Map<string, number[]>, hash: string): number | undefined => {
+ 				const indexes = indexesByHash.get(hash);
+@@ -1659,7 +1647,7 @@ export class KnowledgeEngine {
+ 				return repairedVector;
+ 			};
+ 			try {
+-				for (const chunk of iterateChunksByKB(this.db, kb.id)) {
++				for (const chunk of skipVectorRebuild ? [] : iterateChunksByKB(this.db, kb.id)) {
+ 					if (signal?.aborted) throw new Error("Cancelled");
+ 					if (idsToRemoveSet.has(chunk.id)) continue;
+ 					const oldVectorIndex = takeVectorIndex(oldVectorIndexByHash, chunk.content_hash);
+@@ -1693,8 +1681,18 @@ export class KnowledgeEngine {
+ 				newVectorReader?.close();
+ 				vectorWriter.close();
+ 			}
+-			renameSync(replacementVectorPath, vectorPath);
+-			replacementVectorPath = undefined;
++			if (skipVectorRebuild) {
++				// Discard the empty replacement file: the stored sidecar is already correct, and
++				// renaming a fresh writer over it would replace real vectors with nothing. Keep the
++				// stored embedding metadata too, so the signature survives.
++				rmSync(replacementVectorPath, { force: true });
++				replacementVectorPath = undefined;
++				finalChunkCount = existingIndex;
++				finalEmbeddingDimension = kb.embedding_dimension ?? undefined;
++			} else {
++				renameSync(replacementVectorPath, vectorPath);
++				replacementVectorPath = undefined;
++			}
+ 			if (addedVectorPath) rmSync(addedVectorPath, { force: true });
+ 			addedVectorPath = undefined;
+ 			if (idsToRemove.length > 0) deleteChunksByIds(this.db, idsToRemove);
+@@ -1849,7 +1847,13 @@ export class KnowledgeEngine {
+ 		// paired positionally; using it would attach vectors to the wrong chunks and
+ 		// return confidently wrong results. Skip that KB's vector half and say so.
+ 		const warnVectorMismatch = (kb: KnowledgeBase, found: VectorFileSearchResult): boolean => {
+-			if (found.chunkCount === found.vectorCount) return true;
++			if (!found.shortRead && found.chunkCount === found.vectorCount) return true;
++			if (found.shortRead && found.chunkCount === found.vectorCount) {
++				warnings.push(
++					`"${kb.name}" has a truncated vector file (a promised vector could not be read); vector search skipped for this KB. Run knowledge_update to rebuild it.`,
++				);
++				return false;
++			}
+ 			warnings.push(
+ 				`"${kb.name}" has ${found.chunkCount} chunks but ${found.vectorCount} stored vectors; vector search skipped for this KB. Run knowledge_update to rebuild it.`,
+ 			);
+@@ -1912,8 +1916,14 @@ export class KnowledgeEngine {
+ 						candidateLimit,
+ 						signal,
+ 					);
+-					vecResults = warnVectorMismatch(kb, vectorResults) ? vectorResults.results : [];
+-					for (const [chunkId, vector] of vectorResults.vectorsByChunkId) vectorsByChunkId.set(chunkId, vector);
++					const vectorsTrustworthy = warnVectorMismatch(kb, vectorResults);
++					vecResults = vectorsTrustworthy ? vectorResults.results : [];
++					// Pairing is positional: on a mismatch these vectors do not belong to the
++					// chunks we would name them after, so they must not reach redundancy scoring
++					// either, or the damage would be a silent reorder instead of a warning.
++					if (vectorsTrustworthy) {
++						for (const [chunkId, vector] of vectorResults.vectorsByChunkId) vectorsByChunkId.set(chunkId, vector);
++					}
+ 				} else {
+ 					warnings.push(embeddingMismatchWarning(kb));
+ 				}
+diff --git a/src/indexer/chunker.ts b/src/indexer/chunker.ts
+index b2cd081..df26102 100644
+--- a/src/indexer/chunker.ts
++++ b/src/indexer/chunker.ts
+@@ -593,19 +593,8 @@ export function chunkMarkdown(content: string, filePath: string, fileType = "mar
+ 				continue;
+ 			}
+ 			const next = [...buffer, para];
+-			if (
+-				estimateTokens(
+-					next
+-						.map((item) => item.text)
+-						.join("\n\n"),
+-				) > MARKDOWN_TARGET_TOKENS &&
+-				buffer.length > 0
+-			) {
+-				pushMarkdownChunk(
+-					buffer.map((item) => item.text).join("\n\n"),
+-					buffer[0].start,
+-					buffer[buffer.length - 1].end,
+-				);
++			if (estimateTokens(next.map((item) => item.text).join("\n\n")) > MARKDOWN_TARGET_TOKENS && buffer.length > 0) {
++				pushMarkdownChunk(buffer.map((item) => item.text).join("\n\n"), buffer[0].start, buffer[buffer.length - 1].end);
+ 				buffer = [para];
+ 				continue;
+ 			}
+@@ -613,11 +602,7 @@ export function chunkMarkdown(content: string, filePath: string, fileType = "mar
+ 		}
+ 
+ 		if (buffer.length > 0) {
+-			pushMarkdownChunk(
+-				buffer.map((item) => item.text).join("\n\n"),
+-				buffer[0].start,
+-				buffer[buffer.length - 1].end,
+-			);
++			pushMarkdownChunk(buffer.map((item) => item.text).join("\n\n"), buffer[0].start, buffer[buffer.length - 1].end);
+ 		}
+ 	}
+ 
+@@ -628,7 +613,6 @@ export function chunkMarkdown(content: string, filePath: string, fileType = "mar
+ 		if (headingMatch && sectionLines.length > 0) {
+ 			flush(i);
+ 			sectionLines = [];
+-			startLine = i + 1;
+ 		}
+ 
+ 		if (headingMatch) {
+@@ -636,6 +620,9 @@ export function chunkMarkdown(content: string, filePath: string, fileType = "mar
+ 			headingStack.splice(level - 1);
+ 			headingStack[level - 1] = line;
+ 			currentHeading = line;
++			// Every heading owns the lines after it, including a section with no body: without
++			// this, consecutive headings kept the previous heading's line as their own.
++			startLine = i + 1;
+ 		} else {
+ 			sectionLines.push(line);
+ 		}
+diff --git a/src/search/vector.ts b/src/search/vector.ts
+index 4cdeb90..7001fb8 100644
+--- a/src/search/vector.ts
++++ b/src/search/vector.ts
+@@ -12,6 +12,8 @@ export interface VectorFileSearchResult {
+ 	vectorCount: number;
+ 	/** Chunk ids offered by the caller; a mismatch with vectorCount means the two are out of sync. */
+ 	chunkCount: number;
++	/** A vector the header promised could not be read back: the sidecar is truncated. */
++	shortRead: boolean;
+ }
+ 
+ type ChunkIdSource = Iterable<string | { id: string }>;
+@@ -63,20 +65,26 @@ export function searchVectorFile(
+ 	const ids = Array.isArray(chunkIds) ? chunkIds : [...chunkIds];
+ 	const chunkCount = ids.length;
+ 	const reader = openVectorReader(vectorPath);
+-	if (!reader) return { results: [], vectorsByChunkId: new Map(), vectorCount: 0, chunkCount };
++	if (!reader) return { results: [], vectorsByChunkId: new Map(), vectorCount: 0, chunkCount, shortRead: true };
+ 	try {
+ 		if (reader.dim !== queryVec.length) {
+-			return { results: [], vectorsByChunkId: new Map(), vectorCount: reader.count, chunkCount };
++			return { results: [], vectorsByChunkId: new Map(), vectorCount: reader.count, chunkCount, shortRead: true };
+ 		}
+ 		const scratch = new Float32Array(reader.dim);
+ 		const top: Array<VectorResult & { vector: Float32Array }> = [];
++		let shortRead = false;
+ 		let i = 0;
+ 		for (const chunkIdRef of ids) {
+ 			if (signal?.aborted) throw new Error("Cancelled");
+ 			if (i >= reader.count) break;
+ 			const vectorIndex = i;
+ 			i++;
+-			if (!reader.readInto(vectorIndex, scratch)) continue;
++			if (!reader.readInto(vectorIndex, scratch)) {
++				// The header promised this vector; failing to read it means the file was
++				// truncated, and every later index is no longer trustworthy either.
++				shortRead = true;
++				continue;
++			}
+ 			const chunkId = typeof chunkIdRef === "string" ? chunkIdRef : chunkIdRef.id;
+ 			keepTopK(top, { chunkId, score: cosine(queryVec, scratch) }, scratch, limit);
+ 		}
+@@ -87,6 +95,7 @@ export function searchVectorFile(
+ 			vectorsByChunkId,
+ 			vectorCount: reader.count,
+ 			chunkCount,
++			shortRead,
+ 		};
+ 	} finally {
+ 		reader.close();
+diff --git a/src/storage/kb-lock.ts b/src/storage/kb-lock.ts
+index 6c12a9b..57fe3f2 100644
+--- a/src/storage/kb-lock.ts
++++ b/src/storage/kb-lock.ts
+@@ -7,20 +7,32 @@
+  * rows, the vector sidecar and the FTS triggers, which is the one way to reach a
+  * state that needs a full rebuild to repair.
+  *
+- * The lock is a `wx`-created file holding `{ pid, at }`. It is treated as stale when
+- * the recorded process is gone or the record is older than `STALE_AFTER_MS`, so a
+- * killed run cannot wedge a KB forever.
++ * Publishing uses `link()` from a fully written staging file, so a reader never sees
++ * a half-written lock. Reclaiming is limited to locks whose recorded process is gone,
++ * or to unreadable leftovers that have not been touched for a grace period; a fresh
++ * lock is never judged stale just because it is momentarily empty.
++ *
++ * Release is ownership-checked: the file is removed only when the token still matches,
++ * so an owner whose lock was reclaimed cannot delete the lock of whoever took over.
+  */
+ 
+-import { mkdirSync, readFileSync, unlinkSync, writeFileSync } from "node:fs";
++import { randomUUID } from "node:crypto";
++import { linkSync, mkdirSync, readFileSync, statSync, unlinkSync, writeFileSync } from "node:fs";
+ import { join } from "node:path";
+ 
+ const STALE_AFTER_MS = 6 * 60 * 60 * 1_000;
++const UNREADABLE_GRACE_MS = 30 * 1_000;
+ 
+ export interface KnowledgeLock {
+ 	release(): void;
+ }
+ 
++interface LockRecord {
++	pid: number;
++	token: string;
++	at: number;
++}
++
+ function processIsAlive(pid: number): boolean {
+ 	if (!Number.isInteger(pid) || pid <= 0) return false;
+ 	try {
+@@ -32,53 +44,73 @@ function processIsAlive(pid: number): boolean {
+ 	}
+ }
+ 
+-function readLockRecord(path: string): { pid: number; at: number } | undefined {
++function readLockRecord(path: string): LockRecord | undefined {
+ 	try {
+ 		const parsed: unknown = JSON.parse(readFileSync(path, "utf8"));
+ 		if (typeof parsed !== "object" || parsed === null) return undefined;
+-		const pid = (parsed as { pid?: unknown }).pid;
+-		const at = (parsed as { at?: unknown }).at;
+-		if (typeof pid !== "number" || typeof at !== "number") return undefined;
+-		return { pid, at };
++		const { pid, token, at } = parsed as { pid?: unknown; token?: unknown; at?: unknown };
++		if (typeof pid !== "number" || typeof token !== "string" || typeof at !== "number") return undefined;
++		return { pid, token, at };
+ 	} catch {
+ 		return undefined;
+ 	}
+ }
+ 
++function isReclaimable(path: string, record: LockRecord | undefined): boolean {
++	if (!record) {
++		// Unreadable: a lock being published right now, or a corrupt leftover. Only the
++		// latter is reclaimable, and only once it has been quiet for a while.
++		try {
++			return Date.now() - statSync(path).mtimeMs > UNREADABLE_GRACE_MS;
++		} catch {
++			return false;
++		}
++	}
++	if (Date.now() - record.at > STALE_AFTER_MS) return true;
++	return !processIsAlive(record.pid);
++}
++
+ /**
+  * Returns a lock handle, or `undefined` when another live process holds it.
+- * Throws only on unexpected filesystem errors.
+  */
+ export function acquireKnowledgeLock(knowledgeDir: string, kbId: string, label: string): KnowledgeLock | undefined {
+ 	const dir = join(knowledgeDir, "locks");
+ 	mkdirSync(dir, { recursive: true });
+ 	const path = join(dir, `${kbId}.lock`);
+-	for (let attempt = 0; attempt < 2; attempt++) {
++	const token = randomUUID();
++	const payload = JSON.stringify({ pid: process.pid, token, at: Date.now(), label });
++
++	for (let attempt = 0; attempt < 3; attempt++) {
++		const staging = `${path}.${token}.tmp`;
++		writeFileSync(staging, payload);
+ 		try {
+-			writeFileSync(path, JSON.stringify({ pid: process.pid, at: Date.now(), label }), { flag: "wx" });
+-			let released = false;
+-			return {
+-				release() {
+-					if (released) return;
+-					released = true;
+-					try {
+-						unlinkSync(path);
+-					} catch {
+-						/* already gone */
+-					}
+-				},
+-			};
++			linkSync(staging, path);
+ 		} catch (error) {
++			unlinkSync(staging);
+ 			if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
+-			const record = readLockRecord(path);
+-			const stale = !record || !processIsAlive(record.pid) || Date.now() - record.at > STALE_AFTER_MS;
+-			if (!stale) return undefined;
++			if (!isReclaimable(path, readLockRecord(path))) return undefined;
+ 			try {
+ 				unlinkSync(path);
+ 			} catch {
+-				/* raced with another reclaimer */
++				/* raced with another reclaimer; retry */
+ 			}
++			continue;
+ 		}
++		unlinkSync(staging);
++		let released = false;
++		return {
++			release() {
++				if (released) return;
++				released = true;
++				const current = readLockRecord(path);
++				if (!current || current.token !== token) return;
++				try {
++					unlinkSync(path);
++				} catch {
++					/* already gone */
++				}
++			},
++		};
+ 	}
+ 	return undefined;
+ }
+diff --git a/src/storage/sqlite.ts b/src/storage/sqlite.ts
+index e87e5b6..5b4ab3e 100644
+--- a/src/storage/sqlite.ts
++++ b/src/storage/sqlite.ts
+@@ -77,6 +77,13 @@ export interface KnowledgeSymbol {
+ 
+ export type KnowledgeSymbolInsert = Omit<KnowledgeSymbol, "id" | "kb_id" | "indexed_at" | "normalized_name">;
+ 
++// Indexes that are safe to (re)create on every open. Adaptive search expands each
++// result by its file's neighbouring chunks; without idx_chunks_kb_file that lookup
++// scans every chunk row of the KB.
++const POST_MIGRATION_INDEXES = `
++CREATE INDEX IF NOT EXISTS idx_chunks_kb_file ON chunks(kb_id, file_path, start_line);
++`;
++
+ const SCHEMA_VERSION = 5;
+ const ITERATION_BATCH_SIZE = 500;
+ 
+@@ -139,9 +146,6 @@ CREATE TABLE IF NOT EXISTS indexing_jobs (
+ 
+ CREATE INDEX IF NOT EXISTS idx_chunks_kb_id ON chunks(kb_id);
+ CREATE INDEX IF NOT EXISTS idx_chunks_content_hash ON chunks(content_hash);
+--- Adaptive search expands each result by its file's neighbouring chunks; without this
+--- index that lookup scans every chunk row in the KB (~70 ms per result on a 43k-chunk KB).
+-CREATE INDEX IF NOT EXISTS idx_chunks_kb_file ON chunks(kb_id, file_path, start_line);
+ 
+ CREATE TABLE IF NOT EXISTS symbols (
+   id TEXT PRIMARY KEY,
+@@ -342,6 +346,10 @@ export function openDatabase(knowledgeDir?: string): Database.Database {
+ 		}
+ 	}
+ 
++	// Idempotent and cheap when the index already exists. Applied to every open so
++	// existing databases pick up indexes added after their schema version was stamped.
++	db.exec(POST_MIGRATION_INDEXES);
++
+ 	return db;
+ }
+ 
+diff --git a/test/unit/perf-guards.test.ts b/test/unit/perf-guards.test.ts
+new file mode 100644
+index 0000000..f8767e4
+--- /dev/null
++++ b/test/unit/perf-guards.test.ts
+@@ -0,0 +1,110 @@
++import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
++import { tmpdir } from "node:os";
++import { join } from "node:path";
++import { afterEach, beforeEach, describe, expect, it } from "vitest";
++import { KnowledgeEngine } from "../../src/engine.ts";
++import { chunkMarkdown } from "../../src/indexer/chunker.ts";
++
++describe("chunkMarkdown source spans", () => {
++	// Paragraphs stay well under MAX_TEXT_CHUNK_CHARS so chunking goes through the normal
++	// paragraph path instead of the oversized-paragraph slicing heuristic.
++	const body = (n: number): string =>
++		`# Doc ${n}\n\n` +
++		Array.from({ length: 8 }, (_, block) =>
++			Array.from(
++				{ length: 5 },
++				(_, line) => `block ${block} line ${line}: shared paragraph body text for span tests.`,
++			).join("\n"),
++		).join("\n\n");
++
++	it("gives every chunk of a multi-chunk section its own line range", () => {
++		const chunks = chunkMarkdown(body(1), "/src/a.md");
++		expect(chunks.length).toBeGreaterThan(1);
++		const spans = chunks.map((chunk) => [chunk.start_line, chunk.end_line]);
++		for (let i = 1; i < spans.length; i++) {
++			expect(spans[i][0]).toBeGreaterThan(spans[i - 1][0]);
++			expect(spans[i][0]).toBeGreaterThan(spans[i - 1][1]);
++		}
++	});
++
++	it("keeps chunk text identical when only a later line is appended", () => {
++		const before = chunkMarkdown(body(2), "/src/b.md");
++		const after = chunkMarkdown(`${body(2)}\n\nappended paragraph that changes only the tail.`, "/src/b.md");
++		expect(after[0].content).toBe(before[0].content);
++	});
++
++	it("attributes a section to the heading that owns it", () => {
++		const chunks = chunkMarkdown("# A\n# B\n\nbody text that is long enough to be chunked and measured.", "/src/c.md");
++		expect(chunks).toHaveLength(1);
++		expect(chunks[0].start_line).toBe(2);
++	});
++});
++
++describe("update guards", () => {
++	const dir = "/tmp/pk-perf-guards";
++	let engine: KnowledgeEngine;
++
++	beforeEach(async () => {
++		rmSync(dir, { recursive: true, force: true });
++		engine = new KnowledgeEngine();
++		await engine.initialize(dir);
++	});
++
++	afterEach(async () => {
++		await engine.dispose();
++		rmSync(dir, { recursive: true, force: true });
++	});
++
++	it("leaves the vector sidecar untouched when nothing changed", async () => {
++		const source = mkdtempSync(join(tmpdir(), "pk-perf-src-"));
++		try {
++			writeFileSync(join(source, "a.md"), "# A\n\nstable content about incremental indexing behaviour.");
++			const created = await engine.add(source, "Stable KB");
++			const vectorPath = join(dir, "vectors", `${created.kb.id}.bin`);
++			const before = readFileSync(vectorPath);
++			const result = await engine.update("Stable KB");
++			expect(result).toEqual({ added: 0, removed: 0, unchanged: 1 });
++			expect(readFileSync(vectorPath).equals(before)).toBe(true);
++		} finally {
++			rmSync(source, { recursive: true, force: true });
++		}
++	});
++
++	it("never pairs vectors positionally once the sidecar and the rows disagree", async () => {
++		const source = mkdtempSync(join(tmpdir(), "pk-perf-src-"));
++		try {
++			for (const name of ["a.md", "b.md"]) {
++				writeFileSync(join(source, name), `# ${name}\n\ncontent that is distinctive enough for a vector.`);
++			}
++			const created = await engine.add(source, "Mismatch KB");
++			const vectorPath = join(dir, "vectors", `${created.kb.id}.bin`);
++			const raw = readFileSync(vectorPath);
++			// Drop one stored vector but keep the header count: the sidecar can no longer be
++			// mapped onto the chunk rows by position.
++			const header = raw.subarray(0, 8);
++			const bodyBytes = raw.subarray(8);
++			const truncated = Buffer.concat([header, bodyBytes.subarray(0, bodyBytes.length - 384 * 4)]);
++			writeFileSync(vectorPath, truncated);
++			const response = await engine.search("distinctive content", { mode: "semantic", limit: 5, kb_id: "Mismatch KB" });
++			expect((response.warnings ?? []).join(" ")).toMatch(/stored vectors|truncated vector/);
++		} finally {
++			rmSync(source, { recursive: true, force: true });
++		}
++	});
++
++	it("rejects a second writer that holds the cross-process lock", async () => {
++		const { acquireKnowledgeLock } = await import("../../src/storage/kb-lock.ts");
++		const source = mkdtempSync(join(tmpdir(), "pk-perf-src-"));
++		try {
++			writeFileSync(join(source, "a.md"), "# A\n\nlocked content about single writer enforcement.");
++			const created = await engine.add(source, "Locked KB");
++			const lock = acquireKnowledgeLock(dir, created.kb.id, "test");
++			expect(lock).toBeDefined();
++			await expect(engine.update("Locked KB")).rejects.toThrow(/another process/);
++			lock?.release();
++			await expect(engine.update("Locked KB")).resolves.toEqual({ added: 0, removed: 0, unchanged: 1 });
++		} finally {
++			rmSync(source, { recursive: true, force: true });
++		}
++	});
++});
+-- 
+2.56.0
+

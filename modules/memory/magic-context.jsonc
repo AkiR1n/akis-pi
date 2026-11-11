@@ -1,0 +1,42 @@
+{
+  "enabled": true,
+  "execute_threshold_tokens": {
+    "default": 400000
+  },
+  "compaction": {
+    "enabled": true
+  },
+  "historian": {
+    "disable": false,
+    "pi": {
+      "model": "{{PROVIDER}}/{{MODEL_HISTORIAN}}",
+      "thinking_level": "high"
+    }
+  },
+  "dreamer": {
+    "disable": true,
+    "inject_docs": false,
+    "tasks": {
+      "review-user-memories": {
+        "schedule": ""
+      }
+    }
+  },
+  "embedding": {
+    "provider": "local",
+    "model": "Xenova/multilingual-e5-small",
+    "local_dtype": "q8"
+  },
+  "memory": {
+    "enabled": true,
+    "injection_budget_tokens": 3000,
+    "auto_promote": false,
+    "auto_search": {
+      "enabled": false
+    },
+    "git_commit_indexing": {
+      "enabled": false
+    }
+  },
+  "historian_timeout_ms": 600000
+}

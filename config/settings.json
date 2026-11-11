@@ -1,0 +1,137 @@
+{
+  "defaultProvider": "{{PROVIDER}}",
+  "defaultModel": "{{MODEL}}",
+  "defaultThinkingLevel": "high",
+  "defaultTools": [
+    "+codemode",
+    "+grep",
+    "+find"
+  ],
+  "theme": "dark",
+  "defaultProjectTrust": "always",
+  "doubleEscapeAction": "tree",
+  "treeFilterMode": "no-tools",
+  "showCacheMissNotices": true,
+  "enableInstallTelemetry": false,
+  "compaction": {
+    "enabled": true,
+    "reserveTokens": 24576,
+    "keepRecentTokens": 32000
+  },
+  "branchSummary": {
+    "reserveTokens": 16384,
+    "skipPrompt": false
+  },
+  "retry": {
+    "enabled": true,
+    "maxRetries": 3,
+    "baseDelayMs": 2000,
+    "provider": {
+      "timeoutMs": 3600000,
+      "maxRetries": 0,
+      "maxRetryDelayMs": 60000
+    }
+  },
+  "steeringMode": "one-at-a-time",
+  "followUpMode": "one-at-a-time",
+  "httpIdleTimeoutMs": 600000,
+  "terminal": {
+    "showImages": true,
+    "imageWidthCells": 60,
+    "showTerminalProgress": true
+  },
+  "images": {
+    "autoResize": true,
+    "blockImages": false
+  },
+  "npmCommand": [
+    "/usr/bin/env",
+    "NPM_CONFIG_CACHE={{HOME}}/.cache/pi-npm",
+    "mise",
+    "exec",
+    "node@24.21.0",
+    "--",
+    "npm"
+  ],
+  "enabledModels": [
+    "{{PROVIDER}}/{{MODEL}}",
+    "{{PROVIDER}}/{{MODEL_EXEC}}",
+    "{{PROVIDER}}/{{MODEL_REVIEW}}",
+    "{{PROVIDER}}/{{MODEL_PLAN}}"
+  ],
+  "packages": [
+    "npm:pi-web-access@0.47.0",
+    "npm:pi-agent-browser-native@0.9.18",
+    {
+      "source": "npm:pi-atelier@0.18.0",
+      "extensions": [
+        "+extensions/index.ts"
+      ]
+    },
+    "npm:pi-ask-user@0.17.2",
+    "npm:pi-powerpoint@1.0.0",
+    "npm:pi-subagents@0.88.0",
+    {
+      "source": "npm:pi-compact-tools@0.17.0",
+      "extensions": [
+        "+extensions/compact-tools.ts"
+      ],
+      "themes": []
+    },
+    "npm:pi-mobile@0.4.0",
+    "npm:@injaneity/pi-computer-use@0.5.1",
+    "{{HOME}}/.pi/vendor/pi-knowledge",
+    "npm:pi-away@0.1.4",
+    "npm:pi-prompt-suggestion@0.1.2",
+    "npm:@cortexkit/pi-magic-context@0.49.50"
+  ],
+  "hideThinkingBlock": false,
+  "skills": [
+    "-skills/microsoft-foundry/SKILL.md",
+    "-skills/abstract-automation/SKILL.md",
+    "-skills/rex/SKILL.md"
+  ],
+  "tuiMode": "fullscreen",
+  "subagents": {
+    "disableBuiltins": false,
+    "defaultExtensions": [
+      "npm:pi-web-access"
+    ],
+    "agentOverrides": {
+      "oracle": {
+        "model": "{{MODEL_PLAN}}",
+        "thinking": "high"
+      },
+      "reviewer": {
+        "model": "{{MODEL_REVIEW}}",
+        "thinking": "high",
+        "inheritGlobalContext": true
+      },
+      "evidence-auditor": {
+        "model": "{{MODEL_REVIEW}}",
+        "thinking": "high"
+      },
+      "scout": {
+        "model": "{{MODEL_EXEC}}",
+        "thinking": "high"
+      },
+      "worker": {
+        "model": "{{MODEL_EXEC}}",
+        "thinking": "high"
+      },
+      "researcher": {
+        "model": "{{MODEL_EXEC}}",
+        "thinking": "high"
+      }
+    },
+    "watchdog": {
+      "enabled": false,
+      "children": {
+        "enabled": false
+      }
+    }
+  },
+  "codemode": {
+    "mode": "only"
+  }
+}

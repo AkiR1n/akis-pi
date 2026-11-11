@@ -1,0 +1,59 @@
+{
+  "provider": "auto",
+  "workflow": "none",
+  "allowBrowserCookies": true,
+  "webSearch": {
+    "enabled": true
+  },
+  "fetchRouting": {
+    "allowRemoteHostedProviders": true
+  },
+  "bochaApiKey": "{{BOCHA_KEY_REF}}",
+  "braveApiKey": "{{BRAVE_KEY_REF}}",
+  "searchRouting": {
+    "providers": [
+      "exa",
+      "brave",
+      "bocha",
+      "gemini",
+      "degoog"
+    ],
+    "fallbackOn": [
+      "empty",
+      "domain-miss",
+      "transient",
+      "quota",
+      "network",
+      "invalid-response"
+    ]
+  },
+  "fetchContent": {
+    "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/156.0.0.0 Safari/537.36"
+  },
+  "pdf": {
+    "provider": "auto",
+    "endpointUrl": "http://127.0.0.1:8791/parse"
+  },
+  "githubClone": {
+    "enabled": true,
+    "maxRepoSizeMB": 350,
+    "cloneTimeoutSeconds": 45,
+    "clonePath": "/tmp/pi-github-repos"
+  },
+  "youtube": {
+    "enabled": true
+  },
+  "video": {
+    "enabled": false,
+    "maxSizeMB": 50
+  },
+  "ssrf": {
+    "allowRanges": [
+      "198.19.0.0/16"
+    ]
+  },
+  "shortcuts": {
+    "curate": "ctrl+shift+s",
+    "activity": "ctrl+shift+w"
+  }
+}

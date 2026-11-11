@@ -1,0 +1,38 @@
+{
+  "$schema": "https://raw.githubusercontent.com/nedleeds/pi-compact-tools/main/schemas/compact-tools.schema.json",
+  "style": "compact",
+  "mode": "normal",
+  "tools": [
+    "read",
+    "write",
+    "edit",
+    "bash",
+    "powershell",
+    "grep",
+    "find",
+    "ls"
+  ],
+  "previewLines": 8,
+  "auto_compact": {
+    "read": true,
+    "write": true,
+    "edit": false,
+    "bash": true,
+    "powershell": true,
+    "grep": true,
+    "find": true,
+    "ls": true
+  },
+  "custom_tools": {
+    "enabled": true,
+    "auto_compact": true,
+    "exclude": [
+      "subagent",
+      "subagents_enable",
+      "bg_wait",
+      "ask_user",
+      "run_agent",
+      "run_workflow"
+    ]
+  }
+}

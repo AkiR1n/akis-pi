@@ -1,0 +1,10 @@
+# backups created by scripts/render.mjs live under <agent-dir>/backups, never here
+node_modules/
+
+# local noise
+.DS_Store
+*.log
+
+# never commit a rendered config that still has values filled in, or any credential file
+.env
+*.local.json

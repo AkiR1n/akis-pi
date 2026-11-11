@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "magpie-image": {
+      "command": "/Applications/magpie.app/Contents/MacOS/magpie",
+      "args": [
+        "mcp",
+        "image"
+      ]
+    },
+    "magpie": {
+      "url": "http://127.0.0.1:3425/mcp/magpie/hub/pi",
+      "description": "Tools of magpie-web-search (Search the web with the search set in Magpie (Settings → Models → Web search))."
+    }
+  }
+}
