@@ -10,7 +10,6 @@ Linux、WSL2 与原生 Windows 因此没有 Herdr/Rex pane、tmux inspector、la
 | `ego-gc.ts` | 仅在后台检测到 `ego lite` 浏览器进程正在运行时介入 | 异常中断或子代理遗留的浏览器窗口无法自动回收（每个窗口约占用 0.4–0.8 GB 内存） |
 | Keychain 凭据规范 | 搜索及外部插件读取 API Key 时 | 只能将凭据置于纯环境变量中 |
 
----
 
 ## herdr-agent-state.ts
 
@@ -20,7 +19,6 @@ Linux、WSL2 与原生 Windows 因此没有 Herdr/Rex pane、tmux inspector、la
 
 安装路径：`~/.pi/agent/extensions/herdr-agent-state.ts`（由 Pi 自动加载）。
 
----
 
 ## ego-gc.ts
 
@@ -38,7 +36,6 @@ Linux、WSL2 与原生 Windows 因此没有 Herdr/Rex pane、tmux inspector、la
 
 环境依赖：依赖系统路径中的 `~/.local/bin/ego-gc` 脚本与 `~/.pi/agent/skills/ego-search/scripts/gc.js`。未安装 ego 时扩展会自动跳过，也可直接删除。
 
----
 
 ## ego-browser / ego-search：第三方技能引用说明
 
@@ -48,7 +45,6 @@ Linux、WSL2 与原生 Windows 因此没有 Herdr/Rex pane、tmux inspector、la
 - 本仓库职责：只提供 `ego-gc.ts` 负责资源回收，不分发技能源码。
 - 路由兼容：`AGENTS.md` 中的浏览器路由基于环境能力探测。未安装时自动跳过，不影响常规搜索。
 
----
 
 ## Keychain 凭据规范（搜索类插件调用 Key）
 
@@ -66,7 +62,6 @@ export BRAVE_API_KEY=...
 
 钥匙串的服务名称由用户自行定义，不要在仓库提交、笔记或配置中粘贴真实密钥。渲染脚本 `render.mjs` 的 `--set BRAVE_KEY_REF=...` 接受 `$VAR` / `${VAR}` 或 `!command` 动态引用，直接输入明文会被拦截拒绝。
 
----
 
 ## agent-browser 与 mise 版本别名一致性
 

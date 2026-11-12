@@ -10,7 +10,6 @@
 
 三者可独立运行，组合成「常驻事实 + 按需知识库 + 自动会话归档」的分层记忆。设计依据见 [docs/decisions.md](../../docs/decisions.md)。
 
----
 
 ## Magic Context
 
@@ -53,7 +52,6 @@ node ../../scripts/doctor.mjs --home "$HOME" --modules core,memory \
 
 **升级注意**：升级前查阅更新说明中的 database migration 章节并备份数据，见 [docs/upgrade.md](../../docs/upgrade.md)。
 
----
 
 ## resident-memory.ts
 
@@ -77,7 +75,6 @@ node ../../scripts/doctor.mjs --home "$HOME" --modules core,memory \
 
 安装方式：将文件放入 `~/.pi/agent/extensions/resident-memory.ts` 即可自动加载，无需在 `settings.json` 中额外注册。
 
----
 
 ## RESIDENT.template.md
 
@@ -92,7 +89,6 @@ if [ -e "$dst" ]; then echo "exists: $dst; 停止，不覆盖"; else cp -n "$HOM
 
 `RESIDENT.md` 是用户私有文件，部署 AI 不要擅自生成或修改其内容。
 
----
 
 ## pi-knowledge + 补丁
 

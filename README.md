@@ -1,15 +1,18 @@
 # akis-pi
 
-一份可以直接交给 AI 部署的 Pi coding agent 配置包：将 `config/` 和所选 `modules/` 渲染到目标机器，再通过 `scripts/doctor.mjs` 做检查。
-这不是插件市场，也不是 dotfiles 备份——这里只收录作者日常在用、有明确设计取舍和实测依据的配置。
+一份可以直接交给 AI 部署的 Pi coding agent 配置包：把 `config/` 和所选 `modules/` 渲染到目标机器，再用 `scripts/doctor.mjs` 逐项检查。
+它不是插件市场，也不是 dotfiles 备份，只收录作者日常在用、写明了取舍与实测依据的那部分配置。
 
 作者：Aki。问题与建议请直接提交 Issue。
 
-## 是什么
+目录：[这是什么](#这是什么装完得到什么) · [适合谁](#适合谁--不适合谁) · [平台支持](#平台支持) · [前置条件](#前置条件) · [快速开始](#快速开始) · [回滚](#回滚) · [模块](#模块) · [模型分工](#模型分工三个角色不是固定-id) · [设计取舍](#设计取舍摘要) · [限制与未验证](#限制与未验证) · [升级与维护](#升级与维护)
 
-Pi 是个轻量的 coding agent harness。工具插件装多了之后，系统提示与工具 schema 容易膨胀，导致首轮延迟高、浪费上下文。
+## 这是什么，装完得到什么
 
-akis-pi 做了几点调整：
+Pi 是个轻量的 coding agent harness。工具插件装多了之后，系统提示与工具 schema 会一起膨胀，首轮变慢，上下文被无用信息占掉。
+
+akis-pi 针对这四点做了调整，装完得到的是：
+
 1. **单一工具通道（codemode only）**：Pi 1.5.2 + pi-subagents 0.88.0 下向模型暴露 6 个工具（`ask_user`、`codemode`、`contact_supervisor`、`subagent`、`subagent_supervisor`、`tool_search`），其余 50 多个扩展工具收进 QuickJS 沙箱，按需发现并用 `await tools.<name>()` 调用。首轮提示实测降低 **-45%**（探针从 25,522 降至 13,954 token）。
 2. **多角色分工**：主会话做规划，把测试、脚手架、代码审查分发给不同定位的模型：便宜模型执行，异构模型复核，强模型把控规划。
 3. **分层记忆**：每轮只注入几百到两千字符的常驻事实（`RESIDENT.md`）；项目历史与笔记按需检索；长会话由 Magic Context 按固定阈值与超时归档。
@@ -26,7 +29,7 @@ akis-pi 做了几点调整：
 **不适合**：
 - 想一键安装、不愿配置模型与 API 凭据。
 - 习惯工具 schema 全常驻、不习惯写脚本调用。
-- 需要本包对所有平台、桌面插件和原生依赖提供已完成实机验收的保证。当前实测记录仅为 macOS arm64。
+- 需要开发者对每个平台、桌面插件和原生依赖都给出验收保证。目前的实机记录只有 macOS arm64 与 WSL2 上的 core+memory。
 
 ## 平台支持
 
@@ -48,6 +51,16 @@ Windows 用户默认选 **WSL2 的 core+memory**：源码、`node_modules`、Mag
 - memory 的 onnxruntime-node 需要 **Microsoft Visual C++ 2015-2022 x64 可再发行组件**；缺 DLL 导致的 Win32 126 不能用 npm approve/rebuild 修复。安装与检查见 [DEPLOY](DEPLOY.md)。doctor 会把 onnx 加载失败记为 FAIL。
 - `tree-sitter-qmljs` 没有预编译产物。memory 靠第 4 份补丁把它降级为可选依赖：安装或加载失败时 QML 文件退回文本分块并提示一次，其它语言不受影响。
 - Herdr/Rex pane、tmux inspector、launchd、Keychain、ego 窗口回收在 Windows 上不提供。
+
+## 前置条件
+
+| 项 | 要求 |
+| --- | --- |
+| Node | 24.22.3（不要用 24.19.0–24.21.x，原因见 [docs/upgrade.md](docs/upgrade.md) 的 Node 一节） |
+| Git | POSIX 自带即可；原生 Windows 需要 Git for Windows，Pi 的 shell 与凭据命令都走它 |
+| Pi | 1.5.2（其他版本可能改过扩展接口，见 [docs/upgrade.md](docs/upgrade.md)） |
+| Python | 只有 pdf 模块需要，3.9 以上，用于本地 PDF→Markdown 端点 |
+| 模型 | 任意 OpenAI 兼容供应商；至少准备一个主力模型和一个便宜的批量执行模型 |
 
 ## 快速开始
 
@@ -93,6 +106,12 @@ node scripts/doctor.mjs --home "$HOME" --modules core
 
 回归测试：`node --test scripts/test/*.test.mjs`。无真实 key 验收见 DEPLOY 文末的回环 stub。
 
+## 回滚
+
+渲染不删除文件，改过的目标在写入前都备份到 `<agent-dir>/backups/akis-pi-<时间戳>/targets/`，路径映射与写入时一致。要退回去，把对应文件复制回原位。
+
+`<agent-dir>/.akis-pi-render.json` 记录已完成模块，删掉对应条目就能重跑同一模块。组件升级与数据库回滚是另一套流程，见 [docs/upgrade.md](docs/upgrade.md)。
+
 ## 模块
 
 | 模块 | 内容 | 安装建议 | 详细说明 |
@@ -132,7 +151,7 @@ node scripts/doctor.mjs --home "$HOME" --modules core
 
 ## 限制与未验证
 
-- **系统支持**：实测平台仅 darwin-arm64，平台分级见上文「平台支持」。原生依赖、浏览器会话恢复与桌面 helper 必须分别验证，不能把路径单测当实机证据。
+- **系统支持**：实测过的是 macOS arm64 与 WSL2（仅 core+memory），平台分级见上文「平台支持」。原生依赖、浏览器会话恢复与桌面 helper 要分别验证，路径单测不算实机证据。
 - **npm**：默认不写 npmCommand，使用普通 npm；POSIX 上可显式 `render --mise` 或 `--set USE_MISE=true`。agent-browser CLI 属于 core，须单独安装 CLI 与浏览器。
 - **自检工具**：`scripts/doctor.mjs` 只读检查 settings、node_modules 和 manifest；版本偏差报 WARN，Pi/MC 主版本偏差报 FAIL。由于 Pi 1.5.2 的 `pi list` 会自动补装缺包，脚本不调用 `pi list`。
 - **项目信任**：模板默认 `defaultProjectTrust: "always"`（不逐次弹窗）。想每次确认可改为 `ask`。

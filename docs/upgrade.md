@@ -9,7 +9,6 @@ node scripts/doctor.mjs --home "$HOME" --modules core,memory,macos,magpie > "$TM
 cp -p "$HOME/.pi/agent/settings.json" "$HOME/.pi/agent/settings.json.bak-$(date +%Y%m%d)"
 ```
 
----
 
 ## 推荐升级顺序
 
@@ -17,7 +16,6 @@ cp -p "$HOME/.pi/agent/settings.json" "$HOME/.pi/agent/settings.json.bak-$(date 
 
 建议从底层核心向上推进，避免底层不稳时排查上层问题。
 
----
 
 ## 平台差异
 
@@ -38,7 +36,6 @@ memory 升级后先跑 `node scripts/deploy-check.mjs onnx`，再跑 doctor；�
 
 未实测平台（Linux、WSL2、原生 Windows）跑 doctor 会对每个组件多出 platform verification WARN，这是标签，不要解释成故障，也不要为了消掉 WARN 改 manifest。
 
----
 
 ## 1. Pi 本体
 
@@ -68,7 +65,6 @@ node scripts/doctor.mjs --home "$HOME" --modules core
 
 **注意事项**：运行 `pi list` 时若检测到配置声明了缺失插件，会自动触发安装。不要在未确认依赖的流水线中随意调用。
 
----
 
 ## 2. 插件
 
@@ -87,7 +83,6 @@ pi list
 
 **回滚方案**：执行 `pi install npm:<包名>@<旧版本号>`。不要用全局批量更新命令，一次升全部包会导致故障难以归因。
 
----
 
 ## 3. Magic Context
 
@@ -112,7 +107,6 @@ node scripts/doctor.mjs --home "$HOME" --modules core,memory
 
 **回滚方案**：降级装回原版本包，将备份的数据库目录还原回原路径。操作存储目录前先退出 Pi 进程，避免 SQLite WAL 模式并发写入冲突。
 
----
 
 ## 4. pi-knowledge 补丁
 
@@ -131,7 +125,6 @@ npm ci && npm run build
 
 **回滚方案**：切回已验证的提交点：`git checkout 558e8dd && npm ci && npm run build`（验证过的 base 代码可随时复现）。本地知识库数据保存在源码仓库外，不受构建影响；但若新代码改了向量索引存储格式，可能需要重建索引。
 
----
 
 ## 5. 可选外部模块
 
@@ -140,7 +133,6 @@ npm ci && npm run build
 - **pdf-parse 服务**：服务属于独立 pdf 模块。macOS 用 `launchctl kickstart -k gui/"$(id -u)"/com.example.pipdfparse`，Linux/WSL 用 `systemctl --user restart pi-pdf-parse.service`，Windows 在任务计划程序中重启当前用户任务；然后检查回环 /health。具体步骤与旧状态迁移见 [modules/pdf](../modules/pdf/README.md)。
 - **agent-browser**：若通过 mise 安装了新的 Node 24.x 版本，需重新核验全局 CLI 依然链接在当前 Node 解析树中（详见 DEPLOY.md 步骤 10b），避免路径偏移导致工具调用失败。
 
----
 
 ## 6. 暂缓升级的情形
 

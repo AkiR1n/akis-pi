@@ -1,9 +1,9 @@
 ---
 name: pi-workflow-notes
-description: 写 pi-subagents 多步骤 workflow（subagent workflow:true / options.script）前必读：本机踩过的坑与可用的模型 id。
+description: 写 pi-subagents 多步骤 workflow（subagent workflow:true / options.script）前必读：多步 workflow 的已知坑与可用的模型 id。
 ---
 
-# pi-subagents workflow 本机注意事项
+# pi-subagents workflow 实践注意事项
 
 1. **脚本怎么传**：`subagent({workflow: true})` 依赖同一条回复里的 ```js 代码块；在部分宿主上代码块到不了会话。稳妥做法是把脚本源码放进 `options: { script: "..." }`，其他字段不变。
 2. **脚本里别用模板字符串插值**：`${...}` 写在 JSON 字符串参数里容易触发 `Unexpected token`。拼提示词用数组 `.join('\n')`，子任务输出用 `String(run.output)` 拼接。
