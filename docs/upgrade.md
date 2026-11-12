@@ -34,7 +34,7 @@ cp -p "$HOME/.pi/agent/settings.json" "$HOME/.pi/agent/settings.json.bak-$(date 
 
 memory 升级后先跑 `node scripts/deploy-check.mjs onnx`，再跑 doctor；两者都要求 native runtime 加载成功。Windows 包存在却报 Win32 126，先查 System32 的 `vcruntime140.dll`、`vcruntime140_1.dll`、`msvcp140.dll`，缺则按 [DEPLOY](../DEPLOY.md) 安装官方可再发行组件，approve/rebuild 不能替代它。Linux x64 缺包时，默认 CUDA 下载器可能因不跟随 302 失败并被 npm 丢弃；在 agent-dir/npm 运行 `ONNXRUNTIME_NODE_INSTALL=skip npm install --include=optional` 再检查，CPU 文件已在包中。GPU 路径未实测。
 
-未实测平台（Linux、WSL2、原生 Windows）跑 doctor 会对每个组件多出 platform verification WARN，这是标签，不要解释成故障，也不要为了消掉 WARN 改 manifest。
+未实测平台跑 doctor 会对每个组件多出 platform verification WARN，这是标签，不要解释成故障，也不要为了消掉 WARN 改 manifest。当前实测范围是 macOS arm64 全部模块、WSL2 的 core+memory；Linux 原生、原生 Windows，以及各平台的 pdf 与 magpie 仍属未实测。
 
 
 ## 1. Pi 本体

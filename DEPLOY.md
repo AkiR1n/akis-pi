@@ -532,7 +532,7 @@ PowerShell 的收尾命令：
 node "$Repo/scripts/doctor.mjs" --home $HOME --agent-dir $env:PI_CODING_AGENT_DIR --modules $Modules
 ```
 
-**期望**：0 FAIL，WARN 逐条解释。doctor 只读 settings/node_modules，**不调用 pi list、不安装包**。对照 manifest：版本同 PASS；普通偏差 WARN；Pi/MC 的 major 偏差 FAIL；缺声明包 FAIL。RTK 缺失或无 rewrite 为 WARN。未实测平台（Linux/WSL2/原生 Windows）会对每个组件额外报 platform verification WARN，这是标签而非故障。core 11 包、core+memory 13 包，macos/magpie 不增包。
+**期望**：0 FAIL，WARN 逐条解释。doctor 只读 settings/node_modules，**不调用 pi list、不安装包**。对照 manifest：版本同 PASS；普通偏差 WARN；Pi/MC 的 major 偏差 FAIL；缺声明包 FAIL。RTK 缺失或无 rewrite 为 WARN。未实测平台会对每个组件额外报 platform verification WARN，这是标签而非故障（实测范围见 README 的平台表）。core 11 包、core+memory 13 包，macos/magpie 不增包。
 
 **失败怎么办**：FAIL packages resolve on disk 回步骤 5（memory 查 9）；placeholders 回步骤 4；MC parameters 查 9.1。确保 0 FAIL 方可交付。
 
