@@ -41,8 +41,8 @@ node scripts/render.mjs --home "$HOME" --modules core --strict \
   --set MODEL_REVIEW='<复核模型>' \
   --set MODEL_PLAN='<规划模型>' \
   --set MODEL_HISTORIAN='<压缩模型>' \
-  --set BRAVE_KEY_REF='!printenv BRAVE_API_KEY' \
-  --set BOCHA_KEY_REF='!printenv BOCHA_API_KEY'
+  --set BRAVE_KEY_REF='$BRAVE_API_KEY' \
+  --set BOCHA_KEY_REF='$BOCHA_API_KEY'
 
 # 2. 确认无误后应用渲染
 node scripts/render.mjs --home "$HOME" --modules core --strict --apply \
@@ -52,8 +52,8 @@ node scripts/render.mjs --home "$HOME" --modules core --strict --apply \
   --set MODEL_REVIEW='<复核模型>' \
   --set MODEL_PLAN='<规划模型>' \
   --set MODEL_HISTORIAN='<压缩模型>' \
-  --set BRAVE_KEY_REF='!printenv BRAVE_API_KEY' \
-  --set BOCHA_KEY_REF='!printenv BOCHA_API_KEY'
+  --set BRAVE_KEY_REF='$BRAVE_API_KEY' \
+  --set BOCHA_KEY_REF='$BOCHA_API_KEY'
 
 # 3. 按照 DEPLOY.md 安装所需插件及依赖，最后运行只读自检
 node scripts/doctor.mjs --home "$HOME" --modules core

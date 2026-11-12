@@ -40,8 +40,9 @@ fi
 ```sh
 # Homebrew
 brew install rtk
-# 非 brew：有 Cargo 时，从 crates.io 安装（两种方式二选一）
-cargo install rtk --version 1.1.0 --locked
+# 非 brew：从 GitHub release 下载 v1.1.0 对应平台的压缩包，解压后把 rtk 放进 PATH
+#   https://github.com/rtk-ai/rtk/releases/tag/v1.1.0
+# 不要用 cargo install rtk：crates.io 上的 rtk 是另一个同名项目
 # 均需检查
 rtk --version
 rtk rewrite --help
@@ -72,7 +73,7 @@ pi --version
     "{{PROVIDER}}": {
       "baseUrl": "https://api.example.com/v1",
       "api": "openai-completions",
-      "apiKey": "!printenv PI_PROVIDER_KEY",
+      "apiKey": "$PI_PROVIDER_KEY",
       "models": [
         {
           "id": "{{MODEL}}",
@@ -132,8 +133,8 @@ node "$REPO/scripts/render.mjs" --home "$HOME" --agent-dir "$PI_CODING_AGENT_DIR
   --set MODEL_REVIEW='<复核模型>' \
   --set MODEL_PLAN='<规划模型>' \
   --set MODEL_HISTORIAN='<压缩模型>' \
-  --set BRAVE_KEY_REF='!printenv BRAVE_API_KEY' \
-  --set BOCHA_KEY_REF='!printenv BOCHA_API_KEY'
+  --set BRAVE_KEY_REF='$BRAVE_API_KEY' \
+  --set BOCHA_KEY_REF='$BOCHA_API_KEY'
 ```
 期望打印 create / unchanged / diff，WARNINGS 为空。审阅路径与 diff，确认后写入：
 ```sh
@@ -144,8 +145,8 @@ node "$REPO/scripts/render.mjs" --home "$HOME" --agent-dir "$PI_CODING_AGENT_DIR
   --set MODEL_REVIEW='<复核模型>' \
   --set MODEL_PLAN='<规划模型>' \
   --set MODEL_HISTORIAN='<压缩模型>' \
-  --set BRAVE_KEY_REF='!printenv BRAVE_API_KEY' \
-  --set BOCHA_KEY_REF='!printenv BOCHA_API_KEY'
+  --set BRAVE_KEY_REF='$BRAVE_API_KEY' \
+  --set BOCHA_KEY_REF='$BOCHA_API_KEY'
 ```
 strict 遇未解析占位符拒绝写入；非 strict 警告并跳过。JSON/JSONC 按字符串转义，凭据只接引用，不要手改模板绕过。
 
@@ -201,7 +202,7 @@ key 放环境变量或钥匙串，只渲染引用。macOS 示例：
 security add-generic-password -a "$USER" -s pi-web-access-brave -w
 # --set BRAVE_KEY_REF='!security find-generic-password -a "$USER" -s pi-web-access-brave -w'
 ```
-交互输入 key 免留 shell 历史。环境变量引用形如 `!printenv BRAVE_API_KEY` / `!printenv BOCHA_API_KEY`。检查字段：
+交互输入 key 免留 shell 历史。环境变量引用形如 `$BRAVE_API_KEY` / `$BOCHA_API_KEY`。检查字段：
 ```sh
 node -e 'const c=require(process.env.HOME+"/.pi/web-search.json");console.log(Object.keys(c));for(const k of ["braveApiKey","bochaApiKey"])console.log(k,/^(?:!\S|\$(?:[A-Za-z_]|\{))/.test(c[k]||"")?"ref-ok":"MISSING-OR-LITERAL")'
 ```
@@ -299,8 +300,8 @@ node "$REPO/scripts/render.mjs" --home "$HOME" --agent-dir "$PI_CODING_AGENT_DIR
   --set MODEL_REVIEW='<复核模型>' \
   --set MODEL_PLAN='<规划模型>' \
   --set MODEL_HISTORIAN='<压缩模型>' \
-  --set BRAVE_KEY_REF='!printenv BRAVE_API_KEY' \
-  --set BOCHA_KEY_REF='!printenv BOCHA_API_KEY'
+  --set BRAVE_KEY_REF='$BRAVE_API_KEY' \
+  --set BOCHA_KEY_REF='$BOCHA_API_KEY'
 # 审阅后
 node "$REPO/scripts/render.mjs" --home "$HOME" --agent-dir "$PI_CODING_AGENT_DIR" --modules macos --strict --apply \
   --set PROVIDER='<供应商 id>' \
@@ -309,8 +310,8 @@ node "$REPO/scripts/render.mjs" --home "$HOME" --agent-dir "$PI_CODING_AGENT_DIR
   --set MODEL_REVIEW='<复核模型>' \
   --set MODEL_PLAN='<规划模型>' \
   --set MODEL_HISTORIAN='<压缩模型>' \
-  --set BRAVE_KEY_REF='!printenv BRAVE_API_KEY' \
-  --set BOCHA_KEY_REF='!printenv BOCHA_API_KEY'
+  --set BRAVE_KEY_REF='$BRAVE_API_KEY' \
+  --set BOCHA_KEY_REF='$BOCHA_API_KEY'
 # 同步 MODULES（已含 macos 时不必重复追加）
 export MODULES="$MODULES,macos"
 ```

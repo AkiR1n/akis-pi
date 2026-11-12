@@ -82,7 +82,7 @@ security add-generic-password -a "$USER" -s <服务名> -w
 
 # 2) 通过环境变量提供：
 export BRAVE_API_KEY=...
-# 配置文件中填入引用： "braveApiKey": "!printenv BRAVE_API_KEY"
+# 配置文件中填入引用： "braveApiKey": "$BRAVE_API_KEY"
 ```
 
 钥匙串的服务名称由用户自行定义，不要在仓库提交、笔记或配置中粘贴真实密钥。渲染脚本 `render.mjs` 的 `--set BRAVE_KEY_REF=...` 仅接受以 `!` 开头的动态引用字符串，直接输入明文会被拦截拒绝。

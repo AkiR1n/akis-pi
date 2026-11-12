@@ -17,8 +17,9 @@
 import fs from 'node:fs';
 import { parseJsonc, assertCredentialReferences } from './config-utils.mjs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
 const ALL_MODULES = ['core', 'memory', 'macos', 'magpie'];
 

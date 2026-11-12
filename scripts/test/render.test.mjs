@@ -6,7 +6,7 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 const script = path.resolve(import.meta.dirname, '../render.mjs');
 const home = () => fs.mkdtempSync(path.join(os.tmpdir(), 'akis-render-test-'));
-const values = { PROVIDER: 'example', MODEL: 'main', MODEL_EXEC: 'exec', MODEL_REVIEW: 'review', MODEL_PLAN: 'plan', MODEL_HISTORIAN: 'history', BRAVE_KEY_REF: '!printenv BRAVE_API_KEY', BOCHA_KEY_REF: '$BOCHA_API_KEY' };
+const values = { PROVIDER: 'example', MODEL: 'main', MODEL_EXEC: 'exec', MODEL_REVIEW: 'review', MODEL_PLAN: 'plan', MODEL_HISTORIAN: 'history', BRAVE_KEY_REF: '$BRAVE_API_KEY', BOCHA_KEY_REF: '$BOCHA_API_KEY' };
 const run = (dir, args = [], sets = values) => spawnSync(process.execPath, [script, '--home', dir, ...Object.entries(sets).flatMap(([k,v]) => ['--set', k + '=' + v]), ...args], {encoding:'utf8'});
 const read = (dir, rel) => fs.readFileSync(path.join(dir, rel), 'utf8');
 test('strict unresolved values refuse the entire apply before any writes', () => {

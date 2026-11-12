@@ -23,7 +23,7 @@
     "{{MODEL_REVIEW}}": "independent review model",
     "{{MODEL_PLAN}}": "planning/architecture model",
     "{{MODEL_HISTORIAN}}": "model the memory historian uses to compact sessions",
-    "{{BRAVE_KEY_REF}}": "credential reference for Brave Search: \"!printenv VAR\" or \"!security find-generic-password ...\"",
+    "{{BRAVE_KEY_REF}}": "credential reference for Brave Search: \"$VAR\" or \"!security find-generic-password ...\"",
     "{{BOCHA_KEY_REF}}": "credential reference for Bocha Search, same forms as {{BRAVE_KEY_REF}}"
   },
   "components": [

@@ -16,7 +16,7 @@
 3. **向用户确认部署参数**（一次问齐，不要分多次追问）：
    - 模型供应商标识（`{{PROVIDER}}`）与各角色模型 ID：主力模型（`{{MODEL}}`）、执行模型（`{{MODEL_EXEC}}`）、复核模型（`{{MODEL_REVIEW}}`）、规划模型（`{{MODEL_PLAN}}`）、压缩模型（`{{MODEL_HISTORIAN}}`）；
    - 要装的模块（`core` 必选；`memory` / `macos` / `magpie` 按用户环境选）；
-   - 凭据注入方式：环境变量引用（`!printenv VAR`）还是系统钥匙串（`!security find-generic-password ...`）。
+   - 凭据注入方式：环境变量引用（`$VAR`）还是系统钥匙串（`!security find-generic-password ...`）。
 
 ---
 
@@ -32,7 +32,7 @@
 ## 2. 凭据安全
 
 - **不要猜密钥**：不要伪造、推测或用临时占位字符串尝试连通。
-- **不要明文存凭据**：不要把 API Key 写进仓库、填入 `settings.json` 或打在终端里。合法的写法只有动态引用：环境变量（`!printenv VAR`）或系统钥匙串（`!security find-generic-password -a "$USER" -s <服务名> -w`）。
+- **不要明文存凭据**：不要把 API Key 写进仓库、填入 `settings.json` 或打在终端里。合法的写法只有动态引用：环境变量（`$VAR`）或系统钥匙串（`!security find-generic-password -a "$USER" -s <服务名> -w`）。
 - **明文提醒**：如果用户直接发来明文 Key，提醒风险，并引导对方存入环境变量或钥匙串后再用引用方式传入。
 - **高危操作先说明**：涉及提权（`sudo`）、破坏性 git 操作或从公网拉取依赖的命令，先向用户说明意图与影响范围，确认后再执行。
 
