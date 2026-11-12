@@ -72,7 +72,7 @@ node ../../scripts/doctor.mjs --home "$HOME" --modules core,memory \
 
 ## RESIDENT.template.md
 
-仓库提供的 `RESIDENT.template.md` 仅包含格式规范与事实筛选标准，不包含任何个人隐私数据。初始化个人配置时执行：
+仓库提供的 `RESIDENT.template.md` 只有格式规范与事实筛选标准，内容需要你自己填写。初始化个人配置时执行：
 
 ```sh
 dst="$HOME/.pi/agent/memory/RESIDENT.md"

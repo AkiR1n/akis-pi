@@ -1,9 +1,9 @@
 # akis-pi
 
 一份可以直接交给 AI 部署的 Pi coding agent 配置包：将 `config/` 和所选 `modules/` 渲染到目标机器，再通过 `scripts/doctor.mjs` 进行全项自检。
-这不是插件市场，也不是 dotfiles 备份——这里只收录经过长期运行验证、并附带完整设计取舍与实测依据的生产配置。
+这不是插件市场，也不是 dotfiles 备份——这里只收录作者日常在用、并写明了设计取舍与实测依据的那部分配置。
 
-作者：Aki。问题与建议请直接提交 Issue；仓库内不含任何个人数据（详见「安全与隐私」）。
+作者：Aki。问题与建议请直接提交 Issue。
 
 ## 是什么
 
@@ -114,14 +114,6 @@ node scripts/doctor.mjs --home "$HOME" --modules core
 - **自检工具限制**：`scripts/doctor.mjs` 仅执行只读检查，对照 settings 与 node_modules 及 manifest 校验；普通版本偏差提示 WARN，Pi/MC 主版本偏差报告 FAIL。注意：Pi 1.5.2 的 `pi list` 会自动安装缺失包，因此自动化脚本中不调用 `pi list`。
 - **项目信任配置**：配置模板默认包含 `defaultProjectTrust: "always"`（不再逐次提示信任项目）。若希望每次确认，可手动改为 `ask`。
 - **测量数据局限**：首轮探针数据不代表模型最终任务准确率；两组探针对比时同时调整了引导提示，无法单一归因于 codemode。
-
-## 安全与隐私
-
-这份配置在设计上严格隔离个人数据，可安全分享与公开审阅：
-- **无任何明文凭据**：不含 `auth.json`、`models.json`、`mcp-auth.json`、私钥或 API Key。模板中仅支持 `{{BRAVE_KEY_REF}}` 等动态引用语法（如 `!printenv VAR` 或 `!security find-generic-password ...`）。
-- **无私有会话与记忆**：不包含任何历史会话（sessions）、个人常驻事实（`RESIDENT.md` 正文）或私有知识库数据，仅提供空模板与格式规范（`modules/memory/RESIDENT.template.md`）。
-- **排除私有组件**：私有清理工具、个人工作流引擎、定制显示补丁及个人专属技能均已被列入排除清单（详见 [manifest.json](manifest.json) 的 `excluded` 与 `neverCopied` 说明）。
-- **双重导出校验**：内置导出脚本会对敏感密钥格式与个人路径进行扫描，命中任意一项即中断导出，杜绝凭据外泄。
 
 ## 升级与维护
 
