@@ -129,7 +129,7 @@ npm ci && npm run build
 ## 5. 可选外部模块
 
 - **Magpie 网关**：网关应用升级后需重启 Pi（MCP 工具元数据仅在 Pi 启动时加载缓存），运行 `pi mcp list` 核对工具面。注意：Hub 端点在 Node fetch 下仅列出搜索工具属于正常安全过滤，并非故障。
-- **ego lite 浏览器**：升级后跑一次跨平台搜索技能，确认任务结束后浏览器窗口能正常回收；`ego-gc` 检测 `ego lite` 进程，未启动时扩展会自动跳过。
+- **ego lite 浏览器**：升级后跑一次跨平台搜索技能，确认任务结束后浏览器窗口能正常回收；`ego-gc` 检测 `ego lite` 进程，未启动时扩展会自动跳过。Windows 上没有 `ego-gc`，这一条只需确认浏览器本体能启动。
 - **pdf-parse 服务**：服务属于独立 pdf 模块。macOS 用 `launchctl kickstart -k gui/"$(id -u)"/com.example.pipdfparse`，Linux/WSL 用 `systemctl --user restart pi-pdf-parse.service`，Windows 在任务计划程序中重启当前用户任务；然后检查回环 /health。具体步骤与旧状态迁移见 [modules/pdf](../modules/pdf/README.md)。
 - **agent-browser**：若通过 mise 安装了新的 Node 24.x 版本，需重新核验全局 CLI 依然链接在当前 Node 解析树中（详见 DEPLOY.md 步骤 10b），避免路径偏移导致工具调用失败。
 

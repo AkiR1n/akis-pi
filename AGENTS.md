@@ -32,6 +32,7 @@
 
 - Windows 用户先问一句：需要操作 Windows 桌面或复用 Windows 登录态浏览器吗？不需要就用 WSL2，源码与 `node_modules` 留在 `/home`，不要放 `/mnt/c`。
 - macos 模块仅供 darwin；其它平台选择会在写入前被拒。PDF 独立选 pdf，Windows 用登录计划任务。
+- 不要把 `ego-gc` 装到 Windows 上：它依赖 `~/.local/bin` 下的 POSIX 路径。`ego-browser` 本体上游有 Windows 安装器，但本包没有 Windows 实测记录，交付报告里要照实写。
 - 原生 Windows 除 Node 外必须有 Git for Windows（Pi 的 shell 与 `!command` 凭据都走 Git Bash）；选 memory 还需 VC++ 2015-2022 x64 可再发行组件，按 DEPLOY 的 PowerShell 入口安装。
 - Linux / WSL2 的 memory 安装前按 POSIX 入口设置 `ONNXRUNTIME_NODE_INSTALL=skip`（CPU 文件已在包中，跳过默认 CUDA 下载）；缺包恢复见 DEPLOY 步骤 5，GPU 未实测。
 - 选 memory 必须通过 `node scripts/deploy-check.mjs onnx`；doctor 的 native 加载失败是 FAIL。npm 审批与 rebuild 不解决 Windows 缺运行库或 Linux 缺包。

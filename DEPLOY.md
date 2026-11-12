@@ -487,7 +487,7 @@ herdr-agent-state.ts 由 herdr 管理，仅 HERDR_ENV、HERDR_SOCKET_PATH、HERD
 
 ### 10.2 ego 窗口回收
 
-ego-gc.ts 仅在 ego lite 运行时清理窗口，不主动启动；`PI_EGO_GC=off` 关闭、`PI_EGO_GC_DEBUG=1` 输出日志。ego-browser/ego-search 技能由第三方 app 安装，本仓库不分发。manifest 的 ego-lite 是 `external app, not redistributed`，**无核实获取 URL**；向提供 app 渠道获取，未取得则跳过，不编造链接。不用时 settings 用 `-path` 排除，不删文件。
+`ego-gc` 依赖 `~/.local/bin/ego-browser` 与两个 shell 脚本，只在 macOS 与 Linux 上可用；Windows 部署跳过它（`ego-browser` 本体上游有 Windows 安装器，本包未实测）。ego-gc.ts 仅在 ego lite 运行时清理窗口，不主动启动；`PI_EGO_GC=off` 关闭、`PI_EGO_GC_DEBUG=1` 输出日志。ego-browser/ego-search 技能由第三方 app 安装，本仓库不分发。manifest 的 ego-lite 是 `external app, not redistributed`，**无核实获取 URL**；向提供 app 渠道获取，未取得则跳过，不编造链接。不用时 settings 用 `-path` 排除，不删文件。
 
 ## 10a. pdf 模块（跨平台可选）
 

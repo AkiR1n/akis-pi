@@ -352,10 +352,11 @@
       "level": "float-ok",
       "module": "macos",
       "platforms": [
-        "darwin"
+        "darwin",
+        "win32"
       ],
       "lastVerified": "2026-11-12",
-      "note": "ego-gc.ts shells out to the ego-browser CLI; the ego skills are third-party and are not copied into this repo.",
+      "note": "ego-gc.ts shells out to the ego-browser CLI; the ego skills are third-party and are not copied into this repo. The browser itself has an upstream Windows installer; only the ego-gc extension is darwin-only.",
       "verified": [
         "darwin-arm64"
       ]

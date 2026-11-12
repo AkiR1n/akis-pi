@@ -35,6 +35,8 @@ akis-pi 针对这四点做了调整，装完得到的是：
 
 macOS arm64 与 WSL2（Ubuntu 24.04 x64）的 core+memory 已完成实机验收，其余平台与模块按下面级别使用。上游支持不等于本包已验证：manifest 的 `platforms` 表示适用平台，`verified` 单独记录实测平台，doctor 在未实测平台会对每个组件报 `WARN`。
 
+Windows 上还要分清三件事：Pi、Node、Git 有官方 Windows 路径；Magic Context、pi-knowledge 和其余插件是 node 包，能装，代价是 VC++ 运行库、`tree-sitter-qmljs` 没有预编译产物（靠 memory 的第 4 份补丁降级为可选）以及 npm 11 的安装脚本审批，这三条都写进了 DEPLOY 的前置；`agent-browser` 按其上游自述属于 best-effort，`herdr` 没有 Windows 版。
+
 | 平台 | 状态 | 可选模块 | 说明 |
 | --- | --- | --- | --- |
 | macOS arm64 | 已实测 | core、memory、macos、pdf、magpie | 基准平台，探针与部署记录都来自这里 |
@@ -50,7 +52,8 @@ Windows 用户默认选 **WSL2 的 core+memory**：源码、`node_modules`、Mag
 - 浏览器与 Electron 按其上游自述属于 best-effort：会话锁、恢复、退出清理都要单独验收，不能把“能启动”当通过。
 - memory 的 onnxruntime-node 需要 **Microsoft Visual C++ 2015-2022 x64 可再发行组件**；缺 DLL 导致的 Win32 126 不能用 npm approve/rebuild 修复。安装与检查见 [DEPLOY](DEPLOY.md)。doctor 会把 onnx 加载失败记为 FAIL。
 - `tree-sitter-qmljs` 没有预编译产物。memory 靠第 4 份补丁把它降级为可选依赖：安装或加载失败时 QML 文件退回文本分块并提示一次，其它语言不受影响。
-- Herdr/Rex pane、tmux inspector、launchd、Keychain、ego 窗口回收在 Windows 上不提供。
+- Herdr/Rex pane 与 tmux inspector 没有 Windows 版，launchd 与 macOS 钥匙串也不在：服务要改成计划任务，凭据要改成环境变量。
+- `ego-browser` 上游有 Windows 安装器（首次引导后把命令注册进 PATH），但本包没有在 Windows 上实测过；`ego-gc` 这个窗口回收扩展依赖 POSIX 路径，Windows 上不提供。
 
 ## 前置条件
 
@@ -118,7 +121,7 @@ node scripts/doctor.mjs --home "$HOME" --modules core
 | --- | --- | --- | --- |
 | **core** | `settings.json`、全局 `AGENTS.md`、`APPEND_SYSTEM.md`、8 个子代理角色、2 个 prompt 模板、compact-tools 配置、pi-web-access 搜索配置、rtk bash 重写扩展 | 必装 | 基础运行面 |
 | **memory** | Magic Context（项目记忆 + 压缩）、resident-memory 扩展、pi-knowledge 知识库及 4 个补丁（QML 可选） | 推荐（需要持久项目记忆时装；仅需精简工具面可跳过） | [modules/memory](modules/memory/README.md) |
-| **macos** | herdr 状态面板扩展、ego-browser 窗口回收 | 仅 darwin 可选；其它平台拒绝选择 | [modules/macos](modules/macos/README.md) |
+| **macos** | herdr 状态面板扩展、ego-gc 窗口回收（`ego-browser` 本体各平台都有） | 仅 darwin 可选；其它平台拒绝选择 | [modules/macos](modules/macos/README.md) |
 | **pdf** | 本地 PDF→Markdown 端点；launchd / systemd user / Windows 登录任务说明 | 按需，独立于 macos | [modules/pdf](modules/pdf/README.md) |
 | **magpie** | Magpie 网关接入：本地 OpenAI 兼容 provider、MCP hub、生图/生视频扩展 | 可选（用 Magpie 网关时启用；跳过可直连任意 OpenAI 兼容服务） | [modules/magpie](modules/magpie/README.md) |
 
@@ -175,7 +178,7 @@ akis-pi/
 ├── skills/          pi-workflow-notes（多步工作流编写注意事项）
 ├── modules/
 │   ├── memory/      Magic Context 配置、resident-memory 扩展、RESIDENT 模板、pi-knowledge 补丁
-│   ├── macos/       herdr 状态面板、ego-browser 窗口回收（仅 darwin）
+│   ├── macos/       herdr 状态面板、ego-gc 窗口回收（仅 darwin）
 │   ├── pdf/         PDF 唯一源码与各平台服务启动适配
 │   └── magpie/      magpie.ts 扩展、mcp.json.example、路由说明
 ├── scripts/
