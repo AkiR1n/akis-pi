@@ -1,7 +1,7 @@
 {
   "name": "akis-pi",
   "schemaVersion": 2,
-  "generatedAt": "2026-11-12T07:35:18.712Z",
+  "generatedAt": "2026-11-12T20:48:00.514Z",
   "generatedFrom": "live Pi configuration, read-only (see NEVER_COPIED in export-akis-pi.mjs)",
   "verifiedOn": {
     "os": "macOS 27.2.1",
@@ -352,11 +352,10 @@
       "level": "float-ok",
       "module": "macos",
       "platforms": [
-        "darwin",
-        "win32"
+        "darwin"
       ],
       "lastVerified": "2026-11-12",
-      "note": "ego-gc.ts shells out to the ego-browser CLI; the ego skills are third-party and are not copied into this repo. The browser itself has an upstream Windows installer; only the ego-gc extension is darwin-only.",
+      "note": "ego-gc.ts shells out to the ego-browser CLI; the ego skills are third-party and are not copied into this repo.",
       "verified": [
         "darwin-arm64"
       ]
@@ -422,19 +421,19 @@
     },
     "memory": {
       "description": "Magic Context, resident memory and pi-knowledge with patches",
-      "required": true
+      "required": false
     },
     "macos": {
-      "description": "macOS herdr agent state and ego window GC (required on darwin)",
-      "required": true
+      "description": "macOS herdr agent state and ego window GC",
+      "required": false
     },
     "pdf": {
       "description": "Local PDF endpoint with launchd, systemd user unit or Windows login task",
       "required": false
     },
     "magpie": {
-      "description": "Magpie gateway (required): local OpenAI-compatible provider, MCP hub, images, skill and MCP routing",
-      "required": true
+      "description": "Magpie gateway: local OpenAI-compatible provider, MCP hub, images",
+      "required": false
     }
   },
   "excluded": [

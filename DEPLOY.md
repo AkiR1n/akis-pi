@@ -343,7 +343,7 @@ pi-web-access 0.47.0 优先读取 `PI_CODING_AGENT_DIR/web-search.json`。render
 
 ## 7. 子代理角色
 
-core 渲染 8 个角色、subagent/config.json 与 prompts。
+core 渲染 5 个角色、subagent/config.json 与 prompts。
 
 **检查**（列出角色与 `model:` 行，两个平台相同）：
 
@@ -355,7 +355,7 @@ node "$REPO/scripts/deploy-check.mjs" roles
 node "$REPO/scripts/deploy-check.mjs" placeholders
 ```
 
-**期望**：无占位符；模型含 `inherit` 与步骤 4 填的角色 id（impl-sol 用 MODEL_REVIEW，impl-flash 用 MODEL_EXEC，规划角色用 MODEL_PLAN）。
+**期望**：无占位符；角色文件里**没有** `model:` 行，档位只出现在 `settings.subagents.defaultModel`（MODEL_EXEC）与 `agentOverrides`（analyze 用 MODEL_REVIEW、review 用 MODEL_PLAN）。
 **失败怎么办**：角色文件缺失核对 `agents/`（不是 `subagents/`）；子代理模型必须在 models.json 注册且 provider 正确。core-only 且已装完、有 key 时可执行 `pi --print 'delegate nothing; just list the subagent roles you can call'`；选 memory 则等 9.3 完成后再执行。无 key 用 stub；此步仅验配置解析，不验执行质量。
 
 ## 8. 第一次启动验收

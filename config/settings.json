@@ -84,34 +84,18 @@
   ],
   "tuiMode": "fullscreen",
   "subagents": {
-    "disableBuiltins": false,
+    "disableBuiltins": true,
+    "defaultModel": "{{MODEL_EXEC}}",
     "defaultExtensions": [
       "npm:pi-web-access"
     ],
     "agentOverrides": {
-      "oracle": {
+      "analyze": {
+        "model": "{{MODEL_REVIEW}}",
+        "thinking": "high"
+      },
+      "review": {
         "model": "{{MODEL_PLAN}}",
-        "thinking": "high"
-      },
-      "reviewer": {
-        "model": "{{MODEL_REVIEW}}",
-        "thinking": "high",
-        "inheritGlobalContext": true
-      },
-      "evidence-auditor": {
-        "model": "{{MODEL_REVIEW}}",
-        "thinking": "high"
-      },
-      "scout": {
-        "model": "{{MODEL_EXEC}}",
-        "thinking": "high"
-      },
-      "worker": {
-        "model": "{{MODEL_EXEC}}",
-        "thinking": "high"
-      },
-      "researcher": {
-        "model": "{{MODEL_EXEC}}",
         "thinking": "high"
       }
     },

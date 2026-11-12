@@ -17,5 +17,8 @@
 
 # 委派
 
-- 何时委派以 AGENTS.md 开头的全局规则为准。长任务用 `async: true`，完成会自动唤醒你，不要轮询。
+- 先按工具面选角色，不看模型：`explore` 侦察、`implement` 写、`analyze` 找证据与方案、`review` 验收、`lead` 需要强模型带队并递归时用。角色名不含模型，模型来自 `defaultModel` 与 `agentOverrides`；任务需要别的档位时在调用上写 `model:`。
+- 只有 `implement` 与 `lead` 能改文件。`explore` 只报事实；要判断、要方案、要外部资料用 `analyze`；验收完成声明用 `review`。
+- 单个有界子任务直接 `subagent({agent, task})`，不要套工作流；需要顺序、并行、汇总或重试才写 workflow 脚本。
+- 长任务用 `async: true` 并显式给 `options.timeoutMs`；完成会自动唤醒你，不要轮询。
 - 写多步骤 workflow 之前先读技能 pi-workflow-notes。

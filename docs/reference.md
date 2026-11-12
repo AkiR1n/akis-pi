@@ -36,13 +36,25 @@ POSIX 系统自带。原生 Windows 必须装 Git for Windows：Pi 的 shell 与
 | --- | --- | --- |
 | `{{MODEL}}` | 主会话默认模型 | 日常主力交互 |
 | `{{MODEL_EXEC}}` | 廉价执行：测试、脚手架、前端、批量改动 | 单价低、能稳定跑脚本的模型 |
-| `{{MODEL_REVIEW}}` | impl-sol 与独立复核：查 diff、排查漏洞、改动核验 | 建议与执行模型**不同族/不同供应商**，减少同源盲区 |
-| `{{MODEL_PLAN}}` | 架构规划、后端核心改动、难题攻关 | 最强的旗舰模型 |
+| `{{MODEL_REVIEW}}` | `analyze`：读证据、比较方案、查根因 | 比执行档更强的通用模型 |
+| `{{MODEL_PLAN}}` | `review`：验收完成声明、复核 diff | 最强的旗舰模型；也可给 `analyze` 处理路线评审 |
 | `{{MODEL_HISTORIAN}}` | 会话压缩归档 | 窗口大、价格低，不要求强推理 |
 
-分工原则：执行用低单价高速度模型，复核用异构模型，规划用最强模型。映射为你持有的模型 ID 即可。
+分工原则：日常干活用执行档，分析用较强的通用模型，验收用最强模型。
 
-角色文件名（如 `impl-*`、`opus-*`、`planner`）是历史命名，不限厂商；实际生效的是各角色配置里的 `model:` 字段。
+**角色与模型解耦**：五个角色文件都不写 `model` 字段，档位只在 settings 里定义：
+
+| 角色 | 工具面 | 默认档 |
+| --- | --- | --- |
+| `explore` | 读 + 联网，无 bash | `{{MODEL_EXEC}}` |
+| `implement` | 读 + 联网 + bash + 写 + codemode | `{{MODEL_EXEC}}` |
+| `lead` | implement 的全部 + subagent | `{{MODEL_EXEC}}` |
+| `analyze` | 读 + 联网 + bash，无写 | `{{MODEL_REVIEW}}` |
+| `review` | 同 analyze | `{{MODEL_PLAN}}` |
+
+`subagents.defaultModel` 填 `{{MODEL_EXEC}}`，`agentOverrides` 只覆盖 analyze 与 review。这样主会话换成强模型时，`implement` / `explore` 仍走执行档，不会跟着变贵；主会话是执行档时，`analyze` / `review` 自动升档。
+
+**需要别的档位就在调用上写**：`subagent({agent: "implement", model: "{{MODEL_PLAN}}", task})` 就是"强模型做执行"；`lead` 加同一句就是"强模型带队"。`{{MODEL_REVIEW}}` 允许等于 `{{MODEL_EXEC}}`，那时 `analyze` 不再强于执行模型，交叉检查只能靠换族而不是换档。
 
 凭据只接受环境变量引用（`$VAR` / `${VAR}`）或 `!command`，明文会被 render 直接拒绝。macOS 可以走系统钥匙串，其它平台用环境变量。
 

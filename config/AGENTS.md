@@ -1,9 +1,10 @@
 # Global operating rules
 
 - Keep the main session focused on goals, decisions, task state, routing, and acceptance.
-- Delegate broad repository discovery to the low-cost read-only explorer first.
-- Use impl-flash for ordinary coding, tests, scaffolding and frontend work; use impl-sol when the change is architecture-sensitive or backend-critical. Both load the RTK bash rewrite and codemode; the legacy name `implementer` still resolves to the builtin `worker` role, which has neither — name a role explicitly. Escalate to the planner for architecture, cross-module risk, ambiguous requirements, or repeated failures.
-- Use the analyst for read-only analysis of unusually large repositories, logs, manuals, or historical evidence. Its output is evidence, not final acceptance.
+- Route by tool face, not by model: `explore` for recon, `implement` for writing, `analyze` for evidence and options, `review` for verification, `lead` when a strong model must drive a change and fan out.
+- Role names carry no model. A role resolves its model from `subagents.defaultModel` / `agentOverrides`; pass `model:` on the launch only when the task needs a different tier, e.g. `implement` + the strongest model, or `lead` + the strongest model when the lead must not be the cheap model.
+- Only `implement` and `lead` have write tools. `explore`, `analyze` and `review` are read-only by tool face; `bash` still exists in the latter two, so read-only is discipline, not enforcement.
+- `explore` reports facts, never design opinions: when the answer needs judgment, options or external sources, use `analyze`. Verification of a completion claim belongs to `review`, and `analyze` output is evidence, not final acceptance.
 - Every delegated task must state goal, scope, constraints, required evidence, and acceptance criteria.
 - Do not accept a subagent's completion claim without checking the relevant diff, build, test, lint, runtime, or hardware evidence.
 - Parallelize read-only tasks only. Do not let multiple agents write to the same worktree.

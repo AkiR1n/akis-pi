@@ -5,7 +5,7 @@
 // as providers magpie-systemone and magpie-images. Take Pi off magpie in
 // magpie to have this file gone; with this first line changed, magpie
 // leaves the file to you.
-const MAGPIE = {"apiKey":"magpie","baseUrl":"http://127.0.0.1:3425/v1","classifiers":[],"images":[{"id":"codex/gpt-image-2","name":"GPT Image · Codex","input":["text"]},{"id":"workbuddy-ai/hy-image-3.5","name":"HY-Image-3.5 · WorkBuddy AI","input":["text","image"]},{"id":"workbuddy/hunyuan-image-alpha","name":"Hunyuan Image Alpha · WorkBuddy","input":["text","image"]}]};
+const MAGPIE = {"apiKey":"magpie","baseUrl":"http://127.0.0.1:3425/v1","classifiers":[],"images":[{"id":"codex/gpt-image-2","name":"GPT Image · Codex","input":["text"]},{"id":"workbuddy-ai/hy-image-3.5","name":"HY-Image-3.5 · WorkBuddy AI","input":["text","image"]},{"id":"workbuddy/hunyuan-image-alpha","name":"Hunyuan Image Alpha · WorkBuddy","input":["text","image"]},{"id":"huanling/gemini-3.1-flash-image","name":"gemini-3.1-flash-image · 幻灵","input":["text"]}]};
 
 export default async function (pi) {
 	// a Pi older than its classifier models (1.x) has no such module, or a

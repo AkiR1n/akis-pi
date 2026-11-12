@@ -6,11 +6,12 @@ criteria, and return format. Use fresh context by default. The main Pi session
 owns MC project memory and compaction; child sessions receive only their task,
 role, applicable instructions, explicit tools, and selected extensions.
 
-Use explorer for low-cost non-thinking discovery, analyst for unusually large
-read-only evidence sets, implementer for normal implementation, planner for
-architecture or repeated failure, and reviewer for independent read-only review.
-Keep configured models and thinking levels unless explicitly asked to change them.
-Do not run multiple writers in the same worktree.
+Pick the role by tool face, not by model: explore for recon, implement for
+writing, analyze for evidence, options and external sources, review for
+verification, lead when a strong model must drive a change and fan out.
+Roles carry no model; pass model: on the launch only when the task needs a
+different tier than the role default. Do not run multiple writers in the same
+worktree.
 
 Use the subagent tool (consult action: "guide" when needed). Keep the returned run
 ID and session path; use status, resume, steer, stop and bg_wait for that run.
