@@ -27,10 +27,41 @@ test('doctor compares manifest even when settings matches wrong disk versions, s
  write('.pi/agent/npm/node_modules/pi-web-access/package.json',{version:'9.0.0'});
  write('.pi/web-search.json',{braveApiKey:'{{BRAVE_KEY_REF}}'});
  write('.config/cortexkit/magic-context.jsonc',{historian:{pi:{model:'{{MODEL_HISTORIAN}}'}}});
- const result=spawnSync(process.execPath,[path.resolve(import.meta.dirname,'../doctor.mjs'),'--home',home,'--pi-command',cli,'--modules','core,memory','--json'],{encoding:'utf8',env:{...process.env,PATH:bin+path.delimiter+process.env.PATH}});
+ const env={...process.env,PATH:bin+path.delimiter+process.env.PATH};
+ for(const key of ['PI_CODING_AGENT_DIR','XDG_CONFIG_HOME','XDG_DATA_HOME','WSL_DISTRO_NAME'])delete env[key];
+ const result=spawnSync(process.execPath,[path.resolve(import.meta.dirname,'../doctor.mjs'),'--home',home,'--pi-command',cli,'--modules','core,memory','--json'],{encoding:'utf8',env});
  const output=JSON.parse(result.stdout);
  assert.ok(output.results.some(r=>r.label==='manifest version pi-web-access'&&r.status==='WARN'));
  assert.ok(output.results.some(r=>r.label==='manifest version pi-magic-context'&&r.status==='FAIL'));
  assert.ok(output.results.some(r=>r.label==='placeholders resolved'&&r.status==='FAIL'&&r.detail.includes('BRAVE_KEY_REF')&&r.detail.includes('MODEL_HISTORIAN')));
  assert.equal(fs.existsSync(path.join(home,'unexpected-list')),false);
+ assert.equal(result.status,1);
+ assert.ok(output.results.some(r=>r.label==='onnxruntime-node load'&&r.status==='FAIL'));
+ fs.rmSync(home,{recursive:true,force:true});
+});
+
+test('doctor checks memory native loading in isolation, reports FAIL for broken bindings, and leaves core alone', (t) => {
+ const home=fs.mkdtempSync(path.join(os.tmpdir(),'akis-doctor-onnx-'));
+ t.after(()=>fs.rmSync(home,{recursive:true,force:true}));
+ const agent=path.join(home,'agent');
+ const pkg=path.join(agent,'npm/node_modules/onnxruntime-node');
+ fs.mkdirSync(pkg,{recursive:true});
+ const run=(modules)=>{
+  const result=spawnSync(process.execPath,[path.resolve(import.meta.dirname,'../doctor.mjs'),'--home',home,'--agent-dir',agent,'--modules',modules,'--json'],{encoding:'utf8'});
+  return {code:result.status,output:JSON.parse(result.stdout)};
+ };
+ fs.writeFileSync(path.join(pkg,'index.js'),"throw Error('synthetic native binding failure');");
+ const broken=run('core,memory');
+ assert.equal(broken.code,1);
+ assert.ok(broken.output.results.some(r=>r.label==='onnxruntime-node load'&&r.status==='FAIL'&&r.detail.includes('synthetic native binding failure')));
+ const core=run('core');
+ assert.ok(!core.output.results.some(r=>r.label==='onnxruntime-node load'));
+ fs.writeFileSync(path.join(pkg,'index.js'),"exports.env={versions:{common:'test',node:'test'}};");
+ const good=run('core,memory');
+ assert.ok(good.output.results.some(r=>r.label==='onnxruntime-node load'&&r.status==='PASS'&&r.detail.includes('test')));
+ fs.rmSync(pkg,{recursive:true});
+ const missing=run('core,memory');
+ const failure=missing.output.results.find(r=>r.label==='onnxruntime-node load');
+ assert.equal(failure.status,'FAIL');
+ if(process.platform==='linux')assert.match(failure.detail,/ONNXRUNTIME_NODE_INSTALL=skip/);
 });

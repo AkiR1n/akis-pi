@@ -21,6 +21,26 @@ function render(f, args = [], repo = root) {
 }
 const read = (file) => fs.readFileSync(file, 'utf8');
 
+test('native win32 renders core/memory/pdf and doctor invokes a real npm cmd shim through Node', { skip: process.platform !== 'win32' }, (t) => {
+  const f = fixture(t);
+  const result = render(f, ['--modules', 'core,memory,pdf', '--apply']);
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /platform\s+win32/);
+  const cli = path.join(f.tmp, 'fake-cli.mjs');
+  const shim = path.join(f.tmp, 'pi.cmd');
+  fs.writeFileSync(cli, 'if(process.argv[2]!=="--version")process.exit(9);console.log("1.5.2");');
+  fs.writeFileSync(shim, '@ECHO off\r\n"%_prog%" "%dp0%\\fake-cli.mjs" %*\r\n');
+  const report = spawnSync(process.execPath, [path.join(root, 'scripts/doctor.mjs'), '--home', f.home, '--agent-dir', f.agent, '--modules', 'core,memory,pdf', '--pi-command', shim, '--json'], { env: f.env, encoding: 'utf8' });
+  const output = JSON.parse(report.stdout);
+  assert.equal(output.platform, 'win32');
+  assert.ok(output.results.some((r) => r.label === 'pi version' && r.status === 'PASS'));
+  assert.ok(output.results.some((r) => r.label === 'pdf scheduled task' && r.status === 'WARN'));
+  assert.ok(output.results.some((r) => r.label === 'platform verification pi' && r.detail.includes('experimental')));
+  assert.equal(output.results.some((r) => r.label === 'doctor crashed in a check'), false);
+  assert.equal(fs.existsSync(path.join(f.home, 'Library')), false);
+  assert.equal(fs.existsSync(path.join(f.env.XDG_CONFIG_HOME, 'systemd')), false);
+});
+
 test('macos is rejected on Linux, WSL and native Windows before writes', (t) => {
   const f = fixture(t);
   for (const platform of ['linux', 'wsl', 'win32']) {
@@ -37,7 +57,7 @@ test('default npm uses no override; mise is explicit and rejected on native Wind
   assert.equal('npmCommand' in JSON.parse(read(path.join(f.agent, 'settings.json'))), false);
   const g = fixture(t);
   assert.equal(render(g, ['--platform', 'linux', '--mise', '--apply']).status, 0);
-  assert.deepEqual(JSON.parse(read(path.join(g.agent, 'settings.json'))).npmCommand, ['mise', 'exec', 'node@24.21.0', '--', 'npm']);
+  assert.deepEqual(JSON.parse(read(path.join(g.agent, 'settings.json'))).npmCommand, ['mise', 'exec', 'node@24.22.3', '--', 'npm']);
   const h = fixture(t);
   assert.equal(render(h, ['--platform', 'win32', '--set', 'USE_MISE=true', '--apply']).status, 2);
   assert.equal(fs.existsSync(h.agent), false);
@@ -45,11 +65,12 @@ test('default npm uses no override; mise is explicit and rejected on native Wind
 
 test('PDF targets and systemd escaping follow policy; macos installs only its own extensions', (t) => {
   const f = fixture(t);
-  f.home = path.join(f.home, 'percent% dollar$ quote"');
+  const suffix = process.platform === 'win32' ? 'percent% dollar$' : 'percent% dollar$ quote"';
+  f.home = path.join(f.home, suffix);
   const result = render(f, ['--platform', 'linux', '--modules', 'pdf', '--apply']);
   assert.equal(result.status, 0, result.stderr);
   const service = read(path.join(f.env.XDG_CONFIG_HOME, 'systemd/user/pi-pdf-parse.service'));
-  assert.ok(service.includes('percent%% dollar$$ quote\\"'));
+  assert.ok(service.includes(process.platform === 'win32' ? 'percent%% dollar$$' : 'percent%% dollar$$ quote\\"'));
   assert.ok(fs.existsSync(path.join(f.home, '.local/share/pi-pdf-parse/server.py')));
   assert.equal(fs.existsSync(path.join(f.home, 'Library')), false);
   const g = fixture(t);
@@ -105,5 +126,6 @@ test('CJK/space repository location renders correctly; doctor reads BOM and repo
   assert.equal(read(path.join(f.agent, 'settings.json')), before);
   const failures = output.results.filter((r) => r.status === 'FAIL');
   assert.ok(failures.length > 0, 'fixtures intentionally omit plugin installations');
-  assert.ok(failures.every((r) => r.label === 'packages resolve on disk' || r.label.startsWith('manifest version ')), JSON.stringify(failures));
+  assert.ok(failures.some((r) => r.label === 'onnxruntime-node load'), 'memory must FAIL when its native runtime is absent');
+  assert.ok(failures.every((r) => r.label === 'packages resolve on disk' || r.label === 'onnxruntime-node load' || r.label.startsWith('manifest version ')), JSON.stringify(failures));
 });

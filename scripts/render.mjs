@@ -69,7 +69,7 @@ const USAGE = [
   '  --agent-dir DIR       Pi agent directory (default: <your-home>/.pi/agent)',
   '  --modules LIST        comma separated subset of: ' + ALL_MODULES.join(','),
   '  --platform NAME       platform policy override (darwin/linux/win32/wsl; default: auto)',
-  '  --mise                opt in to mise exec node@24.21.0 -- npm (POSIX only)',
+  '  --mise                opt in to mise exec node@24.22.3 -- npm (POSIX only)',
   '  --apply               write files (default: dry run)',
   '  --backup-dir DIR      where existing files are preserved (default: <agent-dir>/backups)',
   '  --strict              exit non-zero when a placeholder stays unresolved',
@@ -299,7 +299,7 @@ function main() {
       }
       if (from === 'config/settings.json' && (opts.mise || opts.sets.USE_MISE === 'true')) {
         const settings = parseJsonc(text);
-        settings.npmCommand = ['mise', 'exec', 'node@24.21.0', '--', 'npm'];
+        settings.npmCommand = ['mise', 'exec', 'node@24.22.3', '--', 'npm'];
         text = JSON.stringify(settings);
       }
       let resolved;

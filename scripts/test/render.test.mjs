@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
+import { backupRelativePath } from '../platform-utils.mjs';
 const script = path.resolve(import.meta.dirname, '../render.mjs');
 const home = () => fs.mkdtempSync(path.join(os.tmpdir(), 'akis-render-test-'));
 const values = { PROVIDER: 'example', MODEL: 'main', MODEL_EXEC: 'exec', MODEL_REVIEW: 'review', MODEL_PLAN: 'plan', MODEL_HISTORIAN: 'history', BRAVE_KEY_REF: '$BRAVE_API_KEY', BOCHA_KEY_REF: '$BOCHA_API_KEY' };
@@ -67,7 +68,7 @@ test('external targets are backed up beneath an external agent-dir before overwr
  const result=run(dir,['--agent-dir',agent,'--modules','core,memory,macos,pdf','--apply','--strict']);
  assert.equal(result.status,0,result.stderr);
  const backup=path.join(agent,'backups',fs.readdirSync(path.join(agent,'backups'))[0],'targets');
- for(const target of targets)assert.equal(fs.readFileSync(path.join(backup,target.slice(1)),'utf8'),'previous-content');
+ for(const target of targets)assert.equal(fs.readFileSync(path.join(backup,backupRelativePath(target)),'utf8'),'previous-content');
 });
 
 test('memory merge also refuses inherited literal credential fields before writes', () => {

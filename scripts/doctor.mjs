@@ -321,6 +321,19 @@ function main() {
   // 6. Magic Context: values and multi-profile consistency
   if (enabled.has('memory')) {
     guard(() => {
+      // Isolate native loading; no install, download or inference is performed.
+      try {
+        const versions = execFileSync(process.execPath, [path.join(ROOT, 'scripts/deploy-check.mjs'), 'onnx'], {
+          encoding: 'utf8', timeout: 30000, stdio: 'pipe',
+          env: { ...process.env, PI_CODING_AGENT_DIR: agent },
+        }).trim();
+        add('PASS', 'onnxruntime-node load', versions);
+      } catch (error) {
+        add('FAIL', 'onnxruntime-node load', String(error.stderr || error.message).trim());
+      }
+    });
+
+    guard(() => {
       const globalConfig = locations.mcConfig;
       if (!exists(globalConfig)) {
         add('FAIL', 'magic-context config', 'missing ' + globalConfig);
