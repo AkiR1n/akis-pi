@@ -1,7 +1,7 @@
 From cad4de4e21fc11d8857320fa9d2dc9e9a04c9b75 Mon Sep 17 00:00:00 2001
 From: AkiyamaRin <akir1n@outlook.com>
 Date: Sat, 24 Oct 2026 00:09:21 +0800
-Subject: [PATCH 2/3] fix(indexer): record real source spans for markdown
+Subject: [PATCH 2/4] fix(indexer): record real source spans for markdown
  chunks
 
 chunkMarkdown used the section's last line as the start of every chunk after the

@@ -21,7 +21,7 @@ pi install npm:@cortexkit/pi-magic-context@0.49.50
 # 先按 DEPLOY.md 第 4 步使用完整 --set 参数渲染 core,memory（先 dry run 预览，再应用写入）
 ```
 
-配置文件：`$HOME/.config/cortexkit/magic-context.jsonc`（XDG_CONFIG_HOME 为默认值时有效；自定义路径需自行移动）。
+配置文件：绝对 `XDG_CONFIG_HOME` 下的 `cortexkit/magic-context.jsonc`，未设置时为 `$HOME/.config/cortexkit/magic-context.jsonc`。render 与 doctor 使用同一位置，Windows 也使用该默认值，不改为 APPDATA。
 
 以下三项核心阈值直接影响压缩质量与成本，调整前参考设计依据：
 
@@ -98,13 +98,14 @@ for p in "$REPO"/modules/memory/patches/*.patch; do git am "$p" || { git am --ab
 npm ci && npm run build
 ```
 
-补丁说明（3 个优化）：
+补丁说明（4 份）：
 
 1. **尾延迟优化**：候选去重复杂度从 O(n³) 降至 O(n²)；多样性窗口截断为前 256 个候选；单次请求内复用 embedding；sidecar 向量数与 chunk 数不一致时告警跳过；更新时跳过未变分块的测量。
 2. **物理行号对齐**：Markdown chunk 记录真实物理行号，确保反查工具准确跳转到原始位置。
 3. **边界修复**：修复上述改动的边界情况。
+4. **QML 可选依赖**：tree-sitter-qmljs 移入 optionalDependencies；安装或加载失败时 QML 改用文本分块，每个进程只提示一次，其余语言的 AST 解析与检索保持原有行为。原生 Windows 无预编译包时不再因 QML 编译失败阻断整个 memory 安装。重新安装成功后重启进程以重试。
 
-各补丁提交信息已规范化，应用后不影响代码功能。
+各补丁作者已去敏。第 4 份补丁包含并发/重复加载失败的降级测试；原生 Windows 的完整安装与查询仍需实机验收，推荐 Windows 用户优先采用 WSL2 的 core+memory。
 
 **安装验证**：
 

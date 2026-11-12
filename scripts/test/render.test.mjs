@@ -7,7 +7,9 @@ import { spawnSync } from 'node:child_process';
 const script = path.resolve(import.meta.dirname, '../render.mjs');
 const home = () => fs.mkdtempSync(path.join(os.tmpdir(), 'akis-render-test-'));
 const values = { PROVIDER: 'example', MODEL: 'main', MODEL_EXEC: 'exec', MODEL_REVIEW: 'review', MODEL_PLAN: 'plan', MODEL_HISTORIAN: 'history', BRAVE_KEY_REF: '$BRAVE_API_KEY', BOCHA_KEY_REF: '$BOCHA_API_KEY' };
-const run = (dir, args = [], sets = values) => spawnSync(process.execPath, [script, '--home', dir, ...Object.entries(sets).flatMap(([k,v]) => ['--set', k + '=' + v]), ...args], {encoding:'utf8'});
+const env = { ...process.env };
+for (const key of ['PI_CODING_AGENT_DIR', 'XDG_CONFIG_HOME', 'XDG_DATA_HOME', 'WSL_DISTRO_NAME']) delete env[key];
+const run = (dir, args = [], sets = values) => spawnSync(process.execPath, [script, '--home', dir, '--platform', 'darwin', ...Object.entries(sets).flatMap(([k,v]) => ['--set', k + '=' + v]), ...args], {encoding:'utf8',env});
 const read = (dir, rel) => fs.readFileSync(path.join(dir, rel), 'utf8');
 test('strict unresolved values refuse the entire apply before any writes', () => {
  const dir = home(); const result = run(dir, ['--apply', '--strict'], {});
@@ -26,7 +28,7 @@ test('JSON escaping preserves Keychain quotes, slashes and control characters', 
  const model = 'main"\\id\nnext';
  const result = run(dir, ['--apply','--strict'], {...values, MODEL:model, BRAVE_KEY_REF:ref});
  assert.equal(result.status, 0, result.stderr);
- assert.equal(JSON.parse(read(dir,'.pi/web-search.json')).braveApiKey, ref);
+ assert.equal(JSON.parse(read(dir,'.pi/agent/web-search.json')).braveApiKey, ref);
  assert.equal(JSON.parse(read(dir,'.pi/agent/settings.json')).defaultModel, model);
 });
 test('literal credentials are rejected without disclosure or writes', () => {
@@ -35,14 +37,14 @@ test('literal credentials are rejected without disclosure or writes', () => {
  assert.equal(result.status,2); assert.equal(fs.existsSync(path.join(dir,'.pi')), false);
  assert.equal((result.stdout + result.stderr).includes(literal), false);
 });
-test('adding macos preserves core bytes and memory packages; default is dry run', () => {
+test('adding macos and pdf preserves core bytes and memory packages; default is dry run', () => {
  const dir = home(); assert.equal(run(dir,['--modules','core,memory']).status,0);
  assert.equal(fs.existsSync(path.join(dir,'.pi')),false);
  assert.equal(run(dir,['--modules','core,memory','--apply','--strict']).status,0);
  const rel = '.pi/agent/settings.json'; const settings = JSON.parse(read(dir,rel)); settings.userCustom = 'keep';
  fs.writeFileSync(path.join(dir,rel), JSON.stringify(settings));
  const before=read(dir,rel); const rules=read(dir,'.pi/agent/AGENTS.md');
- assert.equal(run(dir,['--modules','core,macos','--apply','--strict']).status,0);
+ assert.equal(run(dir,['--modules','core,macos,pdf','--apply','--strict']).status,0);
  assert.equal(read(dir,rel),before); assert.equal(read(dir,'.pi/agent/AGENTS.md'),rules);
  assert.ok(JSON.parse(before).packages.some(e=>String(e.source||e).includes('pi-magic-context')));
  assert.ok(fs.existsSync(path.join(dir,'Library/LaunchAgents/com.example.pipdfparse.plist')));
@@ -60,9 +62,9 @@ test('adding memory merges packages while retaining customized core settings', (
 
 test('external targets are backed up beneath an external agent-dir before overwrite', () => {
  const root=home(); const dir=path.join(root,'home'); const agent=path.join(root,'external-agent');
- const targets=['.pi/web-search.json','.config/cortexkit/magic-context.jsonc','.local/share/pi-pdf-parse/server.py','Library/LaunchAgents/com.example.pipdfparse.plist'].map(rel=>path.join(dir,rel));
+ const targets=[path.join(agent,'web-search.json'),...['.config/cortexkit/magic-context.jsonc','.local/share/pi-pdf-parse/server.py','Library/LaunchAgents/com.example.pipdfparse.plist'].map(rel=>path.join(dir,rel))];
  for(const target of targets){fs.mkdirSync(path.dirname(target),{recursive:true});fs.writeFileSync(target,'previous-content');}
- const result=run(dir,['--agent-dir',agent,'--modules','core,memory,macos','--apply','--strict']);
+ const result=run(dir,['--agent-dir',agent,'--modules','core,memory,macos,pdf','--apply','--strict']);
  assert.equal(result.status,0,result.stderr);
  const backup=path.join(agent,'backups',fs.readdirSync(path.join(agent,'backups'))[0],'targets');
  for(const target of targets)assert.equal(fs.readFileSync(path.join(backup,target.slice(1)),'utf8'),'previous-content');

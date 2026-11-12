@@ -1,0 +1,198 @@
+From 5e6ac691e591c4d779e4c71861cba8f9b863401d Mon Sep 17 00:00:00 2001
+From: AkiyamaRin <akir1n@outlook.com>
+Date: Thu, 12 Nov 2026 15:34:57 +0800
+Subject: [PATCH 4/4] fix: make QML grammar optional
+
+tree-sitter-qmljs ships no prebuilt binaries, so npm ci needs a native
+toolchain on platforms without one (native Windows, linux-arm64). Move it to
+optionalDependencies and cache its load: a failed load warns once and QML
+files fall back to text chunks while every other language keeps its AST.
+An ambient module declaration keeps typecheck and build working when npm
+omitted the package entirely.
+---
+ README.md                        |  2 ++
+ docs/configuration.md            |  4 ++++
+ docs/known-pitfalls.md           |  2 +-
+ package-lock.json                |  5 ++++-
+ package.json                     |  4 +++-
+ src/indexer/chunkers/code-ast.ts | 19 ++++++++++++++++---
+ src/types/tree-sitter-qmljs.d.ts |  3 +++
+ test/unit/qml-optional.test.ts   | 29 +++++++++++++++++++++++++++++
+ 8 files changed, 62 insertions(+), 6 deletions(-)
+ create mode 100644 src/types/tree-sitter-qmljs.d.ts
+ create mode 100644 test/unit/qml-optional.test.ts
+
+diff --git a/README.md b/README.md
+index fe5dcf1..eb92601 100644
+--- a/README.md
++++ b/README.md
+@@ -75,6 +75,8 @@ This is intentionally not a heavy ColBERT-style late-interaction index yet (Khat
+ 
+ In project-level dogfood, these changes improved a real codebase evaluation from early 3.x/5 quality to above 4.5/5 after rebuilds, with fixes for score compression, README repetition, garbage-query false positives, small-module discoverability, source-vs-test ranking, indexing stability, and auto-mode false positives. Existing KBs should be rebuilt or updated after upgrades that change indexing text.
+ 
++QML AST support uses optional `tree-sitter-qmljs@0.3.1`. If installation or loading fails, QML files remain searchable as text chunks and one notice is emitted per process. Other language parsers are unchanged.
++
+ ## Quick Start
+ 
+ ```bash
+diff --git a/docs/configuration.md b/docs/configuration.md
+index ec780de..6dde99f 100644
+--- a/docs/configuration.md
++++ b/docs/configuration.md
+@@ -102,6 +102,10 @@ Search diagnostics include result provenance and applied search tuning in both t
+ 
+ When `PI_KNOWLEDGE_E2E_PDF` or `PI_KNOWLEDGE_E2E_DOCX` is unset, `npm run test:e2e` is only a smoke gate for those document formats. Do not commit fixture files, fixture paths, extracted text, or snapshots.
+ 
++## Optional QML parser
++
++`tree-sitter-qmljs@0.3.1` is an optional dependency. On hosts without a compatible native build (including native Windows), npm may omit it. The first QML load failure emits one notice per process; concurrent and subsequent files reuse the failed load and fall back to text chunking. QML files remain indexable, without QML AST metadata. TypeScript, JavaScript, Python, Go, Rust, Java, Bash, C and C++ keep their existing grammars. To restore QML AST support, install a working optional dependency and restart the process.
++
+ ## Pi and OMP Support
+ 
+ `pi-knowledge` supports direct Pi extension loading through `pi -e ./extension.js` and OMP-compatible loading through the same packaged entry shim. The root `extension.js` and `index.ts` stay startup-light so install-time validation can inspect the extension without resolving native runtime dependencies such as `better-sqlite3` or `onnxruntime-node`.
+diff --git a/docs/known-pitfalls.md b/docs/known-pitfalls.md
+index 7e16e2f..15f47c3 100644
+--- a/docs/known-pitfalls.md
++++ b/docs/known-pitfalls.md
+@@ -27,7 +27,7 @@ npm install from the packed tarball and the supported AST language smoke tests.
+ `.hpp`/`.hh`/`.hxx` for C++ AST indexing. Qt macro forms such as `Q_OBJECT`, `signals:`, and `slots:`
+ can produce tree-sitter errors and intentionally fall back to text chunks instead of partial AST claims.
+ 
+-QML support uses `tree-sitter-qmljs@0.3.1`; it extracts structural UI metadata only.
++QML support uses optional `tree-sitter-qmljs@0.3.1`; it extracts structural UI metadata only. The package has no Windows prebuild; a failed install must not block other languages. Runtime import failure emits a single notice per process and is cached before awaiting so concurrent indexing does not repeat it. QML then uses text chunks. Restart after fixing the optional native binding to retry. An ambient declaration keeps TypeScript builds valid when npm omits the optional package entirely; it does not provide a runtime grammar.
+ It is not a Qt semantic analyzer and does not infer runtime signal wiring or component instantiation beyond parsed file structure.
+ 
+ ## PDF/DOCX — 已解決 (v0.2.0)
+diff --git a/package-lock.json b/package-lock.json
+index ff46e12..c16b71a 100644
+--- a/package-lock.json
++++ b/package-lock.json
+@@ -21,7 +21,6 @@
+ 				"tree-sitter-java": "0.23.5",
+ 				"tree-sitter-javascript": "0.23.1",
+ 				"tree-sitter-python": "0.21.0",
+-				"tree-sitter-qmljs": "0.3.1",
+ 				"tree-sitter-rust": "0.21.0",
+ 				"tree-sitter-typescript": "0.23.2",
+ 				"unpdf": "1.6.2"
+@@ -35,6 +34,9 @@
+ 			},
+ 			"engines": {
+ 				"node": ">=22.0.0"
++			},
++			"optionalDependencies": {
++				"tree-sitter-qmljs": "0.3.1"
+ 			}
+ 		},
+ 		"node_modules/@biomejs/biome": {
+@@ -3429,6 +3431,7 @@
+ 			"integrity": "sha512-A7FGIqs6YNqF5Y5shwzmiDlKGwjIAPK7HWt0Z4bVa1gMeh4glAoPHr/Mu7lDLpQHzxHp7osdv+HjP1RSMQpoKg==",
+ 			"hasInstallScript": true,
+ 			"license": "MIT",
++			"optional": true,
+ 			"dependencies": {
+ 				"node-addon-api": "^8.2.1",
+ 				"node-gyp-build": "^4.8.2"
+diff --git a/package.json b/package.json
+index 1f218b6..a65e785 100644
+--- a/package.json
++++ b/package.json
+@@ -62,11 +62,13 @@
+ 		"tree-sitter-java": "0.23.5",
+ 		"tree-sitter-javascript": "0.23.1",
+ 		"tree-sitter-python": "0.21.0",
+-		"tree-sitter-qmljs": "0.3.1",
+ 		"tree-sitter-rust": "0.21.0",
+ 		"tree-sitter-typescript": "0.23.2",
+ 		"unpdf": "1.6.2"
+ 	},
++	"optionalDependencies": {
++		"tree-sitter-qmljs": "0.3.1"
++	},
+ 	"devDependencies": {
+ 		"@biomejs/biome": "2.3.5",
+ 		"@types/better-sqlite3": "7.6.13",
+diff --git a/src/indexer/chunkers/code-ast.ts b/src/indexer/chunkers/code-ast.ts
+index b711e94..59de956 100644
+--- a/src/indexer/chunkers/code-ast.ts
++++ b/src/indexer/chunkers/code-ast.ts
+@@ -79,6 +79,9 @@ function moduleDefault(moduleValue: unknown): unknown {
+ 	return moduleField(moduleValue, "default");
+ }
+ 
++// Cache success or failure before yielding so concurrent QML files share one load and notice.
++let qmlGrammar: Promise<unknown> | undefined;
++
+ const LANGS: Record<string, LangConfig> = {
+ 	typescript: {
+ 		grammar: async () => {
+@@ -147,9 +150,19 @@ const LANGS: Record<string, LangConfig> = {
+ 		fallbackOnParseError: true,
+ 	},
+ 	qml: {
+-		grammar: async () => {
+-			const m = await import("tree-sitter-qmljs");
+-			return moduleDefault(m) ?? m;
++		grammar: () => {
++			qmlGrammar ??= (async () => {
++				try {
++					const m = await import("tree-sitter-qmljs");
++					return moduleDefault(m) ?? m;
++				} catch {
++					console.warn(
++						"[pi-knowledge] Optional QML parser unavailable; QML files use text chunks. Other languages are unaffected.",
++					);
++					throw new Error("Optional QML parser unavailable");
++				}
++			})();
++			return qmlGrammar;
+ 		},
+ 		fileType: "qml",
+ 		fallbackOnParseError: true,
+diff --git a/src/types/tree-sitter-qmljs.d.ts b/src/types/tree-sitter-qmljs.d.ts
+new file mode 100644
+index 0000000..387a858
+--- /dev/null
++++ b/src/types/tree-sitter-qmljs.d.ts
+@@ -0,0 +1,3 @@
++// npm may omit this optional native grammar entirely. Keep source builds possible without it;
++// the lazy runtime import is guarded and grammar values are handled as unknown.
++declare module "tree-sitter-qmljs";
+diff --git a/test/unit/qml-optional.test.ts b/test/unit/qml-optional.test.ts
+new file mode 100644
+index 0000000..6a44f79
+--- /dev/null
++++ b/test/unit/qml-optional.test.ts
+@@ -0,0 +1,29 @@
++import { afterEach, expect, it, vi } from "vitest";
++
++vi.mock("tree-sitter-qmljs", () => {
++	throw new Error("simulated missing optional native binding");
++});
++
++afterEach(() => vi.restoreAllMocks());
++
++it("falls back for concurrent and repeated QML loads once while TypeScript AST remains available", async () => {
++	const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
++	const { analyzeIndexableContent } = await import("../../src/indexer/chunker.ts");
++	const qml = "Item { property string title: 'Example' }";
++	const results = await Promise.all([
++		analyzeIndexableContent(qml, "ui/One.qml"),
++		analyzeIndexableContent(qml, "ui/Two.qml"),
++	]);
++	results.push(await analyzeIndexableContent(qml, "ui/Three.qml"));
++	for (const result of results) {
++		expect(result.chunks.length).toBeGreaterThan(0);
++		expect(result.chunks.map((chunk) => chunk.content).join(" ")).toContain("Example");
++		expect(JSON.parse(result.chunks[0].metadata_json).language).toBeUndefined();
++	}
++	expect(warn).toHaveBeenCalledTimes(1);
++	expect(warn.mock.calls[0][0]).toContain("Optional QML parser unavailable");
++	expect(warn.mock.calls[0][0]).not.toContain("simulated");
++	const ts = await analyzeIndexableContent("export function retained() { return 1; }", "src/main.ts");
++	expect(ts.symbols.some((symbol) => symbol.name === "retained")).toBe(true);
++	expect(JSON.parse(ts.chunks[0].metadata_json).language).toBe("typescript");
++});
+-- 
+2.56.0
+

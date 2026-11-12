@@ -10,7 +10,7 @@
 - Do not run destructive Git commands, sudo, force push, or delete untracked files without explicit authorization.
 - For embedded work, record the exact MCU or SoC, board revision, SDK or BSP, toolchain, firmware image, pin and clock assumptions, build command, and validation level reached.
 - Never describe a host build or static review as physical target validation.
-- Treat /private/tmp as an operator-approved shared scratch boundary; trusted project permission policy is part of the local trust base.
+- Treat the OS temporary directory (TMPDIR on POSIX, TEMP on Windows) as an operator-approved shared scratch boundary; trusted project permission policy is part of the local trust base.
 
 ## 联网与浏览器路由
 

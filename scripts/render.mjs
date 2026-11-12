@@ -18,10 +18,9 @@ import fs from 'node:fs';
 import { parseJsonc, assertCredentialReferences } from './config-utils.mjs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { ALL_MODULES, detectPlatform, validateModules, deploymentPaths, backupRelativePath } from './platform-utils.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-
-const ALL_MODULES = ['core', 'memory', 'macos', 'magpie'];
 
 // source (relative to the repository root) -> { target, module }
 // target is a function of the resolved paths so placeholders and locations stay in one place.
@@ -33,17 +32,18 @@ const PLAN = [
   { from: 'config/subagent/config.json', module: 'core', to: (p) => p.agent('extensions/subagent/config.json') },
   { from: 'config/agents/*.md', module: 'core', to: (p, name) => p.agent('agents/' + name) },
   { from: 'config/prompts/*.md', module: 'core', to: (p, name) => p.agent('prompts/' + name) },
-  { from: 'config/web-search.json', module: 'core', to: (p) => p.home('.pi/web-search.json') },
+  { from: 'config/web-search.json', module: 'core', to: (p) => p.webSearch },
   { from: 'extensions/rtk.ts', module: 'core', to: (p) => p.agent('extensions/rtk.ts') },
   { from: 'skills/pi-workflow-notes/SKILL.md', module: 'core', to: (p) => p.agent('skills/pi-workflow-notes/SKILL.md') },
-  { from: 'modules/memory/magic-context.jsonc', module: 'memory', to: (p) => p.home('.config/cortexkit/magic-context.jsonc') },
+  { from: 'modules/memory/magic-context.jsonc', module: 'memory', to: (p) => p.mcConfig },
   { from: 'modules/memory/resident-memory.ts', module: 'memory', to: (p) => p.agent('extensions/resident-memory.ts') },
   { from: 'modules/memory/RESIDENT.template.md', module: 'memory', to: (p) => p.agent('memory/RESIDENT.template.md') },
   { from: 'modules/macos/herdr-agent-state.ts', module: 'macos', to: (p) => p.agent('extensions/herdr-agent-state.ts') },
   { from: 'modules/macos/ego-gc.ts', module: 'macos', to: (p) => p.agent('extensions/ego-gc.ts') },
-  { from: 'modules/macos/pdf-parse/server.py', module: 'macos', to: (p) => p.home('.local/share/pi-pdf-parse/server.py') },
-  { from: 'modules/macos/pdf-parse/requirements.txt', module: 'macos', to: (p) => p.home('.local/share/pi-pdf-parse/requirements.txt') },
-  { from: 'modules/macos/pdf-parse/com.example.pipdfparse.plist', module: 'macos', to: (p) => p.home('Library/LaunchAgents/com.example.pipdfparse.plist') },
+  { from: 'modules/pdf/server.py', module: 'pdf', to: (p) => p.home('.local/share/pi-pdf-parse/server.py') },
+  { from: 'modules/pdf/requirements.txt', module: 'pdf', to: (p) => p.home('.local/share/pi-pdf-parse/requirements.txt') },
+  { from: 'modules/pdf/launchd/com.example.pipdfparse.plist', module: 'pdf', platforms: ['darwin'], to: (p) => p.home('Library/LaunchAgents/com.example.pipdfparse.plist') },
+  { from: 'modules/pdf/systemd/pi-pdf-parse.service', module: 'pdf', platforms: ['linux', 'wsl'], to: (p) => path.join(p.configHome, 'systemd/user/pi-pdf-parse.service') },
   { from: 'modules/magpie/magpie.ts', module: 'magpie', to: (p) => p.agent('extensions/magpie.ts') },
 ];
 
@@ -68,6 +68,8 @@ const USAGE = [
   '  --home DIR            home directory of this machine (required)',
   '  --agent-dir DIR       Pi agent directory (default: <your-home>/.pi/agent)',
   '  --modules LIST        comma separated subset of: ' + ALL_MODULES.join(','),
+  '  --platform NAME       platform policy override (darwin/linux/win32/wsl; default: auto)',
+  '  --mise                opt in to mise exec node@24.21.0 -- npm (POSIX only)',
   '  --apply               write files (default: dry run)',
   '  --backup-dir DIR      where existing files are preserved (default: <agent-dir>/backups)',
   '  --strict              exit non-zero when a placeholder stays unresolved',
@@ -82,6 +84,7 @@ function parseArgs(argv) {
   const opts = { apply: false, sets: {}, modules: ['core'], strict: false };
   const takesValue = {
     '--home': (v) => (opts.home = v),
+    '--platform': (v) => (opts.platform = v),
     '--agent-dir': (v) => (opts.agentDir = v),
     '--modules': (v) => (opts.modules = v.split(',').map((s) => s.trim()).filter(Boolean)),
     '--backup-dir': (v) => (opts.backupDir = v),
@@ -102,6 +105,7 @@ function parseArgs(argv) {
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i];
     if (arg === '--apply') opts.apply = true;
+    else if (arg === '--mise') opts.mise = true;
     else if (arg === '--strict') opts.strict = true;
     else if (arg === '--help' || arg === '-h') opts.help = true;
     else if (takesValue[arg]) {
@@ -162,6 +166,9 @@ function resolver(values, sets) {
       out = JSON.stringify(config, null, 2) + '\n';
     } else if (format.endsWith('.plist')) {
       out = text.replace(/\{\{([A-Z0-9_]+)\}\}/g, (match) => replace(match).replace(/[&<>"']/g, (c) => ({'&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&apos;'}[c])));
+    } else if (format.endsWith('.service')) {
+      // systemd specifiers and environment expansion also apply inside quoted arguments.
+      out = text.replace(/\{\{([A-Z0-9_]+)\}\}/g, (match) => replace(match).replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/%/g, '%%').replace(/\$/g, '$$$$').replace(/\n/g, '\\n').replace(/\r/g, '\\r'));
     } else out = replace(text);
     for (const token of out.match(/\{\{[A-Z0-9_]+\}\}/g) || []) missing.add(token);
     return { text: out, missing: [...missing] };
@@ -189,7 +196,7 @@ function diffSummary(before, after) {
 
 function backup(target, backupRoot) {
   // Mirror absolute paths beneath the backup directory, including external agent directories.
-  const destination = path.join(backupRoot, 'targets', path.resolve(target).slice(path.parse(target).root.length));
+  const destination = path.join(backupRoot, 'targets', backupRelativePath(target));
   fs.mkdirSync(path.dirname(destination), { recursive: true });
   fs.copyFileSync(target, destination);
   return destination;
@@ -213,33 +220,44 @@ function main() {
     console.error(USAGE);
     process.exit(2);
   }
-  const unknownModules = opts.modules.filter((m) => !ALL_MODULES.includes(m));
-  if (unknownModules.length > 0) {
-    console.error('unknown module(s): ' + unknownModules.join(', '));
-    process.exit(2);
+  const platform = opts.platform && opts.platform !== 'auto' ? opts.platform : detectPlatform();
+  try { validateModules(opts.modules, platform); }
+  catch (error) { console.error(error.message); process.exit(2); }
+  if ((opts.mise || opts.sets.USE_MISE === 'true') && platform === 'win32') {
+    console.error('mise npmCommand is only available on POSIX; use default npm on native Windows'); process.exit(2);
   }
 
   const home = path.resolve(opts.home);
-  const agent = path.resolve(opts.agentDir || path.join(home, '.pi', 'agent'));
+  const locations = deploymentPaths({ home, agentDir: opts.agentDir });
+  const agent = locations.agent;
   const stamp = new Date().toISOString().replace(/[:.]/g, '-');
-  const backupRoot = path.resolve(opts.backupDir || path.join(agent, 'backups')) + '/akis-pi-' + stamp;
+  const backupRoot = path.join(path.resolve(opts.backupDir || path.join(agent, 'backups')), 'akis-pi-' + stamp);
   const paths = {
+    ...locations,
     home: (...parts) => path.join(home, ...parts),
     agent: (...parts) => path.join(agent, ...parts),
   };
   const resolve = resolver({ HOME: home, AGENT_DIR: agent }, opts.sets);
   const stateFile = paths.agent('.akis-pi-render.json');
   let previous = [];
+  let previousSchema;
   const stateText = read(stateFile);
   if (stateText !== undefined) {
-    try { previous = JSON.parse(stateText).modules; if (!Array.isArray(previous) || previous.some((m) => !ALL_MODULES.includes(m))) throw new Error(); }
+    try { const state = parseJsonc(stateText); previous = state.modules; previousSchema = state.schemaVersion; if (![undefined, 1, 2].includes(previousSchema) || !Array.isArray(previous) || previous.some((m) => !ALL_MODULES.includes(m))) throw new Error(); }
     catch { console.error('invalid render module state; refusing to overwrite'); process.exit(2); }
   }
+  // v1 bundled PDF with macos. Existing deployments already own those exact target paths.
+  // Adopt them without re-rendering or deleting user edits. New macos installs do not imply PDF.
+  const legacyPdf = previousSchema !== 2 && previous.includes('macos') && !previous.includes('pdf');
+  if (legacyPdf) previous.push('pdf');
   const selected = new Set([...previous, ...opts.modules]);
   const enabled = new Set(opts.modules.filter((m) => !previous.includes(m)));
+  if (legacyPdf) console.log('migration: adopted existing macos PDF deployment as pdf; existing files preserved');
 
   console.log('akis-pi render');
+  console.log('  platform   ' + platform);
   console.log('  home       ' + home);
+  console.log('  search     ' + locations.webSearch);
   console.log('  agent dir  ' + agent);
   console.log('  modules    ' + [...selected].join(', '));
   console.log('  new modules ' + [...enabled].join(', '));
@@ -255,7 +273,7 @@ function main() {
   const actions = [];
 
   for (const item of PLAN) {
-    if (!enabled.has(item.module)) continue;
+    if (!enabled.has(item.module) || (item.platforms && !item.platforms.includes(platform))) continue;
     for (const from of expandSources(item.from)) {
       const source = read(path.join(ROOT, from));
       if (source === undefined) {
@@ -263,10 +281,10 @@ function main() {
         continue;
       }
       let text = source;
-      if (from === 'config/settings.json' && !enabled.has('memory')) {
+      if (from === 'config/settings.json' && !selected.has('memory')) {
       // The memory module supplies pi-knowledge and Magic Context; installing either without
       // the module would leave a package entry pointing at nothing.
-        const settings = JSON.parse(source);
+        const settings = parseJsonc(source);
         const removed = [];
         settings.packages = (settings.packages || []).filter((entry) => {
           const name = typeof entry === 'string' ? entry : entry.source;
@@ -278,6 +296,11 @@ function main() {
         });
         text = JSON.stringify(settings, null, 2) + '\n';
         if (removed.length > 0) console.log('memory module not selected, dropped: ' + removed.join(', ') + '\n');
+      }
+      if (from === 'config/settings.json' && (opts.mise || opts.sets.USE_MISE === 'true')) {
+        const settings = parseJsonc(text);
+        settings.npmCommand = ['mise', 'exec', 'node@24.21.0', '--', 'npm'];
+        text = JSON.stringify(settings);
       }
       let resolved;
       try { resolved = resolve(text, from); }
@@ -309,7 +332,7 @@ function main() {
   }
 
   // State is also reviewable and backed up with the same write plan.
-  if (warnings.length === 0) actions.push({ from: 'render module state', target: stateFile, content: JSON.stringify({ modules: [...selected] }, null, 2) + '\n' });
+  if (warnings.length === 0) actions.push({ from: 'render module state', target: stateFile, content: JSON.stringify({ schemaVersion: 2, modules: [...selected] }, null, 2) + '\n' });
 
   for (const action of actions) {
     const before = read(action.target);

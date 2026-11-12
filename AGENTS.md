@@ -15,10 +15,12 @@
    - `float-ok`：允许安装兼容版本。
 3. **向用户确认部署参数**（一次问齐，不要分多次追问）：
    - 模型供应商标识（`{{PROVIDER}}`）与各角色模型 ID：主力模型（`{{MODEL}}`）、执行模型（`{{MODEL_EXEC}}`）、复核模型（`{{MODEL_REVIEW}}`）、规划模型（`{{MODEL_PLAN}}`）、压缩模型（`{{MODEL_HISTORIAN}}`）；
-   - 要装的模块（`core` 必选；`memory` / `macos` / `magpie` 按用户环境选）；
+   - 要装的模块（`core` 必选；`memory` / `pdf` / `macos` / `magpie` 按用户环境选）；
    - 凭据注入方式：环境变量引用（`$VAR`）还是系统钥匙串（`!security find-generic-password ...`）。
 
 ---
+
+平台策略：Windows 默认推荐 WSL2 的 core+memory；原生 Windows 在实机验收前标为试验。macos 仅供 darwin，PDF 独立选 pdf。不要将单测或上游支持写成本包已完成 Windows/Linux 实机验收。
 
 ## 1. 保护现有配置
 

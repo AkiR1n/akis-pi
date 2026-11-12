@@ -26,7 +26,9 @@ akis-pi 做了几点调整：
 **不适合**：
 - 想一键安装、不愿配置模型与 API 凭据。
 - 习惯工具 schema 全常驻、不习惯写脚本调用。
-- Linux / Windows 用户（目前仅在 macOS arm64 实测验证，Linux 未实测，不支持 Windows）。
+- 需要本包对所有平台、桌面插件和原生依赖提供已完成实机验收的保证。当前实测记录仅为 macOS arm64。
+
+Windows 用户默认推荐 **WSL2 的 core+memory**，源码、数据库和 node_modules 放在 WSL 的 Linux 文件系统。原生 Windows 是可选的**试验**路径，需 Node 24.21.0、Git for Windows（Pi 默认使用 Git Bash），桌面/浏览器能力逐项验收；Linux/WSL 也仍待实机验证。manifest 的 platforms 表示适用平台，verified 单独记录实测平台。
 
 ## 快速开始
 
@@ -59,14 +61,14 @@ node scripts/render.mjs --home "$HOME" --modules core --strict --apply \
 node scripts/doctor.mjs --home "$HOME" --modules core
 ```
 
-`render.mjs` 不覆盖 `mcp.json`、不写 `RESIDENT.md`、不删除文件。写入前自动备份目标至 `<agent-dir>/backups/akis-pi-<时间戳>/targets/<绝对目标路径去掉根斜杠>`，含 agent-dir 外的目标：
+`render.mjs` 不覆盖 `mcp.json`、不写 `RESIDENT.md`、不删除文件。写入前自动备份目标至 `<agent-dir>/backups/akis-pi-<时间戳>/targets/<目标映射>`（POSIX 去掉根斜杠；Windows 保留 drive-C / drive-D 或 unc/server/share，避免跨盘碰撞），含 agent-dir 外的目标：
 
 | 模块 | agent-dir 外的写入路径 |
 | --- | --- |
-| core | `$HOME/.pi/web-search.json` |
-| memory | `$HOME/.config/cortexkit/magic-context.jsonc`（MC 配置） |
-| macos | `$HOME/.local/share/pi-pdf-parse/server.py`、`requirements.txt`（PDF 服务源码） |
-| macos | `$HOME/Library/LaunchAgents/com.example.pipdfparse.plist` |
+| core | 搜索配置按上游位置：显式 agent-dir → XDG / agent / legacy 回退；与 doctor 一致 |
+| memory | `<XDG_CONFIG_HOME 或 HOME/.config>/cortexkit/magic-context.jsonc`（MC 配置） |
+| pdf | `$HOME/.local/share/pi-pdf-parse/server.py`、`requirements.txt`（唯一 PDF 服务源码） |
+| pdf | macOS 的 `~/Library/LaunchAgents/com.example.pipdfparse.plist`；Linux/WSL 的 `<config-home>/systemd/user/pi-pdf-parse.service`；Windows 按说明手动建登录任务 |
 
 `<agent-dir>/.akis-pi-render.json` 记录已完成模块。追加渲染 memory 时只合并 packages，保留已有 core 设置。严格模式写入前拒绝未解析占位符；非严格模式跳过含占位符的文件。凭据只接受 `!command` 或 `$ENV_VAR` / `${ENV_VAR}` 引用，明文凭据会被拒绝。自定义路径见 [DEPLOY.md](DEPLOY.md) 第 0 步。
 
@@ -77,8 +79,9 @@ node scripts/doctor.mjs --home "$HOME" --modules core
 | 模块 | 内容 | 安装建议 | 详细说明 |
 | --- | --- | --- | --- |
 | **core** | `settings.json`、全局 `AGENTS.md`、`APPEND_SYSTEM.md`、8 个子代理角色、2 个 prompt 模板、compact-tools 配置、pi-web-access 搜索配置、rtk bash 重写扩展 | 必装 | 基础运行面 |
-| **memory** | Magic Context（项目记忆 + 压缩）、resident-memory 扩展、pi-knowledge 知识库及 3 个补丁 | 推荐（需要持久项目记忆时装；仅需精简工具面可跳过） | [modules/memory](modules/memory/README.md) |
-| **macos** | herdr 状态面板扩展、ego-browser 窗口回收、本地离线 PDF→Markdown 端点、Keychain 凭据规范 | 推荐（macOS 装；Linux 跳过） | [modules/macos](modules/macos/README.md) |
+| **memory** | Magic Context（项目记忆 + 压缩）、resident-memory 扩展、pi-knowledge 知识库及 4 个补丁（QML 可选） | 推荐（需要持久项目记忆时装；仅需精简工具面可跳过） | [modules/memory](modules/memory/README.md) |
+| **macos** | herdr 状态面板扩展、ego-browser 窗口回收 | 仅 darwin 可选；其它平台拒绝选择 | [modules/macos](modules/macos/README.md) |
+| **pdf** | 本地 PDF→Markdown 端点；launchd / systemd user / Windows 登录任务说明 | 按需，独立于 macos | [modules/pdf](modules/pdf/README.md) |
 | **magpie** | Magpie 网关接入：本地 OpenAI 兼容 provider、MCP hub、生图/生视频扩展 | 可选（用 Magpie 网关时启用；跳过可直连任意 OpenAI 兼容服务） | [modules/magpie](modules/magpie/README.md) |
 
 模块间依赖解耦：`settings.json` 中的 pi-knowledge 与 Magic Context 包归属 memory 模块；`APPEND_SYSTEM.md` 里关于 Magpie 与 `ctx_*` 的规则已标注适用模块。
@@ -110,7 +113,8 @@ node scripts/doctor.mjs --home "$HOME" --modules core
 
 ## 限制与未验证
 
-- **系统支持**：验证环境为 macOS 27.2.1 / arm64。Linux 未实测（core 和 memory 含有原生编译依赖，需自行验证；macos 模块不适用）。不支持 Windows。
+- **系统支持**：实测平台仅 darwin-arm64。Windows 默认推荐 WSL2 core+memory，原生 Windows 保持试验；Linux/WSL 未做实机验收。原生依赖、浏览器会话恢复与桌面 helper 必须分别验证，不能把路径单测当实机证据。
+- **npm**：默认不写 npmCommand，使用普通 npm；POSIX 上可显式 `render --mise` 或 `--set USE_MISE=true`。agent-browser CLI 属于 core，须单独安装 CLI 与浏览器。
 - **自检工具**：`scripts/doctor.mjs` 只读检查 settings、node_modules 和 manifest；版本偏差报 WARN，Pi/MC 主版本偏差报 FAIL。由于 Pi 1.5.2 的 `pi list` 会自动补装缺包，脚本不调用 `pi list`。
 - **项目信任**：模板默认 `defaultProjectTrust: "always"`（不逐次弹窗）。想每次确认可改为 `ask`。
 - **探针数据**：首轮探针数据不代表最终任务准确率；两组探针同时调整了引导提示，不能单一归因于 codemode。
@@ -133,7 +137,8 @@ akis-pi/
 ├── skills/          pi-workflow-notes（多步工作流编写注意事项）
 ├── modules/
 │   ├── memory/      Magic Context 配置、resident-memory 扩展、RESIDENT 模板、pi-knowledge 补丁
-│   ├── macos/       herdr 状态面板、ego-browser 窗口回收、PDF 离线解析端点、Keychain 凭据规范
+│   ├── macos/       herdr 状态面板、ego-browser 窗口回收（仅 darwin）
+│   ├── pdf/         PDF 唯一源码与各平台服务启动适配
 │   └── magpie/      magpie.ts 扩展、mcp.json.example、路由说明
 ├── scripts/
 │   ├── render.mjs   渲染配置至目标环境（默认 dry run，具备前置备份与 diff 输出）

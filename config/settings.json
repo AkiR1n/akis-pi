@@ -44,15 +44,6 @@
     "autoResize": true,
     "blockImages": false
   },
-  "npmCommand": [
-    "/usr/bin/env",
-    "NPM_CONFIG_CACHE={{HOME}}/.cache/pi-npm",
-    "mise",
-    "exec",
-    "node@24.21.0",
-    "--",
-    "npm"
-  ],
   "enabledModels": [
     "{{PROVIDER}}/{{MODEL}}",
     "{{PROVIDER}}/{{MODEL_EXEC}}",

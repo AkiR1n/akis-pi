@@ -1,6 +1,17 @@
 # 部署
 
-按「做什么 → 检查命令 → 期望结果 → 失败怎么办」执行。先读 [AGENTS.md](AGENTS.md)，版本见 [manifest.json](manifest.json)，理由见 [docs/decisions.md](docs/decisions.md)。core 必装，memory / macos / magpie 按需。联网安装前先说明，不覆盖已有配置，doctor FAIL 时停止。
+按「做什么 → 检查命令 → 期望结果 → 失败怎么办」执行。先读 [AGENTS.md](AGENTS.md)，版本见 [manifest.json](manifest.json)，理由见 [docs/decisions.md](docs/decisions.md)。core 必装，memory / pdf / macos / magpie 按需。联网安装前先说明，不覆盖已有配置，doctor FAIL 时停止。
+
+Windows 用户默认推荐 WSL2 的 core+memory；源码、node_modules 与数据库留在 WSL Linux 文件系统。原生 Windows 为试验路径，尚未通过本包实机验收。下文 sh 命令用于 macOS/Linux/WSL；原生 Windows 先安装 Node 24.21.0 和 Git for Windows（Pi 默认 Git Bash），再用 PowerShell 运行 Node 渲染器：
+
+~~~powershell
+$env:PI_CODING_AGENT_DIR = Join-Path $HOME '.pi\agent'
+node scripts/render.mjs --home $HOME --agent-dir $env:PI_CODING_AGENT_DIR --modules core,memory --strict --provider '<供应商 id>' --model '<主模型 id>' --model-exec '<执行模型>' --model-review '<复核模型>' --model-plan '<规划模型>' --model-historian '<压缩模型>' --brave-key-ref '$BRAVE_API_KEY' --bocha-key-ref '$BOCHA_API_KEY'
+# 审阅后以同样参数追加 --apply。完成对应依赖安装后运行：
+node scripts/doctor.mjs --home $HOME --agent-dir $env:PI_CODING_AGENT_DIR --modules core,memory
+~~~
+
+PowerShell 单引号使 $VAR 保持引用文本。doctor 只报告变量 ok/missing，不输出值。原生 Windows 的 .cmd 由 doctor 解析为 node.exe + CLI 脚本，不调用 shell，不调用 pi list。计划任务 PDF 见 [modules/pdf](modules/pdf/README.md)。browser 原生 Windows 为试验；Electron、会话恢复和退出清理需另测。Windows 的 Herdr/Rex pane、tmux inspector 不能由 core 通过推导可用。
 
 ## 0. 前置检查与路径
 
@@ -9,7 +20,7 @@
 export REPO="$(pwd)"
 # 默认目录；使用自定义目录时改这行
 export PI_CODING_AGENT_DIR="$HOME/.pi/agent"
-# 本文示例选择 core + memory；跳过 memory 就写 core，可追加 ,macos 或 ,magpie
+# 本文示例选择 core + memory；跳过 memory 就写 core，可追加 ,pdf 或 ,magpie，darwin 可选 ,macos
 export MODULES=core,memory
 uname -sm; echo "HOME=$HOME"
 command -v pi && pi --version
@@ -18,23 +29,19 @@ command -v git && git --version
 ```
 期望：macOS arm64 或 Linux x86_64/arm64，HOME 非空，Git 可用；Linux 未实测。已有 Pi 记下版本，缺 Pi 则步骤 2 安装。已有 settings.json / AGENTS.md / APPEND_SYSTEM.md 必须备份、审阅 diff，确认后再覆盖。
 
-render 与 doctor 的 `--agent-dir` 需显式传入 `"$PI_CODING_AGENT_DIR"`；默认 HOME/.pi/agent。模板 `{{AGENT_DIR}}` 跟随此参数。文中 `~/.pi/agent` 在自定义部署中均换为该目录。搜索配置写 `$HOME/.pi/web-search.json`，MC 写 `$HOME/.config/cortexkit/magic-context.jsonc`。自定义 XDG_CONFIG_HOME 需自行备份并移到实际读取位置（脚本不跟随）。resident-memory 默认读 HOME/.pi/agent/memory/RESIDENT.md，自定义 agent-dir 设 `PI_RESIDENT_MEMORY_FILE="$PI_CODING_AGENT_DIR/memory/RESIDENT.md"`。pi-web-access 查找差异见步骤 6。
+render 与 doctor 的 `--agent-dir` 需显式传入 `"$PI_CODING_AGENT_DIR"`；默认 HOME/.pi/agent。模板 `{{AGENT_DIR}}` 跟随此参数。文中 `~/.pi/agent` 在自定义部署中均换为该目录。搜索配置写显式 agent-dir 下的 web-search.json；没有显式目录时跟随 pi-web-access 的 XDG / agent / legacy 回退规则。MC 写绝对 XDG_CONFIG_HOME 下的 cortexkit/magic-context.jsonc，未设置时为 HOME/.config/cortexkit/magic-context.jsonc，Windows 相同。render 与 doctor 共用解析器。resident-memory 默认读 HOME/.pi/agent/memory/RESIDENT.md，自定义 agent-dir 设 `PI_RESIDENT_MEMORY_FILE="$PI_CODING_AGENT_DIR/memory/RESIDENT.md"`。pi-web-access 查找差异见步骤 6。
 
 ## 1. Node 24.21.0、npmCommand 与 RTK
 
-推荐使用 mise：
+Node 24.21.0 可直接安装；mise 是可选版本管理器：
 ```sh
 curl https://mise.run | sh       # 已有 mise 则跳过
 mise use -g node@24.21.0
 node --version
-# 第 2 步前确认模板 npmCommand 的依赖
-if command -v mise >/dev/null; then
-  /usr/bin/env mise exec node@24.21.0 -- npm --version   # 用 mise：期望打印 npm 版本
-else
-  node --version && npm --version                          # 不用 mise：走下文「非 mise」分支
-fi
+node --version && npm --version
 ```
-用 mise 期望 Node v24.21.0、npm 有输出；`command -v mise` 无输出说明不用 mise，报 `env: mise: No such file or directory` 属预期，按非 mise 分支处理。模板 npmCommand 通过 mise 调 npm；隔离 HOME 时 mise 可能重下 Node，先跑这条检查，免得把下载当成插件行为。非 mise 运行 `node --version && npm --version`，在步骤 4 apply 后删部署目标的 npmCommand（见对应命令），否则 pi install 报 `env: mise: No such file or directory`。不要用 node/24 别名代替精确版本。
+
+默认模板不写 npmCommand，Pi 使用普通 npm。仅 POSIX 上显式给 render 加 --mise 或 --set USE_MISE=true，才生成 mise exec node@24.21.0 -- npm；先验证 mise exec node@24.21.0 -- npm --version。原生 Windows 使用默认 npm。不要用 node/24 别名代替精确版本。
 
 安装 core bash rewrite 所需 RTK，任选其一：
 ```sh
@@ -152,15 +159,9 @@ strict 遇未解析占位符拒绝写入；非 strict 警告并跳过。JSON/JSO
 
 渲染器将已完成模块记入 `<agent-dir>/.akis-pi-render.json`。后续只渲染新增模块，不重写已完成 core，不移除旧模块；后加 memory 只合并 packages 到 settings，保留其它设置与过滤项。重复传 core 不更新；需更新模板时在独立目录生成审阅合并，不要删状态文件覆盖。
 
-写入范围与备份见 README；已有目标先备份到 `<agent-dir>/backups/akis-pi-<时间戳>/targets/<绝对目标路径去掉根斜杠>`。不替换 mcp.json、models.json、auth.json、RESIDENT.md。
+写入范围与备份见 README；已有目标先备份到 `<agent-dir>/backups/akis-pi-<时间戳>/targets/<目标映射>（POSIX 去根斜杠；Windows 为 drive-C / drive-D 或 unc/server/share）`。不替换 mcp.json、models.json、auth.json、RESIDENT.md。
 
-非 mise 用户在 apply 后、装插件前执行（只改部署副本）：
-```sh
-cp -p "$PI_CODING_AGENT_DIR/settings.json" "$PI_CODING_AGENT_DIR/settings.json.before-npm-command"
-node -e 'const fs=require("fs"),p=process.env.PI_CODING_AGENT_DIR+"/settings.json",s=JSON.parse(fs.readFileSync(p));delete s.npmCommand;fs.writeFileSync(p,JSON.stringify(s,null,2)+"\n")'
-npm --version
-```
-检查目标 settings 无 npmCommand；Pi 将用默认 npm。删除失败则停止，不要装插件。
+新部署无需删除 npmCommand：默认没有该字段。旧配置的模板升级须在独立目录生成、审阅合并，避免重写用户自定义配置。
 
 ## 5. 安装插件（必须先渲染）
 ```sh
@@ -206,20 +207,9 @@ security add-generic-password -a "$USER" -s pi-web-access-brave -w
 ```sh
 node -e 'const c=require(process.env.HOME+"/.pi/web-search.json");console.log(Object.keys(c));for(const k of ["braveApiKey","bochaApiKey"])console.log(k,/^(?:!\S|\$(?:[A-Za-z_]|\{))/.test(c[k]||"")?"ref-ok":"MISSING-OR-LITERAL")'
 ```
-期望 searchRouting/fetchRouting/pdf 存在、两字段 ref-ok，无占位符。引用指向未设变量时 pi-web-access 行为**未验证**，不要当成有可用 key。没 Brave/Bocha 删对应字段与 providers，保留 exa → gemini → degoog 兜底。改 routing 后重启 Pi。
+期望 searchRouting/fetchRouting/pdf 存在、两字段 ref-ok，无占位符。doctor 对 $VAR / ${VAR} 真实读取环境变量一次，仅输出 ok/missing；missing 为 WARN，不能当成可用 key。!command 不会被 doctor 执行，另行验证。没 Brave/Bocha 删对应字段与 providers，保留 exa → gemini → degoog 兜底。改 routing 后重启 Pi。
 
-pi-web-access 0.47.0 源码：只要设了 PI_CODING_AGENT_DIR，优先读该目录下 web-search.json（即使等于默认）；未设才按 XDG / agent / legacy 回退。步骤 0 已设该变量，必须将渲染在 legacy 的文件同步到 agent-dir。先看 diff；目标确认后备份再复制：
-```sh
-src="$HOME/.pi/web-search.json"
-dst="$PI_CODING_AGENT_DIR/web-search.json"
-if [ -e "$dst" ]; then diff -u "$dst" "$src"; else echo "create: $dst"; fi
-# 审阅且用户确认后执行（仅路径不同才复制）
-if [ "$src" != "$dst" ]; then
-  if [ -e "$dst" ]; then cp -p "$dst" "$dst.before-search-sync-$(date +%Y%m%d%H%M%S)"; fi
-  cp "$src" "$dst"
-fi
-```
-doctor 同时扫描两处占位符，agent-dir 变化须重测搜索。步骤 6 检查也将路径换为实际读取的 agent-dir/web-search.json。
+pi-web-access 0.47.0 优先读取 PI_CODING_AGENT_DIR/web-search.json。render --agent-dir 与 doctor --agent-dir 跟随该目录；运行 Pi 时保持相同环境变量。未显式指定 agent-dir 时，渲染器按 XDG_CONFIG_HOME/pi、默认 agent-dir 与 legacy ~/.pi 的存在性回退，与上游一致，dry run 会打印最终 search 路径，无需重复复制两份。
 
 ## 7. 子代理角色
 
@@ -285,7 +275,7 @@ node -e 'console.log(require(process.env.HOME+"/.pi/vendor/pi-knowledge/package.
 pi list
 node "$REPO/scripts/doctor.mjs" --home "$HOME" --agent-dir "$PI_CODING_AGENT_DIR" --modules core,memory
 ```
-期望 dist/index.js 存在、版本 0.12.0、pi list **13 项**（11 core + MC + pi-knowledge），保留两个 filtered；此处仅查 core,memory，doctor 应 0 FAIL；MODULES 其余模块步骤 12 查。启动新 Pi 会话做步骤 7、8 验收（无 key 用 stub），静态检查不可替代。补丁含尾延迟优化、真实 source span 行号对齐、复核修复三份，作者已去敏。git am 冲突停止查 base，不要手动绕过。npm 脚本警告按步骤 5 查。在小库实测检索行号；仅构建不证明检索可用。知识库目录不可指向 resident 目录。
+期望 dist/index.js 存在、版本 0.12.0、pi list **13 项**（11 core + MC + pi-knowledge），保留两个 filtered；此处仅查 core,memory，doctor 应 0 FAIL；MODULES 其余模块步骤 12 查。启动新 Pi 会话做步骤 7、8 验收（无 key 用 stub），静态检查不可替代。补丁含尾延迟优化、真实 source span 行号对齐、复核修复和 QML 可选依赖四份，作者已去敏。git am 冲突停止查 base，不要手动绕过。npm 脚本警告按步骤 5 查。在小库实测检索行号；仅构建不证明检索可用。知识库目录不可指向 resident 目录。
 
 ## 10. macos 模块（可选）
 
@@ -321,25 +311,22 @@ herdr-agent-state.ts 由 herdr 管理，仅 HERDR_ENV、HERDR_SOCKET_PATH、HERD
 
 ego-gc.ts 仅在 ego lite 运行时清理窗口，不主动启动；PI_EGO_GC=off 关闭、PI_EGO_GC_DEBUG=1 输出日志。ego-browser/ego-search 技能由第三方 app 安装，本仓库不分发。manifest 的 ego-lite 是 `external app, not redistributed`，**无核实获取 URL**；向提供 app 渠道获取，未取得则跳过，不编造链接。不用时 settings 用 -path 排除，不删文件。
 
-### 10.3 本地 PDF→Markdown
-```sh
-# macos 渲染已写 server.py / requirements.txt / LaunchAgent，默认仅回环
-python3 -m venv "$HOME/.local/share/pi-pdf-parse/venv"
-"$HOME/.local/share/pi-pdf-parse/venv/bin/pip" install -r "$HOME/.local/share/pi-pdf-parse/requirements.txt"
-launchctl bootstrap gui/"$(id -u)" "$HOME/Library/LaunchAgents/com.example.pipdfparse.plist"
-curl --noproxy '*' http://127.0.0.1:8791/health
-```
-期望 {"ok":true}。链路：本地端点 → Gemini → unpdf，扫描件 422 走 OCR。改端口需同步 PI_PDF_PARSE_PORT 与 web-search.json 的 pdf.endpointUrl。停用用 launchctl bootout；launchd 不展开 ~，迁移 HOME 需审阅重装 plist 绝对路径。
+## 10a. pdf 模块（跨平台可选）
 
-### 10.4 agent-browser
+从 core 或 macos 中独立选择 pdf：先 node scripts/render.mjs --home "$HOME" --modules pdf --strict 预览，审阅后加 --apply。唯一 server.py / requirements.txt 渲染到 HOME/.local/share/pi-pdf-parse，darwin 另写 LaunchAgent，Linux/WSL 写 systemd --user unit，Windows 使用登录计划任务说明。安装、health 与扫描件 422 验收见 [modules/pdf/README.md](modules/pdf/README.md)。
 
-npx 成功不证明全局 CLI 安装；实际安装并检查：
-```sh
+旧 v1 macos 状态自动接管为独立 pdf 归属，保留已有文件和用户修改；不会删除或重复部署。新的 macos 安装不再隐含 PDF。
+
+## 10b. agent-browser（core 的通用前置依赖）
+
+~~~sh
 npm install -g agent-browser@0.41.2
-command -v agent-browser
-"$(npm prefix -g)/bin/agent-browser" --version
-```
-期望 0.41.2 且路径在扩展解析的同一 Node 树。mise node/24 别名会漂移，装新 24.x 后需重新确认，否则浏览器工具报 could not be validated。来源参照 manifest 的 npm -g agent-browser。
+agent-browser --version
+agent-browser install
+# Linux 系统库缺失时按上游说明选择 agent-browser install --with-deps
+~~~
+
+期望 CLI 0.41.2 且位于扩展解析的同一 Node 树。安装 CLI 不等于已下载浏览器，随后用 tools.agent_browser({args:["doctor"]}) 验证。mise 的 node/24 别名可能随新版本漂移。原生 Windows 的会话锁、恢复与 Electron 有上游限制，保持试验标签。
 
 ## 11. magpie 模块（可选）
 

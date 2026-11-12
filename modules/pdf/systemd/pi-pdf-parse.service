@@ -1,0 +1,12 @@
+[Unit]
+Description=Local PDF to Markdown endpoint
+
+[Service]
+Type=simple
+Environment=PI_PDF_PARSE_HOST=127.0.0.1 PI_PDF_PARSE_PORT=8791
+ExecStart="{{HOME}}/.local/share/pi-pdf-parse/venv/bin/python" -I -B -u "{{HOME}}/.local/share/pi-pdf-parse/server.py"
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=default.target

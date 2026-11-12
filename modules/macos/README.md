@@ -1,12 +1,11 @@
 # macos 模块
 
-本模块包含四项针对 macOS 环境验证的功能组件；除 Keychain 凭据规范在其它平台有对应替代语法外，其余组件均针对 macOS 系统特性设计。
+本模块仅在 darwin 上可选，提供 herdr 状态与 ego 窗口回收。其它平台选择 macos 会在写入前拒绝。PDF 已拆为独立 [pdf 模块](../pdf/README.md)，浏览器 CLI 属于 core 的通用前置依赖。
 
 | 组件 | 生效触发条件 | 未安装时的影响 |
 | --- | --- | --- |
 | `herdr-agent-state.ts` | 仅在检测到环境变量 `HERDR_ENV=1` 且存在 `HERDR_SOCKET_PATH` / `HERDR_PANE_ID` 时生效 | herdr 面板无法实时显示 Pi 的代理工作状态 |
 | `ego-gc.ts` | 仅在后台检测到 `ego lite` 浏览器进程正在运行时介入 | 异常中断或子代理遗留的浏览器窗口无法自动回收（每个窗口约占用 0.4–0.8 GB 内存） |
-| `pdf-parse/` | 提供本地端点，作为 pi-web-access 的 `pdf.endpointUrl` | 扫描件或复杂表格 PDF 只能回退至远程 OCR 解析 |
 | Keychain 凭据规范 | 搜索及外部插件读取 API Key 时 | 只能将凭据置于纯环境变量中 |
 
 ---
@@ -49,28 +48,6 @@
 
 ---
 
-## pdf-parse：本地 PDF → Markdown 离线端点
-
-`server.py` 用 PyMuPDF 在本地提取 PDF 排版文本并转为 Markdown，无外部调用成本。检测到文件无文本层（如扫描件）时返回 422 状态码，引导上层 pi-web-access 回退至远程 OCR；根路径 `/health` 返回 `{"ok": true}`。
-
-部署与启动：
-
-```sh
-node ../../scripts/render.mjs --home "$HOME" --modules core,macos --apply
-python3 -m venv "$HOME/.local/share/pi-pdf-parse/venv"
-"$HOME/.local/share/pi-pdf-parse/venv/bin/pip" install -r "$HOME/.local/share/pi-pdf-parse/requirements.txt"
-launchctl bootstrap gui/"$(id -u)" "$HOME/Library/LaunchAgents/com.example.pipdfparse.plist"
-curl --noproxy '*' http://127.0.0.1:8791/health
-```
-
-**服务说明**：.plist 配置文件路径由渲染脚本生成为宿主机绝对路径（launchd 默认不展开 `~`）。若移动了家目录或服务路径，需重新渲染并重载 plist。
-
-**运行模式**：不想常驻后台可执行 `launchctl bootout` 注销服务，配置保留 `pdf.provider: "auto"`，本地不可用时自动改用云端解析。进阶场景可配置为系统 LaunchDaemon 配合独立低权限账户运行，需管理员权限（`sudo`）并调整目录权限，本仓库默认提供易于部署的用户级 LaunchAgent 模板。
-
-**端口调整**：修改监听端口需同步调整环境变量 `PI_PDF_PARSE_PORT` 与 `web-search.json` 中的 `pdf.endpointUrl`。
-
----
-
 ## Keychain 凭据规范（搜索类插件调用 Key）
 
 本配置仓库只保留凭据引用，不存储密钥明文。macOS 下推荐两种安全写法：
@@ -85,13 +62,13 @@ export BRAVE_API_KEY=...
 # 配置文件中填入引用： "braveApiKey": "$BRAVE_API_KEY"
 ```
 
-钥匙串的服务名称由用户自行定义，不要在仓库提交、笔记或配置中粘贴真实密钥。渲染脚本 `render.mjs` 的 `--set BRAVE_KEY_REF=...` 仅接受以 `!` 开头的动态引用字符串，直接输入明文会被拦截拒绝。
+钥匙串的服务名称由用户自行定义，不要在仓库提交、笔记或配置中粘贴真实密钥。渲染脚本 `render.mjs` 的 `--set BRAVE_KEY_REF=...` 接受 `$VAR` / `${VAR}` 或 `!command` 动态引用，直接输入明文会被拦截拒绝。
 
 ---
 
 ## agent-browser 与 mise 版本别名一致性
 
-Pi 的 `npmCommand` 默认通过 `mise exec node@24.21.0` 运行，而在部分扩展解析 Node 时，系统别名 `node/24` 会指向最后安装的 24.x 版本。全局 CLI 工具 `agent-browser` 必须装在当前 Node 运行树中，否则扩展会报 `could not be validated` 校验失败。
+Pi 默认使用普通 npm；只有显式 `render --mise` 才生成 mise 的 `npmCommand`。在部分扩展解析 Node 时，mise 别名 `node/24` 会指向最后安装的 24.x 版本。全局 CLI 工具 `agent-browser` 必须装在当前 Node 运行树中，否则扩展会报 `could not be validated` 校验失败。
 
 环境排查与安装：
 

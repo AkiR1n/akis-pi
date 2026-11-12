@@ -1,7 +1,7 @@
 From 6b32b68ff66dfc17d31bd5cb3295c1f698a101c1 Mon Sep 17 00:00:00 2001
 From: AkiyamaRin <akir1n@outlook.com>
 Date: Sat, 24 Oct 2026 00:44:56 +0800
-Subject: [PATCH 3/3] fix: address review findings on the performance patch
+Subject: [PATCH 3/4] fix: address review findings on the performance patch
 
 - Take the KB lock and the indexing claim inside the protected region and release
   on every path; a configuration error during setup used to leak the lock file with

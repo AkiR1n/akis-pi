@@ -12,7 +12,7 @@
 - 本项目的历史、决策、约定：ctx_search，命中后用 ctx_expand 看原文（ctx_* 仅记忆模块）。个人背景、旧对话、笔记：knowledge_search（选哪个库见 AGENTS.md）。
 - 联网：web_search → fetch_content；抓取遇到 403/反爬再试 `mcp__magpie__magpie_web_search__web_fetch`（仅 Magpie 模块）；需要登录态的网站用 ego-search 技能。
 - 生图/生视频：`mcp__magpie_image__generate_image` / `generate_video`（仅 Magpie 模块），先 `n: 1` 试一张。
-- 浏览器自动化：agent_browser；macOS 桌面界面：find_roots → observe_ui → act_ui。
+- 浏览器自动化：agent_browser；有图形会话的桌面界面：find_roots → observe_ui → act_ui。
 - 技能：任务命中 `<available_skills>` 里的描述时，先读对应 SKILL.md 再动手；magpie-skills 是另一份技能索引（仅 Magpie 模块）。
 
 # 委派

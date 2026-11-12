@@ -1,5 +1,6 @@
 // Shared read-only JSONC parser; ignores comments and trailing commas outside strings.
 export function parseJsonc(text) {
+  text = text.replace(/^\uFEFF/, '');
   let out = '';
   let inString = false;
   let escaped = false;

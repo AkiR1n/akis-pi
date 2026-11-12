@@ -1,7 +1,7 @@
 {
   "name": "akis-pi",
-  "schemaVersion": 1,
-  "generatedAt": "2026-11-11T18:41:26.806Z",
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-12T07:35:18.712Z",
   "generatedFrom": "live Pi configuration, read-only (see NEVER_COPIED in export-akis-pi.mjs)",
   "verifiedOn": {
     "os": "macOS 27.2.1",
@@ -34,35 +34,52 @@
       "level": "pinned",
       "module": "core",
       "platforms": [
-        "macos"
+        "darwin",
+        "linux",
+        "win32",
+        "wsl"
       ],
       "lastVerified": "2026-11-12",
-      "note": "tested 1.5.2. The official installer installs the newest release; the npm command in DEPLOY.md reproduces 1.5.2 exactly."
+      "note": "tested 1.5.2. The official installer installs the newest release; the npm command in DEPLOY.md reproduces 1.5.2 exactly.",
+      "verified": [
+        "darwin-arm64"
+      ]
     },
     {
       "id": "node",
-      "source": "mise node@24.21.0",
+      "source": "Node.js 24.21.0 (mise optional)",
       "version": "24.21.0",
       "level": "pinned-reason",
       "module": "core",
       "platforms": [
-        "macos"
+        "darwin",
+        "linux",
+        "win32",
+        "wsl"
       ],
       "lastVerified": "2026-11-12",
-      "note": "the mise node/24 alias follows whatever 24.x was installed last; pin the version where the agent CLIs live."
+      "note": "Use the same Node installation for Pi and global CLIs; mise is an explicit renderer option.",
+      "verified": [
+        "darwin-arm64"
+      ]
     },
     {
       "id": "rtk",
-      "source": "homebrew rtk",
+      "source": "https://github.com/rtk-ai/rtk/releases/tag/v1.1.0 or Homebrew rtk",
       "version": "1.1.0",
       "level": "pinned-reason",
       "module": "core",
       "platforms": [
-        "macos",
-        "linux"
+        "darwin",
+        "linux",
+        "win32",
+        "wsl"
       ],
       "lastVerified": "2026-11-12",
-      "note": "extensions/rtk.ts delegates to rtk rewrite and needs >= 0.23.0 for that subcommand; it fails open otherwise."
+      "note": "extensions/rtk.ts delegates to rtk rewrite and needs >= 0.23.0 for that subcommand; it fails open otherwise.",
+      "verified": [
+        "darwin-arm64"
+      ]
     },
     {
       "id": "pi-magic-context",
@@ -71,11 +88,16 @@
       "level": "pinned-reason",
       "module": "memory",
       "platforms": [
-        "macos",
-        "linux"
+        "darwin",
+        "linux",
+        "win32",
+        "wsl"
       ],
       "lastVerified": "2026-11-12",
-      "note": "read the release notes for database migrations before upgrading; MC owns the project-memory store."
+      "note": "read the release notes for database migrations before upgrading; MC owns the project-memory store.",
+      "verified": [
+        "darwin-arm64"
+      ]
     },
     {
       "id": "pi-knowledge",
@@ -84,11 +106,16 @@
       "level": "pinned",
       "module": "memory",
       "platforms": [
-        "macos",
-        "linux"
+        "darwin",
+        "linux",
+        "win32",
+        "wsl"
       ],
       "lastVerified": "2026-11-12",
-      "note": "3 patch commits on top of 558e8dd; apply with git am, then npm ci and npm run build."
+      "note": "4 patches on 558e8dd; QML grammar is optional. Apply with git am, then npm ci and npm run build.",
+      "verified": [
+        "darwin-arm64"
+      ]
     },
     {
       "id": "pi-web-access",
@@ -97,10 +124,15 @@
       "level": "pinned",
       "module": "core",
       "platforms": [
-        "macos",
-        "linux"
+        "darwin",
+        "linux",
+        "win32",
+        "wsl"
       ],
-      "lastVerified": "2026-11-12"
+      "lastVerified": "2026-11-12",
+      "verified": [
+        "darwin-arm64"
+      ]
     },
     {
       "id": "pi-agent-browser-native",
@@ -109,10 +141,15 @@
       "level": "pinned",
       "module": "core",
       "platforms": [
-        "macos",
-        "linux"
+        "darwin",
+        "linux",
+        "win32",
+        "wsl"
       ],
-      "lastVerified": "2026-11-12"
+      "lastVerified": "2026-11-12",
+      "verified": [
+        "darwin-arm64"
+      ]
     },
     {
       "id": "pi-atelier",
@@ -121,15 +158,20 @@
       "level": "pinned",
       "module": "core",
       "platforms": [
-        "macos",
-        "linux"
+        "darwin",
+        "linux",
+        "win32",
+        "wsl"
       ],
       "lastVerified": "2026-11-12",
       "resourceFilters": {
         "extensions": [
           "+extensions/index.ts"
         ]
-      }
+      },
+      "verified": [
+        "darwin-arm64"
+      ]
     },
     {
       "id": "pi-ask-user",
@@ -138,10 +180,15 @@
       "level": "pinned",
       "module": "core",
       "platforms": [
-        "macos",
-        "linux"
+        "darwin",
+        "linux",
+        "win32",
+        "wsl"
       ],
-      "lastVerified": "2026-11-12"
+      "lastVerified": "2026-11-12",
+      "verified": [
+        "darwin-arm64"
+      ]
     },
     {
       "id": "pi-powerpoint",
@@ -150,10 +197,15 @@
       "level": "pinned",
       "module": "core",
       "platforms": [
-        "macos",
-        "linux"
+        "darwin",
+        "linux",
+        "win32",
+        "wsl"
       ],
-      "lastVerified": "2026-11-12"
+      "lastVerified": "2026-11-12",
+      "verified": [
+        "darwin-arm64"
+      ]
     },
     {
       "id": "pi-subagents",
@@ -162,10 +214,15 @@
       "level": "pinned",
       "module": "core",
       "platforms": [
-        "macos",
-        "linux"
+        "darwin",
+        "linux",
+        "win32",
+        "wsl"
       ],
-      "lastVerified": "2026-11-12"
+      "lastVerified": "2026-11-12",
+      "verified": [
+        "darwin-arm64"
+      ]
     },
     {
       "id": "pi-compact-tools",
@@ -174,8 +231,10 @@
       "level": "pinned",
       "module": "core",
       "platforms": [
-        "macos",
-        "linux"
+        "darwin",
+        "linux",
+        "win32",
+        "wsl"
       ],
       "lastVerified": "2026-11-12",
       "resourceFilters": {
@@ -183,7 +242,10 @@
           "+extensions/compact-tools.ts"
         ],
         "themes": []
-      }
+      },
+      "verified": [
+        "darwin-arm64"
+      ]
     },
     {
       "id": "pi-mobile",
@@ -192,10 +254,15 @@
       "level": "pinned",
       "module": "core",
       "platforms": [
-        "macos",
-        "linux"
+        "darwin",
+        "linux",
+        "win32",
+        "wsl"
       ],
-      "lastVerified": "2026-11-12"
+      "lastVerified": "2026-11-12",
+      "verified": [
+        "darwin-arm64"
+      ]
     },
     {
       "id": "pi-computer-use",
@@ -204,10 +271,15 @@
       "level": "pinned",
       "module": "core",
       "platforms": [
-        "macos",
-        "linux"
+        "darwin",
+        "linux",
+        "win32",
+        "wsl"
       ],
-      "lastVerified": "2026-11-12"
+      "lastVerified": "2026-11-12",
+      "verified": [
+        "darwin-arm64"
+      ]
     },
     {
       "id": "pi-away",
@@ -216,10 +288,15 @@
       "level": "pinned",
       "module": "core",
       "platforms": [
-        "macos",
-        "linux"
+        "darwin",
+        "linux",
+        "win32",
+        "wsl"
       ],
-      "lastVerified": "2026-11-12"
+      "lastVerified": "2026-11-12",
+      "verified": [
+        "darwin-arm64"
+      ]
     },
     {
       "id": "pi-prompt-suggestion",
@@ -228,10 +305,15 @@
       "level": "pinned",
       "module": "core",
       "platforms": [
-        "macos",
-        "linux"
+        "darwin",
+        "linux",
+        "win32",
+        "wsl"
       ],
-      "lastVerified": "2026-11-12"
+      "lastVerified": "2026-11-12",
+      "verified": [
+        "darwin-arm64"
+      ]
     },
     {
       "id": "herdr",
@@ -240,10 +322,13 @@
       "level": "pinned",
       "module": "macos",
       "platforms": [
-        "macos"
+        "darwin"
       ],
       "lastVerified": "2026-11-12",
-      "note": "only active when HERDR_ENV, HERDR_SOCKET_PATH and HERDR_PANE_ID are set; inert otherwise."
+      "note": "only active when HERDR_ENV, HERDR_SOCKET_PATH and HERDR_PANE_ID are set; inert otherwise.",
+      "verified": [
+        "darwin-arm64"
+      ]
     },
     {
       "id": "ego-lite",
@@ -252,22 +337,31 @@
       "level": "float-ok",
       "module": "macos",
       "platforms": [
-        "macos"
+        "darwin"
       ],
       "lastVerified": "2026-11-12",
-      "note": "ego-gc.ts shells out to the ego-browser CLI; the ego skills are third-party and are not copied into this repo."
+      "note": "ego-gc.ts shells out to the ego-browser CLI; the ego skills are third-party and are not copied into this repo.",
+      "verified": [
+        "darwin-arm64"
+      ]
     },
     {
       "id": "agent-browser",
       "source": "npm -g agent-browser",
       "version": "0.41.2",
       "level": "float-ok",
-      "module": "macos",
+      "module": "core",
       "platforms": [
-        "macos"
+        "darwin",
+        "linux",
+        "win32",
+        "wsl"
       ],
       "lastVerified": "2026-11-12",
-      "note": "must live in the node tree the extension resolves; the mise node/24 alias can drift away from it."
+      "note": "must live in the node tree the extension resolves; the mise node/24 alias can drift away from it.",
+      "verified": [
+        "darwin-arm64"
+      ]
     },
     {
       "id": "magpie",
@@ -276,10 +370,33 @@
       "level": "float-ok",
       "module": "magpie",
       "platforms": [
-        "macos"
+        "darwin",
+        "linux",
+        "win32",
+        "wsl"
       ],
       "lastVerified": "2026-11-12",
-      "note": "optional module: gateway, MCP hub and image generation. Not required for core or memory."
+      "note": "optional module: gateway, MCP hub and image generation. Not required for core or memory.",
+      "verified": [
+        "darwin-arm64"
+      ]
+    },
+    {
+      "id": "pdf-parse",
+      "source": "modules/pdf/server.py + PyMuPDF",
+      "version": "1.28.2",
+      "level": "pinned",
+      "module": "pdf",
+      "verified": [
+        "darwin-arm64"
+      ],
+      "note": "Service startup outside macOS requires separate validation.",
+      "platforms": [
+        "darwin",
+        "linux",
+        "win32",
+        "wsl"
+      ]
     }
   ],
   "modules": {
@@ -292,7 +409,11 @@
       "required": false
     },
     "macos": {
-      "description": "herdr agent state, ego window GC, local PDF endpoint, Keychain credentials",
+      "description": "macOS herdr agent state and ego window GC",
+      "required": false
+    },
+    "pdf": {
+      "description": "Local PDF endpoint with launchd, systemd user unit or Windows login task",
       "required": false
     },
     "magpie": {

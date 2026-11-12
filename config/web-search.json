@@ -37,8 +37,7 @@
   "githubClone": {
     "enabled": true,
     "maxRepoSizeMB": 350,
-    "cloneTimeoutSeconds": 45,
-    "clonePath": "/tmp/pi-github-repos"
+    "cloneTimeoutSeconds": 45
   },
   "youtube": {
     "enabled": true

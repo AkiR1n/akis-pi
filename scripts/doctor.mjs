@@ -13,9 +13,9 @@ import fs from 'node:fs';
 import { parseJsonc, versionStatus } from './config-utils.mjs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { detectPlatform, validateModules, deploymentPaths, resolveCommand } from './platform-utils.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const ALL_MODULES = ['core', 'memory', 'macos', 'magpie'];
 
 const REQUIRED_CORE = [
   'settings.json',
@@ -42,6 +42,8 @@ const USAGE = [
   '  --agent-dir DIR     Pi agent directory (default: <your-home>/.pi/agent)',
   '  --modules LIST      modules expected to be installed (default: core)',
   '  --mc-profile FILE   extra Magic Context JSONC config file to compare, repeatable',
+  '  --platform NAME     platform policy override (default: auto)',
+  '  --pi-command FILE   Pi executable or Node CLI script (default: pi on PATH)',
   '  --json              print the result as JSON',
 ].join('\n');
 
@@ -59,6 +61,8 @@ function parseArgs(argv) {
     else if (arg === '--agent-dir') opts.agentDir = value();
     else if (arg === '--modules') opts.modules = value().split(',').map((s) => s.trim()).filter(Boolean);
     else if (arg === '--mc-profile') opts.mcProfiles.push(value());
+    else if (arg === '--platform') opts.platform = value();
+    else if (arg === '--pi-command') opts.piCommand = value();
     else if (arg === '--json') opts.json = true;
     else if (arg === '--help' || arg === '-h') opts.help = true;
     else throw new Error('unknown argument: ' + arg);
@@ -93,7 +97,7 @@ function installedVersion(agentDir, name) {
   const text = read(path.join(agentDir, 'npm', 'node_modules', name, 'package.json'));
   if (text === undefined) return undefined;
   try {
-    return JSON.parse(text).version;
+    return parseJsonc(text).version;
   } catch {
     return undefined;
   }
@@ -118,11 +122,13 @@ function main() {
     process.exit(2);
   }
 
-  const unknown = opts.modules.filter((m) => !ALL_MODULES.includes(m));
-  if (unknown.length) { console.error('unknown module(s): ' + unknown.join(', ')); process.exit(2); }
+  const platform = opts.platform && opts.platform !== 'auto' ? opts.platform : detectPlatform();
+  try { validateModules(opts.modules, platform); }
+  catch (error) { console.error(error.message); process.exit(2); }
 
   const home = path.resolve(opts.home);
-  const agent = path.resolve(opts.agentDir || path.join(home, '.pi', 'agent'));
+  const locations = deploymentPaths({ home, agentDir: opts.agentDir });
+  const agent = locations.agent;
   const enabled = new Set(opts.modules);
   const results = [];
   const add = (status, label, detail) => results.push({ status, label, detail: detail || '' });
@@ -137,16 +143,26 @@ function main() {
   const manifestText = read(path.join(ROOT, 'manifest.json'));
   let manifest = {};
   guard(() => {
-    manifest = JSON.parse(manifestText);
+    manifest = parseJsonc(manifestText);
     add('PASS', 'manifest.json readable', manifest.components.length + ' components, tested on ' + manifest.verifiedOn.os);
   });
+
+  add('PASS', 'platform', platform + '-' + process.arch);
+  for (const component of manifest.components || []) {
+    if (!enabled.has(component.module)) continue;
+    if (!(component.verified || []).includes(platform + '-' + process.arch)) add('WARN', 'platform verification ' + component.id, 'not verified on ' + platform + '-' + process.arch + (platform === 'win32' ? '; native Windows is experimental; WSL2 core+memory is recommended' : ''));
+  }
+  const invoke = (command, args, options) => {
+    const resolved = resolveCommand(command);
+    return execFileSync(resolved.command, [...resolved.args, ...args], options);
+  };
 
   // 1. Pi binary and version
   guard(() => {
     const expected = (manifest.components || []).find((c) => c.id === 'pi');
     let actual;
     try {
-      actual = execFileSync('pi', ['--version'], { encoding: 'utf8', timeout: 30000 }).trim();
+      actual = invoke(opts.piCommand || 'pi', ['--version'], { encoding: 'utf8', timeout: 30000 }).trim();
     } catch {
       add('FAIL', 'pi binary', 'pi --version failed; is Pi installed and on PATH?');
       return;
@@ -207,8 +223,8 @@ function main() {
 
   guard(() => {
     try {
-      const version = execFileSync('rtk', ['--version'], { encoding: 'utf8', timeout: 5000 }).trim();
-      execFileSync('rtk', ['rewrite', '--help'], { stdio: 'pipe', timeout: 5000 });
+      const version = invoke('rtk', ['--version'], { encoding: 'utf8', timeout: 5000 }).trim();
+      invoke('rtk', ['rewrite', '--help'], { stdio: 'pipe', timeout: 5000 });
       add('PASS', 'rtk rewrite', version);
     } catch { add('WARN', 'rtk rewrite', 'rtk missing or rewrite unavailable; install/check in DEPLOY.md step 1'); }
   });
@@ -227,7 +243,7 @@ function main() {
         const agentsDir = path.join(agent, 'agents');
         const agentFiles = exists(agentsDir) ? fs.readdirSync(agentsDir).filter((name) => name.endsWith('.md')) : [];
         if (agentFiles.length === 0) missing.push('agents/*.md');
-        if (!exists(path.join(home, '.pi', 'web-search.json'))) missing.push('~/.pi/web-search.json');
+        if (!exists(locations.webSearch)) missing.push(locations.webSearch);
       }
       if (missing.length === 0) add('PASS', module + ' files', files.length + ' checked');
       else add('FAIL', module + ' files', 'missing: ' + missing.join(', '));
@@ -237,7 +253,7 @@ function main() {
   // 4. No unresolved placeholders in deployed config
   guard(() => {
     const offenders = [];
-    const targets = [...PLACEHOLDER_TARGETS.map((rel) => path.join(agent, rel)), path.join(home, '.pi/web-search.json'), path.join(agent, 'web-search.json'), path.join(home, '.config/cortexkit/magic-context.jsonc'), ...opts.mcProfiles];
+    const targets = [...PLACEHOLDER_TARGETS.map((rel) => path.join(agent, rel)), path.join(home, '.pi/web-search.json'), locations.webSearch, path.join(agent, 'web-search.json'), locations.mcConfig, ...opts.mcProfiles];
     const profileRoot = path.join(agent, 'mc-profiles');
     for (const name of exists(profileRoot) ? fs.readdirSync(profileRoot) : []) targets.push(path.join(profileRoot, name, 'xdg/cortexkit/magic-context.jsonc'));
     for (const rel of targets) {
@@ -253,6 +269,31 @@ function main() {
     }
     if (offenders.length === 0) add('PASS', 'placeholders resolved', targets.filter(exists).length + ' files checked');
     else add('FAIL', 'placeholders resolved', offenders.join('; '));
+  });
+
+  // Resolve environment credentials once; never invoke arbitrary credential commands.
+  // Only status is reported, including references in models.json.
+  guard(() => {
+    const cache = new Map();
+    const walk = (value, prefix) => {
+      if (!value || typeof value !== 'object') return;
+      for (const [key, child] of Object.entries(value)) {
+        if (/apikey$/i.test(key) && typeof child === 'string') {
+          const variable = /^\$(?:([A-Za-z_][A-Za-z0-9_]*)|\{([A-Za-z_][A-Za-z0-9_]*)\})$/.exec(child);
+          if (variable) {
+            const name = variable[1] || variable[2];
+            if (!cache.has(name)) cache.set(name, Boolean(process.env[name]?.trim()));
+            add(cache.get(name) ? 'PASS' : 'WARN', 'credential ' + prefix + '.' + key, cache.get(name) ? 'ok' : 'missing');
+          } else if (child.startsWith('!')) add('WARN', 'credential ' + prefix + '.' + key, 'command reference not evaluated');
+          else add('FAIL', 'credential ' + prefix + '.' + key, 'missing or invalid reference (value withheld)');
+        }
+        walk(child, prefix + '.' + key);
+      }
+    };
+    for (const file of [path.join(agent, 'settings.json'), locations.webSearch, path.join(agent, 'models.json')]) {
+      const text = read(file);
+      if (text !== undefined) walk(parseJsonc(text), path.basename(file));
+    }
   });
 
   // A rendered config must contain values, never the source text of the renderer. This catches the
@@ -280,7 +321,7 @@ function main() {
   // 6. Magic Context: values and multi-profile consistency
   if (enabled.has('memory')) {
     guard(() => {
-      const globalConfig = path.join(home, '.config', 'cortexkit', 'magic-context.jsonc');
+      const globalConfig = locations.mcConfig;
       if (!exists(globalConfig)) {
         add('FAIL', 'magic-context config', 'missing ' + globalConfig);
         return;
@@ -329,7 +370,7 @@ function main() {
         add('WARN', 'magic context package', 'not installed under the agent dir yet');
         return;
       }
-      const version = JSON.parse(packageJson).version;
+      const version = parseJsonc(packageJson).version;
       const expected = manifest.components.find((c) => c.id === 'pi-magic-context')?.version;
       add(expected ? versionStatus(version, expected, true) : 'WARN', 'magic context package', 'installed ' + version + ', manifest ' + (expected || 'missing'));
     });
@@ -365,19 +406,24 @@ function main() {
     if (!exists(path.join(home, '.local', 'bin', 'ego-gc')) && !exists(path.join(home, '.local', 'bin', 'ego-browser'))) {
       notes.push('ego-browser CLI not found in ~/.local/bin (ego-gc disables itself)');
     }
-    const pdf = read(path.join(home, '.local', 'share', 'pi-pdf-parse', 'server.py'));
-    if (pdf === undefined) notes.push('pdf-parse server.py missing; pdf.endpointUrl will fall through to the next provider');
-    const plist = read(path.join(home, 'Library', 'LaunchAgents', 'com.example.pipdfparse.plist'));
-    if (plist === undefined) notes.push('LaunchAgent not installed; start the PDF endpoint by hand or skip it');
-    if (notes.length === 0) add('PASS', 'macos module', 'ego and pdf-parse present');
+    if (notes.length === 0) add('PASS', 'macos module', 'ego CLI present');
     else add('WARN', 'macos module', notes.join('; '));
+  });
+
+  if (enabled.has('pdf')) guard(() => {
+    const required = [path.join(locations.pdfDir, 'server.py'), path.join(locations.pdfDir, 'requirements.txt')];
+    if (platform === 'darwin') required.push(path.join(home, 'Library/LaunchAgents/com.example.pipdfparse.plist'));
+    if (platform === 'linux' || platform === 'wsl') required.push(path.join(locations.configHome, 'systemd/user/pi-pdf-parse.service'));
+    const missing = required.filter((file) => !exists(file));
+    add(missing.length ? 'FAIL' : 'PASS', 'pdf files', missing.length ? 'missing: ' + missing.join(', ') : 'rendered files present; runtime health and service startup require separate validation');
+    if (platform === 'win32') add('WARN', 'pdf scheduled task', 'configure and verify the login task in modules/pdf/README.md');
   });
 
   // Output
   const counts = { PASS: 0, WARN: 0, FAIL: 0 };
   for (const result of results) counts[result.status] += 1;
   if (opts.json) {
-    console.log(JSON.stringify({ counts, results }, null, 2));
+    console.log(JSON.stringify({ platform, arch: process.arch, counts, results }, null, 2));
   } else {
     console.log('akis-pi doctor - home ' + home);
     console.log('               agent dir ' + agent);
