@@ -1,25 +1,24 @@
 # magpie 模块
 
-Magpie 是一个本地网关：它提供 OpenAI 兼容的 chat 端点、MCP hub、以及生图/生视频模型。这个模块让它接管 Pi 的一部分能力，**但边界是刻意划过的**（见下）。
+Magpie 是一款本地服务网关：提供 OpenAI 兼容的对话端点、MCP 工具 Hub、以及本地图像与视频生成模型接口。本模块用于将 Magpie 的部分专长能力接入 Pi coding agent，其**集成边界经过严格界定**（详见下文说明）。
 
-| 内容 | 说明 |
+| 模块内容 | 功能说明 |
 | --- | --- |
-| `magpie.ts` | 用 Magpie 的 decision / image 模型注册 `models.classify()` / `generateImages()` 的 provider |
-| `mcp.json.example` | 两个 MCP server 条目：hub（web_search/web_fetch）+ 独立 stdio（生图生视频） |
-| 路由用法 | 什么时候用 Magpie、什么时候不用 |
+| `magpie.ts` | 利用 Magpie 的分类决策模型与生图模型，向 Pi 注册 `models.classify()` 与 `generateImages()` 提供商 |
+| `mcp.json.example` | 提供两个 MCP 服务配置参考：Hub 端点（web_search / web_fetch）与独立 stdio 服务（生图生视频） |
+| 路由集成策略 | 明确规范何时调用网关能力、何时保持本地原生链路 |
 
 ---
 
 ## magpie.ts
 
-这个文件**由 Magpie 自己生成**（文件头写着：把 Pi 从 Magpie 上摘掉，magpie 就不再管它）。所以它应该被当作产物：Magpie 升级后它可能被重写，你的本地改动会丢。
+该文件在实际使用中**由 Magpie 网关应用生成与维护**（文件头注有自动生成声明）。因此应将其视作外部集成产物：当 Magpie 升级或重新接入时可能会被重写，任何手动修改可能会丢失。
 
-它做两件事：
+扩展主要实现两项机制：
+1. 检测宿主 Pi 是否支持 `typesafe.classify` 能力；若支持，则注册 `magpie-systemone` 提供商（用于本地小模型快速决策）。旧版本 Pi 若不支持该接口则自动静默跳过，不影响基础运行。
+2. 注册 `magpie-images` 提供商及 `generateImages` 实现，对接 `POST /v1/images/generations` 接口，支持将输入图像作为参考图进行多模态生成。
 
-1. 只有在宿主 Pi 支持 `typesafe.classify` 时才注册 `magpie-systemone` provider（decision 模型）。老的 Pi 拿不到任何东西，不会报错。
-2. 注册 `magpie-images` provider 与 `magpie-images` 的 `generateImages` 实现，走 `POST /v1/images/generations`，支持用输入图片作参考。
-
-Pi 的 `models.json` 只管 chat 模型，所以图片/分类模型必须由扩展注册——这就是这个文件存在的原因。
+Pi 的 `models.json` 仅管理文本对话模型，图像与分类能力必须通过 TypeScript 扩展进行注册——这是提供该扩展的核心原因。
 
 ---
 
@@ -40,9 +39,9 @@ Pi 的 `models.json` 只管 chat 模型，所以图片/分类模型必须由扩�
 }
 ```
 
-**合并，不要替换**：目标文件是 `~/.pi/agent/mcp.json`，通常已经有别的 server。`render.mjs` 不写这个文件，只打印指引——覆盖别人的 MCP 注册表不是渲染器该做的决定。
+**增量合并原则**：目标文件为 `~/.pi/agent/mcp.json`，用户环境中通常已配置有其他外部服务。`render.mjs` 不会自动写入该文件，仅提供合并指导——确保不破坏现有的 MCP 服务注册表。
 
-装完 **重启 Pi**（MCP 元数据在启动时缓存），然后：
+配置完成后**必须重启 Pi 进程**（MCP 工具元数据仅在系统启动时加载并缓存），随后执行验证：
 
 ```sh
 pi mcp list
@@ -50,47 +49,45 @@ pi mcp list
 
 ---
 
-## 坑 1：hub 会按请求头过滤工具
+## 常见注意事项 1：Hub 端点依据请求头过滤暴露工具
 
-同一个端点，用不同客户端看到的工具数不同：
+访问相同的 Hub 端点时，不同的客户端请求头会导致服务端返回不同的工具列表：
 
-| 客户端 | 看到的工具 |
+| 请求客户端 | 暴露的工具列表 |
 | --- | --- |
-| curl / Python 直连 | 6 个（browser、image×3、web_search、web_fetch） |
-| Pi 的 Node fetch（带 `Sec-Fetch-Mode: cors`） | **2 个**（只有 web-search） |
+| curl / Python 原生直连 | 6 个（browser、image×3、web_search、web_fetch） |
+| Pi 底层 Node fetch（携带 `Sec-Fetch-Mode: cors`） | **2 个**（仅保留 web-search 与 web_fetch） |
 
-结论：**核对一定要用 `pi mcp list`，不要用 curl**。想把生图工具拿进 Pi，就按模板配独立的 stdio server（`magpie mcp image`），不要指望 hub。
+**排错标准**：**校验工具状态必须以 `pi mcp list` 的输出为准，切勿仅凭 curl 结果判断**。若需要在 Pi 中调用图像生成工具，务必配置独立的 stdio 本地进程（`magpie mcp image`），不要依赖 HTTP Hub 聚合。
 
-另：hub 的工具面是**服务器端配置**决定的。Magpie 里关掉的 server 在 Pi 侧也看不到，而且这个元数据在启动时缓存。
-
----
-
-## 坑 2：需要斜杠命令的技能必须 direct
-
-Magpie 的技能路由会把技能收进一份索引（`magpie-skills`），换来 Pi 的 `<available_skills>` 变短（实测 11,276 → 6,545 字符，-42%）。代价是：被路由的技能**不再有同名 `/skill:<name>` 命令**。
-
-所以：
-
-- 第三方通用技能（文档处理、绘图模板之类）交给路由，省索引。
-- **自己的、需要明确斜杠调用的技能保持 direct**（保存话题、写个人笔记这类）。它们被路由之后，依赖 `/skill:<name>` 的流程会直接失效，而且报错方式很难懂（命令不存在）。
-
-判断规则一句话：**如果某个流程里明确写了 `/skill:xxx`，那个技能就不能被路由。**
+另外，Hub 端点暴露的工具集取决于服务端的全局配置。若在 Magpie 应用界面中关闭了某个服务，Pi 侧同样无法感知对应工具。
 
 ---
 
-## 边界：Magpie 接管什么、不接管什么
+## 常见注意事项 2：需斜杠调用的交互技能必须保持直接注册
 
-- **接管**：搜索（第二跳反爬）、生图生视频、技能索引瘦身。
-- **不接管**：记忆（那有 Magic Context）、浏览器自动化（那有 agent-browser / ego）。
+Magpie 的技能聚合机制会将外部技能归集为统一索引文件（`magpie-skills`），从而将 Pi 的直接技能提示词（`<available_skills>`）大幅精简（实测从 11,276 字符降至 6,545 字符，降幅 -42%）。但其带来的代价是：**被归集的技能在 Pi 终端中不再拥有专属的 `/skill:<name>` 快速调用命令**。
 
-理由：Magpie 只在「能减少 Pi 的模型面或维护负担」时接管。塞进第二套记忆或第二套浏览器状态，换来的是两个都要维护、且互相不知道对方存在。
+因此在配置技能路由时遵循以下原则：
+- 通用型、仅需模型自主调用的第三方技能（如文档排版、格式转换等）可交给网关路由以节约提示词。
+- **需要用户手动在终端中输入斜杠命令调用的私有技能，必须保持直接注册（direct）**（例如保存当前话题、记录日记等）。此类技能若被网关路由，将导致显式调用的自动化工作流因命令不存在而直接中断。
+
+判据总结：**凡是在工作流规范中明确需要通过 `/skill:xxx` 触发的技能，均不能收录入网关统一路由。**
 
 ---
 
-## 没有 Magpie 怎么办
+## 职责边界：接管范围与非接管范围
 
-完全可用：
+- **委托接管**：针对 403 反爬的第二跳网络正文抓取（`web_fetch`）、本地图像与视频生成模型、通用外部技能的提示词索引瘦身。
+- **保留原生**：跨会话上下文记忆（由 Magic Context 管理）、浏览器端自动化控制（由 agent-browser / ego 管理）。
 
-1. `models.json` 的 `baseUrl` 指向任意 OpenAI 兼容网关，删掉 `magpie.ts` 与 `mcp.json` 里的 magpie 条目。`settings.json` 本来就不含 Magpie 的包条目——本模块只提供扩展与 MCP 条目。
-2. `APPEND_SYSTEM.md` 里所有 Magpie 相关行都标了「仅 Magpie 模块」，整段删掉不影响其余能力。
-3. `AGENTS.md` 的联网路由第 3 条（403 第二跳）失效时，剩下的链路是 `web_search → fetch_content`，以及需要登录态时的浏览器技能。
+**设计理念**：外部网关仅在能够有效减轻 Pi 的上下文负担或降低运维成本时接入。若在记忆系统与浏览器自动化上引入第二套状态机，将导致多套系统状态脱节、排查难度成倍增加。
+
+---
+
+## 无 Magpie 环境下的平替方案
+
+若当前环境未部署 Magpie，本配置体系依然完整可用：
+1. 将 `models.json` 中的 `baseUrl` 指向任意标准 OpenAI 兼容的网关地址，并在 `settings.json` 与 `mcp.json` 中移除相关配置条目。`settings.json` 本身不含 Magpie 的 npm 依赖包。
+2. `APPEND_SYSTEM.md` 中关于 Magpie 的所有引导说明均标注有模块作用域标签，直接删除该段落不影响其他能力。
+3. 若缺少 403 抓取兜底能力，网络交互将自动沿用默认的 `web_search → fetch_content` 原生链路；遇到复杂反爬或需登录站点时，通过浏览器自动化技能介入处理。

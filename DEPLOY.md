@@ -213,7 +213,7 @@ npm install-scripts ls
 
 判据：被跳过脚本的包，只要下面的加载/可执行检查通过（多数自带 prebuilt，例如 better-sqlite3、sharp、tree-sitter），就**不需要** approve；不要 `approve --all`。只有检查失败的包才审阅后 approve，approve 不会自动重跑脚本，需要执行 `npm rebuild <包名>`（例如 `npm rebuild @injaneity/pi-computer-use`）。不支持该子命令时检查安装日志与 npm 自己的脚本策略。
 
-至少核验 pi-computer-use：postinstall 实际为 `node scripts/setup-helper.mjs --postinstall`，负责安装 helper，跳过会影响桌面控制。下面只读检查本机 helper 可执行文件；失败则按包 README 审阅并重新运行安装步骤（可能下载/签名，先说明），不要把包已安装当作 helper 可用：
+至少核验 pi-computer-use：postinstall 实际为 `node scripts/setup-helper.mjs --postinstall`，负责安装 helper，跳过会影响桌面控制。下面只读检查本地环境的 helper 可执行文件；失败则按包 README 审阅并重新运行安装步骤（可能下载/签名，先说明），不要把包已安装当作 helper 可用：
 
 ```sh
 cd "$PI_CODING_AGENT_DIR/npm/node_modules/@injaneity/pi-computer-use"
@@ -424,7 +424,7 @@ pi remove npm:pi-away@0.1.4
 
 数据库回滚另看 docs/upgrade.md，不能用配置备份冒充数据恢复。
 
-## 无 key 的本机回环验收
+## 无 key 的本地回环验收
 
 先跑第 3 步 pi --list-models，exit 0 且 stderr 为空，证明目录和扩展没有加载错误。再在**独立临时 HOME 与 agent-dir** 复制本次渲染/安装的非凭据配置，创建仅有 stub provider 的 models.json（不要修改真实配置）。示例内容：
 
