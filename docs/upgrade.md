@@ -7,7 +7,8 @@
 升级前先保存基线状态与配置文件（POSIX；Windows 把重定向换成 `Out-File`，`cp` 换成 `Copy-Item`，其余参数相同）：
 
 ```sh
-node scripts/doctor.mjs --home "$HOME" --modules core,memory,macos,magpie > "$TMPDIR/akis-pi-doctor-before.txt"
+# 用本次部署实际选中的模块；macos 只在 darwin 上加
+node scripts/doctor.mjs --home "$HOME" --modules core,magpie,memory > "$TMPDIR/akis-pi-doctor-before.txt"
 cp -p "$HOME/.pi/agent/settings.json" "$HOME/.pi/agent/settings.json.bak-$(date +%Y%m%d)"
 ```
 
@@ -16,7 +17,7 @@ cp -p "$HOME/.pi/agent/settings.json" "$HOME/.pi/agent/settings.json.bak-$(date 
 
 渲染不删除文件，改过的目标在写入前都备份到 `<agent-dir>/backups/akis-pi-<时间戳>/targets/`，路径映射与写入时一致。要退回去，把对应文件复制回原位。
 
-`<agent-dir>/.akis-pi-render.json` 记录已完成模块，删掉对应条目就能重跑同一模块。组件层面的回滚（退插件、退 Pi、退数据库）见下面各节。
+`<agent-dir>/.akis-pi-render.json` 记录已完成模块；需要重新渲染某个模块时才动它。升级模板不要靠删条目覆盖已部署配置——按 DEPLOY 规定的做法在独立目录生成、审阅合并。组件层面的回滚（退插件、退 Pi、退数据库）见下面各节。
 
 ## 推荐升级顺序
 
@@ -42,7 +43,7 @@ cp -p "$HOME/.pi/agent/settings.json" "$HOME/.pi/agent/settings.json.bak-$(date 
 
 memory 升级后先跑 `node scripts/deploy-check.mjs onnx`，再跑 doctor；两者都要求 native runtime 加载成功。Windows 包存在却报 Win32 126，先查 System32 的 `vcruntime140.dll`、`vcruntime140_1.dll`、`msvcp140.dll`，缺则按 [DEPLOY](../DEPLOY.md) 安装官方可再发行组件，approve/rebuild 不能替代它。Linux x64 缺包时，默认 CUDA 下载器可能因不跟随 302 失败并被 npm 丢弃；在 agent-dir/npm 运行 `ONNXRUNTIME_NODE_INSTALL=skip npm install --include=optional` 再检查，CPU 文件已在包中。GPU 路径未实测。
 
-未实测平台跑 doctor 会对每个组件多出 platform verification WARN，这是标签，不要解释成故障，也不要为了消掉 WARN 改 manifest。当前实测范围是 macOS arm64 全部模块、WSL2 的 core+memory；Linux 原生、原生 Windows，以及各平台的 pdf 与 magpie 仍属未实测。
+未实测平台跑 doctor 会对每个组件多出 platform verification WARN，这是标签，不要解释成故障，也不要为了消掉 WARN 改 manifest。当前实测范围：macOS arm64 的全部模块（含 pdf、magpie），WSL2（Ubuntu 24.04 x64）的 core+memory。未实测：Linux 原生；WSL2 与原生 Windows 上的 pdf 与 magpie；原生 Windows 的长期运行、TUI 与桌面能力。子代理从 8 个角色改成 5 个角色后只在本机 macOS 上验证过，跨平台证据对应的是旧角色定义。
 
 
 ## 1. Pi 本体
@@ -66,7 +67,7 @@ pi --print 'answer with the number of tools you can call directly, and nothing e
 node scripts/doctor.mjs --home "$HOME" --modules core
 ```
 
-- 直接可见工具数应在 4–6 个（若骤增到 50 左右，说明 `codemode.mode` 配置解析可能有变，需看对应版本的更新日志）。
+- 直接可见工具应是恰好 6 个（`codemode`、`ask_user`、`subagent`、`tool_search`、`contact_supervisor`、`subagent_supervisor`）。不要用模型自报的数量当判据，跑 `node scripts/deploy-check.mjs stub-requests`，缺项或多项它都会失败。若骤增到 50 左右，说明 `codemode.mode` 解析可能有变，看对应版本的更新日志。
 - `doctor` 脚本若提示 `WARN pi version`（本地版本高于 manifest 记录），属于正常预期。
 
 **回滚方案**：重装 manifest 中记录的指定版本；可通过 `npm uninstall -g` 后重装。若用官方 managed 目录安装，通常保留了历史 release 目录，可直接切换引用。
@@ -131,7 +132,7 @@ npm ci && npm run build
 
 **验收判据**：在小代码仓库中实际跑一次全量索引与检索，验证耗时是否平稳、命中的代码行号是否准确。若因冲突手动调整了逻辑，需在变更记录中写明改动内容。
 
-**回滚方案**：切回已验证的提交点：`git checkout 558e8dd && npm ci && npm run build`（验证过的 base 代码可随时复现）。本地知识库数据保存在源码仓库外，不受构建影响；但若新代码改了向量索引存储格式，可能需要重建索引。
+**回滚方案**：升级前先记录打完四份补丁后的提交（`git rev-parse HEAD`），回滚就是切回它并重新构建：`git checkout <记录的提交> && npm ci && npm run build`。要回到纯上游基线，则 `git checkout 558e8dd` 后按模块 README 重新应用四份补丁——只 checkout 558e8dd 会丢掉补丁。本地知识库数据保存在源码仓库外，不受构建影响；但若新代码改了向量索引存储格式，可能需要重建索引。
 
 
 ## 5. 外部模块
@@ -151,11 +152,6 @@ npm ci && npm run build
 - 组件处于 `pinned-reason` 锁定状态，且对应的锁定理由依然有效（如特定原生依赖的版本兼容要求）。
 
 
-
-<system-reminder>
-58 spent tool outputs (~45k tokens) are reclaimable. Make a ctx_reduce pass now over the outputs you've already used, then continue.
-oldest reclaimable: §1098§ subagent · §1100§ codemode · §1101§ subagent · §1103§ subagent_supervisor.
-</system-reminder>
 
 ## Node 版本
 

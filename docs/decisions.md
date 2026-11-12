@@ -103,7 +103,8 @@
 
 - **角色不绑模型**：五个角色文件都不写 `model`，档位来自 `subagents.defaultModel` 与 `agentOverrides`。改模型不动角色，改角色不动模型。
 - **按工具面分工**：`explore` 只读侦察、`implement` 写、`lead` 能再派子代理、`analyze` 只读分析、`review` 只读验收。只有 `implement` 与 `lead` 有写工具。
-- **三档映射**：执行档给 explore / implement / lead，分析档给 analyze，最强档给 review。依据是作者两周内 221 次真实调用：复核类 51 次里 45 次显式指定最强模型，分析类 14 次里 10 次用较强的通用模型。
+- **两档默认**：执行档给 explore / implement / lead，分析档给 analyze 与 review。最强模型不绑给角色，需要时在调用上写 `model:`。依据是作者两周内 221 次真实调用：复核与分析合计 65 次，绝大多数用较强的通用模型；最强模型是极少数情况。
+- **analyze 与 review 同模型不同提示**：工具面相同，差别在预置提示——analyze 出结论与取舍，review 只出 `VERDICT / EVIDENCE / UNCHECKED`。
 - **强模型也能带队**：需要强模型做执行或带队时，在调用上写 `model:`，不给每个组合单开角色。
 
 代价是档位与角色的对应关系不在角色文件里，要看 settings；换来的是主会话换模型时子代理不会跟着变贵，以及新增一个组合不需要新建文件。

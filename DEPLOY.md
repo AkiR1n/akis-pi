@@ -37,7 +37,7 @@ PowerShell 5.1 与 PowerShell 7 都能执行本文的 PowerShell 片段，注意
 ```powershell
 $Repo = 'C:\path\to\akis-pi'
 $env:PI_CODING_AGENT_DIR = Join-Path $HOME '.pi\agent'
-$Modules = 'core,memory'
+$Modules = 'core,magpie,memory'
 Set-Location $Repo
 # 仅当前终端；让 npm.ps1 和本地测试脚本可运行，不改变用户持久策略。
 Set-ExecutionPolicy -Scope Process -ExecutionPolicy RemoteSigned
@@ -355,7 +355,7 @@ node "$REPO/scripts/deploy-check.mjs" roles
 node "$REPO/scripts/deploy-check.mjs" placeholders
 ```
 
-**期望**：无占位符；角色文件里**没有** `model:` 行，档位只出现在 `settings.subagents.defaultModel`（MODEL_EXEC）与 `agentOverrides`（analyze 用 MODEL_REVIEW、review 用 MODEL_PLAN）。
+**期望**：无占位符；角色文件里**没有** `model:` 行，档位只出现在 `settings.subagents.defaultModel`（MODEL_EXEC）与 `agentOverrides`（analyze 与 review 都用 MODEL_REVIEW）。MODEL_PLAN 不分配给角色，留给临时覆盖。
 **失败怎么办**：角色文件缺失核对 `agents/`（不是 `subagents/`）；子代理模型必须在 models.json 注册且 provider 正确。core-only 且已装完、有 key 时可执行 `pi --print 'delegate nothing; just list the subagent roles you can call'`；选 memory 则等 9.3 完成后再执行。无 key 用 stub；此步仅验配置解析，不验执行质量。
 
 ## 8. 第一次启动验收
@@ -454,14 +454,14 @@ knowledge-version 同时检查版本与 dist，两个平台用同一脚本。
 
 ```sh
 pi list
-node "$REPO/scripts/doctor.mjs" --home "$HOME" --agent-dir "$PI_CODING_AGENT_DIR" --modules core,memory,magpie
+node "$REPO/scripts/doctor.mjs" --home "$HOME" --agent-dir "$PI_CODING_AGENT_DIR" --modules core,memory
 ```
 
 PowerShell：
 
 ```powershell
 pi list
-node "$Repo/scripts/doctor.mjs" --home $HOME --agent-dir $env:PI_CODING_AGENT_DIR --modules core,memory,magpie
+node "$Repo/scripts/doctor.mjs" --home $HOME --agent-dir $env:PI_CODING_AGENT_DIR --modules core,memory
 ```
 
 **期望**：`dist/index.js` 存在、版本 0.12.0、`pi list` **13 项**（11 core + MC + pi-knowledge），保留两个 filtered；此处仅查 core,memory，doctor 应 0 FAIL；MODULES 其余模块步骤 12 查。启动新 Pi 会话做步骤 7、8 验收（无 key 用 stub），静态检查不可替代。

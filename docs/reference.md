@@ -36,11 +36,11 @@ POSIX 系统自带。原生 Windows 必须装 Git for Windows：Pi 的 shell 与
 | --- | --- | --- |
 | `{{MODEL}}` | 主会话默认模型 | 日常主力交互 |
 | `{{MODEL_EXEC}}` | 廉价执行：测试、脚手架、前端、批量改动 | 单价低、能稳定跑脚本的模型 |
-| `{{MODEL_REVIEW}}` | `analyze`：读证据、比较方案、查根因 | 比执行档更强的通用模型 |
-| `{{MODEL_PLAN}}` | `review`：验收完成声明、复核 diff | 最强的旗舰模型；也可给 `analyze` 处理路线评审 |
+| `{{MODEL_REVIEW}}` | `analyze` 与 `review`：分析证据、比较方案，以及验收完成声明 | 比执行档更强的通用模型 |
+| `{{MODEL_PLAN}}` | 不分配给任何角色；用于临时覆盖（强模型做执行、带队或路线评审） | 最强的旗舰模型 |
 | `{{MODEL_HISTORIAN}}` | 会话压缩归档 | 窗口大、价格低，不要求强推理 |
 
-分工原则：日常干活用执行档，分析用较强的通用模型，验收用最强模型。
+分工原则：日常干活用执行档，分析与验收用较强的通用模型；最强模型不绑给角色，需要时在调用上写 `model:`。
 
 **角色与模型解耦**：五个角色文件都不写 `model` 字段，档位只在 settings 里定义：
 
@@ -50,17 +50,19 @@ POSIX 系统自带。原生 Windows 必须装 Git for Windows：Pi 的 shell 与
 | `implement` | 读 + 联网 + bash + 写 + codemode | `{{MODEL_EXEC}}` |
 | `lead` | implement 的全部 + subagent | `{{MODEL_EXEC}}` |
 | `analyze` | 读 + 联网 + bash，无写 | `{{MODEL_REVIEW}}` |
-| `review` | 同 analyze | `{{MODEL_PLAN}}` |
+| `review` | 同 analyze | `{{MODEL_REVIEW}}` |
 
 `subagents.defaultModel` 填 `{{MODEL_EXEC}}`，`agentOverrides` 只覆盖 analyze 与 review。这样主会话换成强模型时，`implement` / `explore` 仍走执行档，不会跟着变贵；主会话是执行档时，`analyze` / `review` 自动升档。
 
-**需要别的档位就在调用上写**：`subagent({agent: "implement", model: "{{MODEL_PLAN}}", task})` 就是"强模型做执行"；`lead` 加同一句就是"强模型带队"。`{{MODEL_REVIEW}}` 允许等于 `{{MODEL_EXEC}}`，那时 `analyze` 不再强于执行模型，交叉检查只能靠换族而不是换档。
+**需要最强模型就在调用上写**：`subagent({agent: "implement", model: "{{MODEL_PLAN}}", task})` 是"强模型做执行"；`lead` 加同一句是"强模型带队"；`analyze` 加同一句是路线评审。`{{MODEL_REVIEW}}` 允许等于 `{{MODEL_EXEC}}`，那时 `analyze` / `review` 不再强于执行模型，交叉检查只能靠换族而不是换档。
 
 凭据只接受环境变量引用（`$VAR` / `${VAR}`）或 `!command`，明文会被 render 直接拒绝。macOS 可以走系统钥匙串，其它平台用环境变量。
 
 ## 平台支持
 
-macOS arm64 与 WSL2（Ubuntu 24.04 x64）的 core+memory 已完成实机验收，其余平台与模块按 README 表格里的级别使用。上游支持不等于本包已验证：manifest 的 `platforms` 表示适用平台，`verified` 单独记录实测平台，doctor 在未实测平台会对每个组件报 `WARN`。
+macOS arm64 与 WSL2（Ubuntu 24.04 x64）的 core+memory 完成过实机验收，其余平台与模块按 README 表格里的级别使用。**那几轮验收跑在旧的角色定义上**（8 个角色、角色自带模型）；现在的 5 个角色与档位映射只在本机 macOS 上验证过，没在 WSL2 或 Windows 上重跑。
+
+上游支持不等于本包已验证：manifest 的 `platforms` 表示适用平台，`verified` 单独记录实测平台，doctor 在未实测平台会对每个组件报 `WARN`。`pi-prompt-suggestion` 钉在 0.1.2，而验收环境当时装的是浮动的 0.1.3，所以它的 `verified` 为空——不是遗漏，是没验过。
 
 **Windows 默认选 WSL2 的 core+magpie+memory**：源码、`node_modules`、Magic Context 数据库与知识库都放在 WSL 的 `/home` 下，不要放 `/mnt/c`（跨文件系统访问慢一个数量级，权限与大小写语义也不同）。只有需要操作 Windows 桌面、或复用 Windows 登录态浏览器时才选原生 Windows。
 

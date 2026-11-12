@@ -65,3 +65,36 @@ test('doctor checks memory native loading in isolation, reports FAIL for broken 
  assert.equal(failure.status,'FAIL');
  if(process.platform==='linux')assert.match(failure.detail,/ONNXRUNTIME_NODE_INSTALL=skip/);
 });
+
+test('doctor rejects pinned role models and missing child-only extensions', (t) => {
+ const home = fs.mkdtempSync(path.join(os.tmpdir(), 'akis-doctor-roles-'));
+ t.after(() => fs.rmSync(home, { recursive: true, force: true }));
+ const agent = path.join(home, 'agent');
+ const agentsDir = path.join(agent, 'agents');
+ const extDir = path.join(agent, 'extensions');
+ fs.mkdirSync(agentsDir, { recursive: true });
+ fs.mkdirSync(extDir, { recursive: true });
+ const rtk = path.join(extDir, 'rtk.ts');
+ fs.writeFileSync(rtk, 'export default function () {}\n');
+ const writeRole = (name, body) => fs.writeFileSync(path.join(agentsDir, name), body);
+ const base = (extra) => ['---', 'name: review', 'thinking: high', ...extra, '---', '', 'Body.', ''].join('\n');
+ const roles = () => {
+  const result = spawnSync(process.execPath, [path.resolve(import.meta.dirname, '../doctor.mjs'), '--home', home, '--agent-dir', agent, '--modules', 'core', '--json'], { encoding: 'utf8' });
+  const output = JSON.parse(result.stdout);
+  return output.results.find((entry) => entry.label === 'subagent roles');
+ };
+
+ writeRole('review.md', base(['subagentOnlyExtensions: ' + rtk]));
+ const healthy = roles();
+ assert.equal(healthy.status, 'PASS', healthy.detail);
+
+ writeRole('review.md', base(['subagentOnlyExtensions: ' + path.join(extDir, 'gone.ts')]));
+ const missing = roles();
+ assert.equal(missing.status, 'FAIL');
+ assert.ok(missing.detail.includes('extension missing'), missing.detail);
+
+ writeRole('review.md', base(['model: example/strong']));
+ const pinned = roles();
+ assert.equal(pinned.status, 'FAIL');
+ assert.ok(pinned.detail.includes('pins a model'), pinned.detail);
+});

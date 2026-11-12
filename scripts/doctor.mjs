@@ -271,6 +271,26 @@ function main() {
     else add('FAIL', 'placeholders resolved', offenders.join('; '));
   });
 
+  // 4b. Subagent role definitions: no pinned models, child-only extensions must exist after render
+  guard(() => {
+    const agentsDir = path.join(agent, 'agents');
+    const names = exists(agentsDir) ? fs.readdirSync(agentsDir).filter((name) => name.endsWith('.md')) : [];
+    const problems = [];
+    for (const name of names) {
+      const text = read(path.join(agentsDir, name)) ?? '';
+      if (/^model:\s*\S/m.test(text)) problems.push('agents/' + name + ': pins a model (tiers belong in settings.subagents)');
+      const match = text.match(/^subagentOnlyExtensions:(.*)$/m);
+      if (!match) continue;
+      for (const raw of match[1].split(',').map((value) => value.trim()).filter(Boolean)) {
+        const target = raw.replace(/^["']|["']$/g, '');
+        if (!target.startsWith('/')) problems.push('agents/' + name + ': extension path is not absolute after render: ' + target);
+        else if (!exists(target)) problems.push('agents/' + name + ': extension missing: ' + target);
+      }
+    }
+    if (problems.length === 0) add('PASS', 'subagent roles', names.length + ' role(s) checked');
+    else add('FAIL', 'subagent roles', problems.join('; '));
+  });
+
   // Resolve environment credentials once; never invoke arbitrary credential commands.
   // Only status is reported, including references in models.json.
   guard(() => {

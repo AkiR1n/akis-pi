@@ -95,7 +95,7 @@
         "thinking": "high"
       },
       "review": {
-        "model": "{{MODEL_PLAN}}",
+        "model": "{{MODEL_REVIEW}}",
         "thinking": "high"
       }
     },

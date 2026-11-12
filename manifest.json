@@ -1,7 +1,7 @@
 {
   "name": "akis-pi",
   "schemaVersion": 2,
-  "generatedAt": "2026-11-12T20:48:00.514Z",
+  "generatedAt": "2026-11-12T21:01:13.128Z",
   "generatedFrom": "live Pi configuration, read-only (see NEVER_COPIED in export-akis-pi.mjs)",
   "verifiedOn": {
     "os": "macOS 27.2.1",
@@ -325,10 +325,7 @@
         "wsl"
       ],
       "lastVerified": "2026-11-13",
-      "verified": [
-        "darwin-arm64",
-        "wsl-x64"
-      ]
+      "verified": []
     },
     {
       "id": "herdr",
@@ -391,7 +388,7 @@
         "wsl"
       ],
       "lastVerified": "2026-11-12",
-      "note": "optional module: gateway, MCP hub and image generation. Not required for core or memory.",
+      "note": "required on every platform: model routing, MCP hub, image generation, fetch fallback, skill and MCP routing. The darwin module is required on macOS.",
       "verified": [
         "darwin-arm64"
       ]
@@ -421,19 +418,22 @@
     },
     "memory": {
       "description": "Magic Context, resident memory and pi-knowledge with patches",
-      "required": false
+      "required": true
     },
     "macos": {
       "description": "macOS herdr agent state and ego window GC",
-      "required": false
+      "required": true,
+      "requiredOn": [
+        "darwin"
+      ]
     },
     "pdf": {
       "description": "Local PDF endpoint with launchd, systemd user unit or Windows login task",
       "required": false
     },
     "magpie": {
-      "description": "Magpie gateway: local OpenAI-compatible provider, MCP hub, images",
-      "required": false
+      "description": "Required gateway: local OpenAI-compatible provider, MCP hub, images, fetch fallback",
+      "required": true
     }
   },
   "excluded": [

@@ -79,9 +79,13 @@ Magpie 的技能聚合机制会将外部技能归集为统一索引文件（`mag
 - **保留原生**：跨会话上下文记忆（由 Magic Context 管理）、浏览器自动化控制（由 agent-browser / ego 管理）。本地已有成熟实现，接入网关只会多一套状态。
 
 
-## 无 Magpie 环境下的平替方案
+## 缺了 Magpie 会退化什么
 
-未部署 Magpie 时，配置依然可用：
-1. 将 `models.json` 的 `baseUrl` 指向任意 OpenAI 兼容地址，在 `settings.json` 与 `mcp.json` 中移除相关条目。`settings.json` 本身不含 Magpie 的 npm 依赖。
-2. `APPEND_SYSTEM.md` 中关于 Magpie 的规则均标有模块作用域标签，删除该段落不影响其他能力。
-3. 缺少 403 抓取兜底时，网络交互沿用默认的 `web_search → fetch_content` 链路；遇到反爬或需登录站点时，通过浏览器自动化技能处理。
+Magpie 在本配置里是必装模块，不是可选项。Pi 裸件接任意 OpenAI 兼容服务仍能跑，但下面四类能力随之消失：
+
+1. 模型路由：`models.json` 的 provider 要自己维护，模型名也不再是 `magpie/...`。
+2. 技能与 MCP 路由：`magpie-skills` 索引与 hub 都不在，技能要直接装在 Pi 里。
+3. 403 反爬时的第二跳抓取：只剩 `web_search → fetch_content`，反爬站点要靠浏览器技能。
+4. 生图与生视频：`generate_image` / `generate_video` 不可用。
+
+这些退化不属于本仓库支持的形态，遇到就按 DEPLOY 第 11 步把 Magpie 补齐。

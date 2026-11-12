@@ -1,6 +1,6 @@
 # memory 模块
 
-本模块包含三项可独立选装的记忆组件：
+本模块包含三项组件，本配置里三个一起装（它不是可选项，只有 `pdf` 才是可选模块）：
 
 | 组件 | 核心作用 | 未安装时的影响 |
 | --- | --- | --- |
@@ -99,7 +99,8 @@ mkdir -p "$HOME/.pi/vendor" && cd "$HOME/.pi/vendor"
 git clone https://github.com/nczz/pi-knowledge
 cd pi-knowledge
 git checkout 558e8dd
-for p in "$REPO"/modules/memory/patches/*.patch; do git am "$p" || { git am --abort; break; }; done
+# 逐份打补丁；任一失败即中止，不会带着失败继续构建
+node "$REPO/scripts/deploy-check.mjs" apply-patches "$REPO/modules/memory/patches" "$PWD"
 npm ci && npm run build
 ```
 
