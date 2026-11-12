@@ -8,7 +8,7 @@
 
 ## 1. codemode only：首轮更精简，多步任务总开销更大
 
-**决策**：在 `settings.json` 中配置 `{"codemode":{"mode":"only"}}`。配合 `pi-compact-tools` 插件时，直接向模型暴露的可见工具仅保留 `codemode`、`ask_user` 与 `tool_search`，其余 50 多个工具通过 QuickJS 沙箱脚本在运行时动态发现与调用。
+**决策**：在 `settings.json` 中配置 `{"codemode":{"mode":"only"}}`。配合 `pi-compact-tools` 插件时，Pi 1.5.2 + pi-subagents 0.88.0 下直接向模型暴露 6 个工具：`ask_user`、`codemode`、`contact_supervisor`、`subagent`、`subagent_supervisor`、`tool_search`，其余 50 多个工具通过 QuickJS 沙箱脚本在运行时动态发现与调用。
 
 **静态测量对比（两次探针，口径不同）**
 
@@ -17,7 +17,7 @@
 | 探针 1：on → only | 39 → 4 | 3,471 → 432 | 26,704 → 16,261（约 -39%） |
 | 探针 2：on → only + 优化系统提示 | 53 → 6 | 系统消息 35,464 → 23,913 字符 | 25,522 → 13,954（约 -45%） |
 
-两次数字差异来自提示词与依赖版本变化；当前版本实际保留 3 个直接工具。不要把上述百分比当作任意机器上的实际节省幅度。
+两次数字差异来自提示词与依赖版本变化；当前 Pi 1.5.2 + pi-subagents 0.88.0 实际保留 6 个直接工具，包含 3 个子代理协调工具；已接受这一集合。不要把上述百分比当作任意机器上的实际节省幅度。
 
 **代价**：5 个对照任务中，only 模式输入 token 降低 29%，输出 token 增加 36%（模型需要写脚本）；多步任务中，总 token（input + cacheRead）约增加 **+17%**。首轮提示词成本下降，长链路多步调用的消耗有所上升。
 
@@ -119,8 +119,32 @@
 
 ## 9. 辅助配置项
 
-- `defaultTools: ["+codemode","+grep","+find"]`：声明基础只读检索偏好；启用 `pi-compact-tools` 时，grep 和 find 也进入按需通道，顶层直接可见工具收敛为 3 个。
+- `defaultTools: ["+codemode","+grep","+find"]`：声明基础只读检索偏好；启用 `pi-compact-tools` 时，grep 和 find 也进入按需通道，当前版本顶层直接可见工具为上述 6 个。
 - `retry.provider.timeoutMs: 3600000`、`maxRetries: 0`：关闭底层自动重试，由上层控制重试，避免掩盖网络故障并在长任务中成倍累加等待时间。
 - `compaction` / `branchSummary` 显式声明 `reserveTokens`：锁定压缩保留量，避免不同版本默认值变动导致基线不一致。
 - `enableInstallTelemetry: false`：关闭安装遥测上报。
 - `showCacheMissNotices: true`：开启缓存未命中通知，便于观察费用波动。
+
+---
+
+## 10. 平台取舍：WSL2 为 Windows 默认，QML 语法包改为可选
+
+**决策一**：Windows 用户默认推荐 **WSL2 的 core+memory**，原生 Windows 作为可选路径并标「试验」。
+
+**依据**：本包的执行面几乎全是 POSIX 语义——部署脚本用 sh、补丁用 `git am` 串行应用、凭据示例用 Keychain、PDF 服务用 launchd/systemd。WSL2 里这些差异一次性消失，剩下的风险只集中在 Linux 侧本身；原生 Windows 则要同时处理 Git Bash 依赖、npm `.cmd` shim、Appx/winget 缺失、原生模块编译与浏览器 best-effort 五类问题。推荐成本更低的一侧，比把五类问题都写进首装路径更诚实。
+
+**代价**：WSL2 的 Linux 用户态不能操作 Windows 桌面（computer-use 在 WSL 里是 Linux 后端），也不能直接复用 Windows 上的登录态浏览器；需要这两类能力的人要选原生 Windows。WSL2 侧的源码、`node_modules`、数据库必须留在 `/home`，与 Windows 共用 `node_modules` 会装错平台包。
+
+**决策二**：`tree-sitter-qmljs` 由硬依赖改为 `optionalDependencies`，加载失败时跳过 QML 解析并一次性提示。
+
+**依据**：该包 0.3.1 的发布包没有 `prebuilds`，`npm ci` 需要 node-gyp 构建链（Python + MSVC 或 Linux 工具链）。在没装 VS Build Tools 的原生 Windows 上，这一个语法包的编译失败会让整个 memory 模块装不上，而 QML 在 Pi 的日常使用里是很小的一块。把它降级为可选后，缺包只是少一种语法解析。
+
+**代价与边界**：QML 文件退回文本分块，检索粒度变粗；其它语言（TypeScript、Python、Rust、Go 等）的 AST 解析与检索行为不变。补丁在加载失败时每个进程只提示一次，重新安装成功后需重启进程才重试。这是「不阻断安装」的取舍，不是「QML 支持已验收」：原生 Windows 上的完整安装与查询仍需实机记录。
+
+**决策三**：Node 钉 24.22.3，不再用 24.21.0。
+
+**依据**：Node 24.19.0–24.21.x 给 `node::ObjectWrap` 加了 cleanup hook，配套的注册表到 24.22.0 才有（上游 nodejs/node#65446）。pi-knowledge 用的 better-sqlite3 在垃圾回收时释放 Statement，会在没有活动上下文时调用 `RemoveEnvironmentCleanupHook`，Node 断言失败，进程以 SIGABRT 退出。WSL2 上 MC 与 pi-knowledge 同时加载时，24.21.0 跑 20 轮有 9 轮崩溃、交互会话 3 次崩 2 次；只换成 24.22.3 后 20 轮与 TUI 10 次全部正常。在 pi-knowledge 里持有 Statement 引用的补丁试过，无效（20 轮 14 轮失败）。崩溃轮次的数据库完整性检查都正常。
+
+**代价**：Node 版本不再与作者最初验证时一致，macOS 与两台 Windows 机器都按 24.22.3 重新验收了一遍。macOS 的 better-sqlite3 预编译件不导入这个函数，所以在 macOS 上不容易复现，但同样不要低于 24.22.0。
+
+**没有采纳的方案**：把 `macos` 模块改名为 `desktop` 并整包跨平台（会让旧状态误启用 darwin 专属扩展，改为拆出 pdf 模块）；用自建 GitHub 镜像替代 release 下载（增加一个需要维护的可信来源）；把 musl、Windows ARM64、Linux arm64 写进正式支持（均无任何实测依据）。

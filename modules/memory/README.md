@@ -17,9 +17,18 @@
 安装与配置：
 
 ```sh
+# POSIX：Linux / WSL2 在安装 MC 前设置；macOS 不需要。
+export ONNXRUNTIME_NODE_INSTALL=skip
+export ONNXRUNTIME_NODE_INSTALL_CUDA=skip  # pi-knowledge 的 1.21.0 安装器使用此变量
 pi install npm:@cortexkit/pi-magic-context@0.49.50
 # 先按 DEPLOY.md 第 4 步使用完整 --set 参数渲染 core,memory（先 dry run 预览，再应用写入）
 ```
+
+MC 0.49.50 的 `optionalDependencies` 固定 `onnxruntime-node@1.30.0`。Linux x64 默认要下载 CUDA 执行提供程序，下载器不跟随重定向，302 会导致安装失败并可能丢弃该可选包；CPU 绑定与运行库已随包发布，`skip` 可跳过下载。需要 GPU 的安装另行处理，未实测。若包已缺失，在 `<agent-dir>/npm` 运行 `ONNXRUNTIME_NODE_INSTALL=skip npm install --include=optional` 后重查。
+
+原生 Windows x64 先安装 [Microsoft Visual C++ 2015-2022 x64 可再发行组件](https://aka.ms/vs/17/release/vc_redist.x64.exe)（管理员，`/install /quiet /norestart`），详见 [DEPLOY 平台入口](../../DEPLOY.md)。缺 `vcruntime140.dll`、`vcruntime140_1.dll`、`msvcp140.dll` 会让已在磁盘的绑定报 Win32 126，npm approve/rebuild 不能修复。安装 MC 后从仓库根运行 `node scripts/deploy-check.mjs onnx`，应打印版本且 exit 0；选 memory 时 doctor 也会检查，失败记 FAIL。此检查不下载模型或验证推理。
+
+pi-knowledge 的依赖链另为 `@huggingface/transformers@3.8.1` → 普通依赖 `onnxruntime-node@1.21.0`，不能把 vendor 包的存在当作 MC 的 1.30.0 已安装。它的安装器只识别 `ONNXRUNTIME_NODE_INSTALL_CUDA=skip`，不识别 1.30.0 的 `ONNXRUNTIME_NODE_INSTALL=skip`；Linux/WSL2 的 `npm ci` 前须同时设置两个变量。
 
 配置文件：绝对 `XDG_CONFIG_HOME` 下的 `cortexkit/magic-context.jsonc`，未设置时为 `$HOME/.config/cortexkit/magic-context.jsonc`。render 与 doctor 使用同一位置，Windows 也使用该默认值，不改为 APPDATA。
 
@@ -106,6 +115,8 @@ npm ci && npm run build
 4. **QML 可选依赖**：tree-sitter-qmljs 移入 optionalDependencies；安装或加载失败时 QML 改用文本分块，每个进程只提示一次，其余语言的 AST 解析与检索保持原有行为。原生 Windows 无预编译包时不再因 QML 编译失败阻断整个 memory 安装。重新安装成功后重启进程以重试。
 
 各补丁作者已去敏。第 4 份补丁包含并发/重复加载失败的降级测试；原生 Windows 的完整安装与查询仍需实机验收，推荐 Windows 用户优先采用 WSL2 的 core+memory。
+
+补丁按文件名排序应用（`0001` → `0004`），顺序错了 `git am` 会冲突。原生 Windows 上 `npm ci` 仍可能需要 Python 3 与 VS Build Tools 的 C++ 工作负载（`better-sqlite3`、`tree-sitter` 系）；QML 语法包已改可选，它失败只让 `.qml` 文件退回文本分块，不要当成整体安装失败。WSL2 与 Linux 的源码、`node_modules`、知识库数据放在 `/home` 下，不要放 `/mnt/c`。
 
 **安装验证**：
 

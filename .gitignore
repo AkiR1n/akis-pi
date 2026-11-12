@@ -1,5 +1,6 @@
 # backups created by scripts/render.mjs live under <agent-dir>/backups, never here
 node_modules/
+tests/results/
 
 # local noise
 .DS_Store

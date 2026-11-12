@@ -14,13 +14,30 @@
    - `pinned-reason`：有特定技术依赖，升级前看对应说明；
    - `float-ok`：允许安装兼容版本。
 3. **向用户确认部署参数**（一次问齐，不要分多次追问）：
+   - 目标平台与入口（见 0a：macOS / Linux / WSL2 用 POSIX 入口，原生 Windows 用 PowerShell 入口）；
    - 模型供应商标识（`{{PROVIDER}}`）与各角色模型 ID：主力模型（`{{MODEL}}`）、执行模型（`{{MODEL_EXEC}}`）、复核模型（`{{MODEL_REVIEW}}`）、规划模型（`{{MODEL_PLAN}}`）、压缩模型（`{{MODEL_HISTORIAN}}`）；
    - 要装的模块（`core` 必选；`memory` / `pdf` / `macos` / `magpie` 按用户环境选）；
-   - 凭据注入方式：环境变量引用（`$VAR`）还是系统钥匙串（`!security find-generic-password ...`）。
+   - 凭据注入方式：环境变量引用（`$VAR`，Windows 用 `setx` 或用户环境变量）还是 macOS 系统钥匙串（`!security find-generic-password ...`）。
 
 ---
 
-平台策略：Windows 默认推荐 WSL2 的 core+memory；原生 Windows 在实机验收前标为试验。macos 仅供 darwin，PDF 独立选 pdf。不要将单测或上游支持写成本包已完成 Windows/Linux 实机验收。
+## 0a. 平台策略
+
+先确认目标平台，再选 DEPLOY.md 的入口：
+
+| 目标 | 入口 | 模块 | 标签 |
+| --- | --- | --- | --- |
+| macOS | POSIX | core，可加 memory / macos / pdf / magpie | 已实测 |
+| Linux | POSIX | core，可加 memory / pdf / magpie | 试验（由 WSL2 推断） |
+| Windows + WSL2 | POSIX（在发行版内） | core + memory（默认推荐） | core、memory 已实测 |
+| Windows 原生 | PowerShell（5.1 与 7） | core，可加 memory（QML 降级）/ pdf / magpie | **试验** |
+
+- Windows 用户先问一句：需要操作 Windows 桌面或复用 Windows 登录态浏览器吗？不需要就用 WSL2，源码与 `node_modules` 留在 `/home`，不要放 `/mnt/c`。
+- macos 模块仅供 darwin；其它平台选择会在写入前被拒。PDF 独立选 pdf，Windows 用登录计划任务。
+- 原生 Windows 除 Node 外必须有 Git for Windows（Pi 的 shell 与 `!command` 凭据都走 Git Bash）；选 memory 还需 VC++ 2015-2022 x64 可再发行组件，按 DEPLOY 的 PowerShell 入口安装。
+- Linux / WSL2 的 memory 安装前按 POSIX 入口设置 `ONNXRUNTIME_NODE_INSTALL=skip`（CPU 文件已在包中，跳过默认 CUDA 下载）；缺包恢复见 DEPLOY 步骤 5，GPU 未实测。
+- 选 memory 必须通过 `node scripts/deploy-check.mjs onnx`；doctor 的 native 加载失败是 FAIL。npm 审批与 rebuild 不解决 Windows 缺运行库或 Linux 缺包。
+- 不要将单测或上游支持写成本包已完成 Windows/Linux 实机验收；未实测平台在 doctor 里表现为 platform verification WARN，照实报告。
 
 ## 1. 保护现有配置
 
@@ -34,7 +51,7 @@
 ## 2. 凭据安全
 
 - **不要猜密钥**：不要伪造、推测或用临时占位字符串尝试连通。
-- **不要明文存凭据**：不要把 API Key 写进仓库、填入 `settings.json` 或打在终端里。合法的写法只有动态引用：环境变量（`$VAR`）或系统钥匙串（`!security find-generic-password -a "$USER" -s <服务名> -w`）。
+- **不要明文存凭据**：不要把 API Key 写进仓库、填入 `settings.json` 或打在终端里。合法的写法只有动态引用：环境变量（`$VAR`，Windows 用 `setx`）或 macOS 系统钥匙串（`!security find-generic-password -a "$USER" -s <服务名> -w`）。Windows 上的 `!command` 由 Pi 找到的 Git Bash 执行，写命令前先确认 Git Bash 能跑它。
 - **明文提醒**：如果用户直接发来明文 Key，提醒风险，并引导对方存入环境变量或钥匙串后再用引用方式传入。
 - **高危操作先说明**：涉及提权（`sudo`）、破坏性 git 操作或从公网拉取依赖的命令，先向用户说明意图与影响范围，确认后再执行。
 
@@ -45,7 +62,8 @@
 每完成 [DEPLOY.md](DEPLOY.md) 中的一步，执行该步骤规定的**检查命令**，把真实终端输出发给用户后再进下一步。没有命令输出验证的步骤算未完成。
 
 - **验证依据**：「已安装」以命令输出和可执行文件为准，不只看文件路径；「生效」以新开 Pi 会话的行为为准，不只看 `/reload` 输出。
-- **运行自检**：所有模块部署完成后，运行自检脚本：`node scripts/doctor.mjs --home "$HOME" --modules ...`，贴出完整检查报告。若有 WARN 逐项解释原因，若有 FAIL 修复后再交付。
+- **直接工具集合**：Pi 1.5.2 + pi-subagents 0.88.0 下应有 6 个：`ask_user`、`codemode`、`contact_supervisor`、`subagent`、`subagent_supervisor`、`tool_search`。用 DEPLOY.md 的回环 stub 抓取请求体，再用 `deploy-check.mjs stub-requests` 检查；缺项或多项都不通过。
+- **运行自检**：所有模块部署完成后，运行自检脚本：`node scripts/doctor.mjs --home "$HOME" --modules ...`，贴出完整检查报告。若有 WARN 逐项解释原因（未实测平台的 platform verification WARN 属正常），若有 FAIL 修复后再交付。
 - **以终端输出为准**：不要只凭代码审阅或假设判断，一切看实际输出。
 
 ---

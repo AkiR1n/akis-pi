@@ -10,7 +10,7 @@
 Pi 是个轻量的 coding agent harness。工具插件装多了之后，系统提示与工具 schema 容易膨胀，导致首轮延迟高、浪费上下文。
 
 akis-pi 做了几点调整：
-1. **单一工具通道（codemode only）**：默认只向模型暴露 3 个工具（`codemode`、`ask_user`、`tool_search`），其余 50 多个扩展工具收进 QuickJS 沙箱，按需发现并用 `await tools.<name>()` 调用。首轮提示实测降低 **-45%**（探针从 25,522 降至 13,954 token）。
+1. **单一工具通道（codemode only）**：Pi 1.5.2 + pi-subagents 0.88.0 下向模型暴露 6 个工具（`ask_user`、`codemode`、`contact_supervisor`、`subagent`、`subagent_supervisor`、`tool_search`），其余 50 多个扩展工具收进 QuickJS 沙箱，按需发现并用 `await tools.<name>()` 调用。首轮提示实测降低 **-45%**（探针从 25,522 降至 13,954 token）。
 2. **多角色分工**：主会话做规划，把测试、脚手架、代码审查分发给不同定位的模型：便宜模型执行，异构模型复核，强模型把控规划。
 3. **分层记忆**：每轮只注入几百到两千字符的常驻事实（`RESIDENT.md`）；项目历史与笔记按需检索；长会话由 Magic Context 按固定阈值与超时归档。
 4. **联网分级兜底**：搜索与正文抓取按顺序回退，遇到 403 反爬时换第二条通道，需要登录态时移交浏览器。
@@ -28,11 +28,30 @@ akis-pi 做了几点调整：
 - 习惯工具 schema 全常驻、不习惯写脚本调用。
 - 需要本包对所有平台、桌面插件和原生依赖提供已完成实机验收的保证。当前实测记录仅为 macOS arm64。
 
-Windows 用户默认推荐 **WSL2 的 core+memory**，源码、数据库和 node_modules 放在 WSL 的 Linux 文件系统。原生 Windows 是可选的**试验**路径，需 Node 24.21.0、Git for Windows（Pi 默认使用 Git Bash），桌面/浏览器能力逐项验收；Linux/WSL 也仍待实机验证。manifest 的 platforms 表示适用平台，verified 单独记录实测平台。
+## 平台支持
+
+macOS arm64 与 WSL2（Ubuntu 24.04 x64）的 core+memory 已完成实机验收，其余平台与模块按下面级别使用。上游支持不等于本包已验证：manifest 的 `platforms` 表示适用平台，`verified` 单独记录实测平台，doctor 在未实测平台会对每个组件报 `WARN`。
+
+| 平台 | 状态 | 可选模块 | 说明 |
+| --- | --- | --- | --- |
+| macOS arm64 | 已实测 | core、memory、macos、pdf、magpie | 基准平台，探针与部署记录都来自这里 |
+| WSL2（Ubuntu 24.04 x64） | core、memory 已实测；pdf、magpie 试验。Windows 用户的默认推荐 | core、memory、pdf、magpie | 走 POSIX 入口；memory 安装前设置 `ONNXRUNTIME_NODE_INSTALL=skip`（CPU）。memory 组合 20 轮、TUI 10 次无异常退出 |
+| 原生 Windows x64 | **试验** | core、memory、pdf、magpie | 需 Git for Windows；memory 还需 VC++ 2015-2022 x64 运行库。开发机与全新中文账户机器部署通过；长时间运行、TUI 与桌面能力未验收 |
+| Linux x64 glibc | 试验 | core、memory、pdf、magpie | 用户态由 WSL2 实测推断，无原生实机记录；Ubuntu 优先；memory 设置 `ONNXRUNTIME_NODE_INSTALL=skip`；凭据用 `$VAR` |
+
+Windows 用户默认选 **WSL2 的 core+memory**：源码、`node_modules`、Magic Context 数据库与知识库都放在 WSL 的 `/home` 下，不要放 `/mnt/c`（跨文件系统访问慢一个数量级，权限与大小写语义也不同）。只有需要操作 Windows 桌面、或复用 Windows 登录态浏览器时才选原生 Windows。
+
+原生 Windows 是可选的**试验**路径，代价要说清楚：
+
+- Pi 的 shell 依赖 **Git for Windows**；部分镜像的默认执行策略是 Restricted，要按上游说明放开，不要用 Bypass 掩盖问题。
+- 浏览器与 Electron 按其上游自述属于 best-effort：会话锁、恢复、退出清理都要单独验收，不能把“能启动”当通过。
+- memory 的 onnxruntime-node 需要 **Microsoft Visual C++ 2015-2022 x64 可再发行组件**；缺 DLL 导致的 Win32 126 不能用 npm approve/rebuild 修复。安装与检查见 [DEPLOY](DEPLOY.md)。doctor 会把 onnx 加载失败记为 FAIL。
+- `tree-sitter-qmljs` 没有预编译产物。memory 靠第 4 份补丁把它降级为可选依赖：安装或加载失败时 QML 文件退回文本分块并提示一次，其它语言不受影响。
+- Herdr/Rex pane、tmux inspector、launchd、Keychain、ego 窗口回收在 Windows 上不提供。
 
 ## 快速开始
 
-这套配置推荐交给部署用的 AI 自动化安装（让 AI 遵循 [AGENTS.md](AGENTS.md) 规则并逐步执行 [DEPLOY.md](DEPLOY.md)）。如果你手动部署，核心步骤如下：
+这套配置推荐交给部署用的 AI 自动化安装（让 AI 遵循 [AGENTS.md](AGENTS.md) 规则并逐步执行 [DEPLOY.md](DEPLOY.md)）。如果你手动部署，核心步骤如下（原生 Windows 用 DEPLOY 的 PowerShell 入口，参数一致、写法按 PowerShell 调整）：
 
 ```sh
 # 1. 运行 dry run，预览将写入的文件、差异 diff 以及占位符解析情况
@@ -113,7 +132,7 @@ node scripts/doctor.mjs --home "$HOME" --modules core
 
 ## 限制与未验证
 
-- **系统支持**：实测平台仅 darwin-arm64。Windows 默认推荐 WSL2 core+memory，原生 Windows 保持试验；Linux/WSL 未做实机验收。原生依赖、浏览器会话恢复与桌面 helper 必须分别验证，不能把路径单测当实机证据。
+- **系统支持**：实测平台仅 darwin-arm64，平台分级见上文「平台支持」。原生依赖、浏览器会话恢复与桌面 helper 必须分别验证，不能把路径单测当实机证据。
 - **npm**：默认不写 npmCommand，使用普通 npm；POSIX 上可显式 `render --mise` 或 `--set USE_MISE=true`。agent-browser CLI 属于 core，须单独安装 CLI 与浏览器。
 - **自检工具**：`scripts/doctor.mjs` 只读检查 settings、node_modules 和 manifest；版本偏差报 WARN，Pi/MC 主版本偏差报 FAIL。由于 Pi 1.5.2 的 `pi list` 会自动补装缺包，脚本不调用 `pi list`。
 - **项目信任**：模板默认 `defaultProjectTrust: "always"`（不逐次弹窗）。想每次确认可改为 `ask`。
@@ -143,6 +162,9 @@ akis-pi/
 ├── scripts/
 │   ├── render.mjs   渲染配置至目标环境（默认 dry run，具备前置备份与 diff 输出）
 │   └── doctor.mjs   只读健康体检脚本：PASS / WARN / FAIL
+├── tests/
+│   ├── windows/     原生 Windows 实机测试：宿主驱动 run.ps1 + 虚拟机内 guest-deploy.ps1
+│   └── wsl/         WSL2 实机测试：run.sh 在一次性副本发行版内跑 POSIX 入口
 └── docs/
     ├── decisions.md 参数背后的设计取舍与实测数据
     └── upgrade.md   组件升级顺序、验证判据与回滚手册

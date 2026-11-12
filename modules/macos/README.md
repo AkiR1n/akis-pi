@@ -2,6 +2,8 @@
 
 本模块仅在 darwin 上可选，提供 herdr 状态与 ego 窗口回收。其它平台选择 macos 会在写入前拒绝。PDF 已拆为独立 [pdf 模块](../pdf/README.md)，浏览器 CLI 属于 core 的通用前置依赖。
 
+Linux、WSL2 与原生 Windows 因此没有 Herdr/Rex pane、tmux inspector、launchd 与 Keychain 支持；这类能力需要各自的上游实现，本包不做等价替换，也不把这些平台标成已支持。
+
 | 组件 | 生效触发条件 | 未安装时的影响 |
 | --- | --- | --- |
 | `herdr-agent-state.ts` | 仅在检测到环境变量 `HERDR_ENV=1` 且存在 `HERDR_SOCKET_PATH` / `HERDR_PANE_ID` 时生效 | herdr 面板无法实时显示 Pi 的代理工作状态 |

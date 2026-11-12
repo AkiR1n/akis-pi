@@ -7,7 +7,7 @@
     "os": "macOS 27.2.1",
     "arch": "arm64",
     "pi": "1.5.2",
-    "node": "v24.21.0"
+    "node": "v24.22.3"
   },
   "levels": {
     "pinned": "exact version required for the documented behaviour",
@@ -39,16 +39,17 @@
         "win32",
         "wsl"
       ],
-      "lastVerified": "2026-11-12",
+      "lastVerified": "2026-11-13",
       "note": "tested 1.5.2. The official installer installs the newest release; the npm command in DEPLOY.md reproduces 1.5.2 exactly.",
       "verified": [
-        "darwin-arm64"
+        "darwin-arm64",
+        "wsl-x64"
       ]
     },
     {
       "id": "node",
-      "source": "Node.js 24.21.0 (mise optional)",
-      "version": "24.21.0",
+      "source": "Node.js 24.22.3 (mise optional)",
+      "version": "24.22.3",
       "level": "pinned-reason",
       "module": "core",
       "platforms": [
@@ -57,10 +58,11 @@
         "win32",
         "wsl"
       ],
-      "lastVerified": "2026-11-12",
-      "note": "Use the same Node installation for Pi and global CLIs; mise is an explicit renderer option.",
+      "lastVerified": "2026-11-13",
+      "note": "Pinned to 24.22.3 because Node 24.19.0-24.21.x abort with SIGABRT when better-sqlite3 (pi-knowledge) frees a Statement during GC (nodejs/node#65446): on WSL2 with the memory module, 9/20 rounds crashed on 24.21.0 and 0/20 on 24.22.3. Do not go below 24.22.0. Use the same Node installation for Pi and global CLIs; mise is an explicit renderer option.",
       "verified": [
-        "darwin-arm64"
+        "darwin-arm64",
+        "wsl-x64"
       ]
     },
     {
@@ -93,10 +95,11 @@
         "win32",
         "wsl"
       ],
-      "lastVerified": "2026-11-12",
+      "lastVerified": "2026-11-13",
       "note": "read the release notes for database migrations before upgrading; MC owns the project-memory store.",
       "verified": [
-        "darwin-arm64"
+        "darwin-arm64",
+        "wsl-x64"
       ]
     },
     {
@@ -111,10 +114,11 @@
         "win32",
         "wsl"
       ],
-      "lastVerified": "2026-11-12",
+      "lastVerified": "2026-11-13",
       "note": "4 patches on 558e8dd; QML grammar is optional. Apply with git am, then npm ci and npm run build.",
       "verified": [
-        "darwin-arm64"
+        "darwin-arm64",
+        "wsl-x64"
       ]
     },
     {
@@ -129,9 +133,10 @@
         "win32",
         "wsl"
       ],
-      "lastVerified": "2026-11-12",
+      "lastVerified": "2026-11-13",
       "verified": [
-        "darwin-arm64"
+        "darwin-arm64",
+        "wsl-x64"
       ]
     },
     {
@@ -146,9 +151,10 @@
         "win32",
         "wsl"
       ],
-      "lastVerified": "2026-11-12",
+      "lastVerified": "2026-11-13",
       "verified": [
-        "darwin-arm64"
+        "darwin-arm64",
+        "wsl-x64"
       ]
     },
     {
@@ -163,14 +169,15 @@
         "win32",
         "wsl"
       ],
-      "lastVerified": "2026-11-12",
+      "lastVerified": "2026-11-13",
       "resourceFilters": {
         "extensions": [
           "+extensions/index.ts"
         ]
       },
       "verified": [
-        "darwin-arm64"
+        "darwin-arm64",
+        "wsl-x64"
       ]
     },
     {
@@ -185,9 +192,10 @@
         "win32",
         "wsl"
       ],
-      "lastVerified": "2026-11-12",
+      "lastVerified": "2026-11-13",
       "verified": [
-        "darwin-arm64"
+        "darwin-arm64",
+        "wsl-x64"
       ]
     },
     {
@@ -202,9 +210,10 @@
         "win32",
         "wsl"
       ],
-      "lastVerified": "2026-11-12",
+      "lastVerified": "2026-11-13",
       "verified": [
-        "darwin-arm64"
+        "darwin-arm64",
+        "wsl-x64"
       ]
     },
     {
@@ -219,9 +228,10 @@
         "win32",
         "wsl"
       ],
-      "lastVerified": "2026-11-12",
+      "lastVerified": "2026-11-13",
       "verified": [
-        "darwin-arm64"
+        "darwin-arm64",
+        "wsl-x64"
       ]
     },
     {
@@ -236,7 +246,7 @@
         "win32",
         "wsl"
       ],
-      "lastVerified": "2026-11-12",
+      "lastVerified": "2026-11-13",
       "resourceFilters": {
         "extensions": [
           "+extensions/compact-tools.ts"
@@ -244,7 +254,8 @@
         "themes": []
       },
       "verified": [
-        "darwin-arm64"
+        "darwin-arm64",
+        "wsl-x64"
       ]
     },
     {
@@ -259,14 +270,15 @@
         "win32",
         "wsl"
       ],
-      "lastVerified": "2026-11-12",
+      "lastVerified": "2026-11-13",
       "verified": [
-        "darwin-arm64"
+        "darwin-arm64",
+        "wsl-x64"
       ]
     },
     {
       "id": "pi-computer-use",
-      "source": "npm:@injaneity/pi-computer-use",
+      "source": "npm:@injaneity/pi-computer-use@0.5.1",
       "version": "0.5.1",
       "level": "pinned",
       "module": "core",
@@ -276,14 +288,15 @@
         "win32",
         "wsl"
       ],
-      "lastVerified": "2026-11-12",
+      "lastVerified": "2026-11-13",
       "verified": [
-        "darwin-arm64"
+        "darwin-arm64",
+        "wsl-x64"
       ]
     },
     {
       "id": "pi-away",
-      "source": "npm:pi-away",
+      "source": "npm:pi-away@0.1.4",
       "version": "0.1.4",
       "level": "pinned",
       "module": "core",
@@ -293,14 +306,15 @@
         "win32",
         "wsl"
       ],
-      "lastVerified": "2026-11-12",
+      "lastVerified": "2026-11-13",
       "verified": [
-        "darwin-arm64"
+        "darwin-arm64",
+        "wsl-x64"
       ]
     },
     {
       "id": "pi-prompt-suggestion",
-      "source": "npm:pi-prompt-suggestion",
+      "source": "npm:pi-prompt-suggestion@0.1.2",
       "version": "0.1.2",
       "level": "pinned",
       "module": "core",
@@ -310,9 +324,10 @@
         "win32",
         "wsl"
       ],
-      "lastVerified": "2026-11-12",
+      "lastVerified": "2026-11-13",
       "verified": [
-        "darwin-arm64"
+        "darwin-arm64",
+        "wsl-x64"
       ]
     },
     {

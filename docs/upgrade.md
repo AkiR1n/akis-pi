@@ -2,10 +2,10 @@
 
 原则：**一次只升一个组件，升完立即验收，未通过立即回滚**。组件间存在依赖与协作（Pi ↔ 插件 ↔ Magic Context ↔ 知识库），若同时升多个，出异常难定根因。
 
-升级前先保存基线状态与配置文件：
+升级前先保存基线状态与配置文件（POSIX；Windows 把重定向换成 `Out-File`，`cp` 换成 `Copy-Item`，其余参数相同）：
 
 ```sh
-node scripts/doctor.mjs --home "$HOME" --modules core,memory,macos,magpie > /tmp/akis-pi-doctor-before.txt
+node scripts/doctor.mjs --home "$HOME" --modules core,memory,macos,magpie > "$TMPDIR/akis-pi-doctor-before.txt"
 cp -p "$HOME/.pi/agent/settings.json" "$HOME/.pi/agent/settings.json.bak-$(date +%Y%m%d)"
 ```
 
@@ -16,6 +16,27 @@ cp -p "$HOME/.pi/agent/settings.json" "$HOME/.pi/agent/settings.json.bak-$(date 
 1. Pi 本体 → 2. 插件 → 3. Magic Context → 4. pi-knowledge 补丁 → 5. 可选外部模块（Magpie / ego / pdf-parse）
 
 建议从底层核心向上推进，避免底层不稳时排查上层问题。
+
+---
+
+## 平台差异
+
+同一套判据，四个平台的差异只在下面几处，其余命令两端一致：
+
+| 项 | macOS | Linux / WSL2 | 原生 Windows（试验） |
+| --- | --- | --- | --- |
+| 入口 | POSIX | POSIX（WSL 内） | PowerShell 5.1/7，不用 `&&` |
+| 凭据 | `$VAR` 或 Keychain `!command` | 只有 `$VAR` | `setx` 后写 `$VAR`；`!command` 由 Git Bash 执行 |
+| Pi 命令解析 | 直接执行 | 直接执行 | doctor 把 `pi.cmd` 解析为 `node.exe + CLI`，交互终端能跑不代表脚本能跑 |
+| 数据位置 | `~/…` | WSL 内必须留在 `/home`，不要 `/mnt/c` | `%USERPROFILE%\…`，MC 配置仍在 `.config`，不是 APPDATA |
+| memory native runtime | 包内预编译文件 | 安装前 `export ONNXRUNTIME_NODE_INSTALL=skip`（CPU，跳过默认 CUDA 下载） | 先装 VC++ 2015-2022 x64 可再发行组件（管理员） |
+| 备份映射 | POSIX 相对路径 | 同左 | `drive-C/`、`unc/server/share`，跨盘不碰撞 |
+| PDF 服务重启 | `launchctl kickstart -k gui/…` | `systemctl --user restart pi-pdf-parse.service` | 任务计划程序里重启当前用户任务 |
+| 文本编码 | UTF-8 | UTF-8 | 读配置兼容 BOM；脚本一律 ASCII（PS 5.1 按 ANSI 读无 BOM 的 .ps1） |
+
+memory 升级后先跑 `node scripts/deploy-check.mjs onnx`，再跑 doctor；两者都要求 native runtime 加载成功。Windows 包存在却报 Win32 126，先查 System32 的 `vcruntime140.dll`、`vcruntime140_1.dll`、`msvcp140.dll`，缺则按 [DEPLOY](../DEPLOY.md) 安装官方可再发行组件，approve/rebuild 不能替代它。Linux x64 缺包时，默认 CUDA 下载器可能因不跟随 302 失败并被 npm 丢弃；在 agent-dir/npm 运行 `ONNXRUNTIME_NODE_INSTALL=skip npm install --include=optional` 再检查，CPU 文件已在包中。GPU 路径未实测。
+
+未实测平台（Linux、WSL2、原生 Windows）跑 doctor 会对每个组件多出 platform verification WARN，这是标签，不要解释成故障，也不要为了消掉 WARN 改 manifest。
 
 ---
 
@@ -135,3 +156,7 @@ npm ci && npm run build
 58 spent tool outputs (~45k tokens) are reclaimable. Make a ctx_reduce pass now over the outputs you've already used, then continue.
 oldest reclaimable: §1098§ subagent · §1100§ codemode · §1101§ subagent · §1103§ subagent_supervisor.
 </system-reminder>
+
+## Node 版本
+
+本包钉 Node 24.22.3。不要用 24.19.0–24.21.x：这几个版本里，pi-knowledge 的 better-sqlite3 在垃圾回收时释放 Statement 会触发 Node 内部断言，进程以 SIGABRT 退出（上游 nodejs/node#65446，24.22.0 已修复）。WSL2 上启用 memory 时，24.21.0 跑 20 轮有 9 轮崩溃，24.22.3 为 0；数据库完整性检查在崩溃轮次也正常。macOS 上的 better-sqlite3 预编译件不走这条路径，所以 macOS 上不容易看到这个问题，但仍按同一版本钉。升级 Node 时先查该版本是否包含上游修复，再在 Linux 或 WSL2 上跑 memory 组合的回归（`tests/wsl/exit-probe.py --rounds 20 --variants memory`，每轮三条 `pi --print`，全部退出码为 0 才算通过）。

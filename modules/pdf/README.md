@@ -1,6 +1,6 @@
 # pdf 模块
 
-本地 PDF → Markdown 服务的唯一源码是本目录的 server.py 和 requirements.txt。使用 PyMuPDF 1.28.2，默认监听 127.0.0.1:8791；无文本层的扫描件返回 422，让 pi-web-access 回退到 OCR。本包只有 darwin-arm64 的已有实测记录；Linux、WSL 与原生 Windows 的服务启动仍待实机验收。
+本地 PDF → Markdown 服务的唯一源码是本目录的 server.py 和 requirements.txt。使用 PyMuPDF 1.28.2，默认监听 127.0.0.1:8791；无文本层的扫描件返回 422，让 pi-web-access 回退到 OCR。本包只有 darwin-arm64 的服务实测记录；Linux、WSL2 与原生 Windows 的服务启动属试验，尚未实机验收。
 
 从仓库根目录先 dry run：
 
