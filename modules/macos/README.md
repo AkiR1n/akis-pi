@@ -1,6 +1,6 @@
 # macos 模块
 
-本模块仅在 darwin 上可选，提供 herdr 状态上报与 ego-gc 窗口回收。其它平台选择 macos 会在写入前拒绝。PDF 已拆为独立 [pdf 模块](../pdf/README.md)，浏览器 CLI 属于 core 的通用前置依赖。
+本模块只在 darwin 上提供，且 darwin 下必装：herdr 状态上报与 ego-gc 窗口回收。其它平台选择 macos 会在写入前拒绝。PDF 已拆为独立 [pdf 模块](../pdf/README.md)，浏览器 CLI 属于 core 的通用前置依赖。
 
 `ego-browser` 本体上游有 Windows 安装器，但本包没有在 Windows 上实测；`ego-gc` 依赖 `~/.local/bin` 下的 POSIX 路径，只在 macOS 与 Linux 上可用，Windows 部署跳过它即可。
 

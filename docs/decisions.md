@@ -77,7 +77,7 @@
 1. **Hub 工具过滤**：网关处理带 `Sec-Fetch-Mode: cors` 或浏览器 UA 的请求时，默认只暴露基础搜索工具；Pi 的 Node fetch 自带此类请求头。因此生图能力要通过独立 stdio 进程启动（`magpie mcp image`），不要依赖 HTTP Hub。
 2. **斜杠命令技能独立注册**：像 `/skill:save-topic` 这种需要在终端输入斜杠命令的技能，并入网关后 Pi 无法注册同名命令。外部通用工具可以由网关精简，手动调用的技能保留直接注册。
 
-**脱离运行**：这套配置可以脱离 Magpie 运行。将端点指向任意 OpenAI 兼容服务即可，`APPEND_SYSTEM.md` 中关于 Magpie 的规则已标注模块作用域，移除后不影响核心功能。
+**必装而非可选**：Magpie 在这套配置里当必装件。模型路由、生图与视频、反爬时的抓取兜底、技能索引与 MCP 都经它，`rtk` 也是它装的；去掉它等于换一套配置，`APPEND_SYSTEM.md` 里那几条规则也没有对象，所以不提供「跳过 Magpie」的路径。Pi 裸件接任意 OpenAI 兼容服务的用法仍然成立，只是那已经不是这份配置。
 
 
 ## 6. 分层记忆：RESIDENT 只留关键事实
@@ -119,7 +119,7 @@
 
 ## 10. 平台取舍：WSL2 为 Windows 默认，QML 语法包改为可选
 
-**决策一**：Windows 用户默认推荐 **WSL2 的 core+memory**，原生 Windows 作为可选路径并标「试验」。
+**决策一**：Windows 用户默认推荐 **WSL2 的全套（core+magpie+memory）**，原生 Windows 作为可选路径并标「试验」。
 
 **依据**：本包的执行面几乎全是 POSIX 语义——部署脚本用 sh、补丁用 `git am` 串行应用、凭据示例用 Keychain、PDF 服务用 launchd/systemd。WSL2 里这些差异一次性消失，剩下的风险只集中在 Linux 侧本身；原生 Windows 则要同时处理 Git Bash 依赖、npm `.cmd` shim、Appx/winget 缺失、原生模块编译与浏览器 best-effort 五类问题。推荐成本更低的一侧，比把五类问题都写进首装路径更诚实。
 

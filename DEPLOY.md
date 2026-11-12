@@ -1,6 +1,6 @@
 # 部署
 
-按「做什么 → 检查命令 → 期望结果 → 失败怎么办」执行。先读 [AGENTS.md](AGENTS.md)，版本见 [manifest.json](manifest.json)，理由见 [docs/decisions.md](docs/decisions.md)。core 必装，memory / pdf / macos / magpie 按需。联网安装前先说明，不覆盖已有配置，doctor FAIL 时停止。
+按「做什么 → 检查命令 → 期望结果 → 失败怎么办」执行。先读 [AGENTS.md](AGENTS.md)，版本见 [manifest.json](manifest.json)，理由见 [docs/decisions.md](docs/decisions.md)。core、magpie、memory 必装（darwin 再加 macos），只有 pdf 可选。联网安装前先说明，不覆盖已有配置，doctor FAIL 时停止。
 
 本文分两层：先按平台选一个**入口**（只有一个平台的差异写在这里），再走**共用步骤**。共用步骤里的检查尽量是 `node` 或 `pi` 命令，参数两端一致；只有安装前置和路径写法必须分平台。
 
@@ -11,14 +11,14 @@
 | POSIX 入口 | macOS、Linux、WSL2 | 系统 Bash、Node 24.22.3、Git | macOS、WSL2 已实测；Linux 原生试验 |
 | PowerShell 入口 | 原生 Windows x64 | Windows PowerShell 5.1 或 7、Node 24.22.3、Git for Windows | **试验**：部署检查已通过，长时间运行与桌面能力未验收 |
 
-Windows 用户默认选 WSL2（core+memory）：Linux 用户态下 Bash、路径和安装流程与本文的 POSIX 部分一致。只有需要操作 Windows 桌面、或复用 Windows 登录态的浏览器时，才选原生 Windows。
+Windows 用户默认选 WSL2（core+magpie+memory）：Linux 用户态下 Bash、路径和安装流程与本文的 POSIX 部分一致。只有需要操作 Windows 桌面、或复用 Windows 登录态的浏览器时，才选原生 Windows。
 
 ### POSIX 入口
 
 ```sh
 export REPO="$HOME/akis-pi"          # 仓库绝对路径
 export PI_CODING_AGENT_DIR="$HOME/.pi/agent"
-export MODULES=core,memory           # 只装 core 写 core；可追加 ,pdf ,magpie；darwin 可加 ,macos
+export MODULES=core,magpie,memory    # 三个必装；darwin 再加 ,macos；pdf 按需
 # Linux / WSL2：必须在安装 memory（MC）之前设置；macOS 不需要。
 export ONNXRUNTIME_NODE_INSTALL=skip        # MC: onnxruntime-node 1.30.0
 export ONNXRUNTIME_NODE_INSTALL_CUDA=skip   # pi-knowledge: onnxruntime-node 1.21.0
@@ -73,7 +73,7 @@ wsl -d Ubuntu-24.04
 
 1. **源码、`node_modules`、知识库与 Magic Context 数据都放在 WSL 的 `/home/<user>/...`**，不要放 `/mnt/c`。跨文件系统访问慢一个数量级，且大小写、权限位与符号链接语义不同，`npm ci` 与 SQLite 都可能出错。
 2. 不要把同一个 `node_modules` 在 Windows 与 WSL 间共用，两边安装的平台包不同。
-3. WSL 内没有 launchd 与 Keychain：macos 模块不可选，凭据用 `$VAR`。
+3. WSL 内没有 launchd 与 Keychain：macos 模块在 WSL 不适用，凭据用 `$VAR`。
 4. WSL 访问 Windows 上的 Magpie / PDF 端点不能假定 `127.0.0.1`（默认 NAT 网络），先在发行版内用 `curl` 验证可达性。需要操作 Windows 桌面时不要留在 WSL：WSL 里装的是 Linux 后端，看不见 Windows UI。
 
 ## 0. 前置检查与路径
@@ -224,7 +224,7 @@ pi --list-models
 
 ## 4. 按实际所需模块渲染
 
-**做什么**：先 dry run 看计划，再 apply。`MODULES` 为步骤 0 所选（选 memory 必须含 core,memory）。
+**做什么**：先 dry run 看计划，再 apply。`MODULES` 为步骤 0 所选（至少 `core,magpie,memory`，darwin 加 `macos`）。
 
 POSIX：
 
@@ -254,7 +254,7 @@ PowerShell 的单引号让 `$BRAVE_API_KEY` 保持引用文本，不会被当前
 
 渲染器将已完成模块记入 `<agent-dir>/.akis-pi-render.json`。后续只渲染新增模块，不重写已完成 core，不移除旧模块；后加 memory 只合并 packages 到 settings，保留其它设置与过滤项。重复传 core 不更新；需更新模板时在独立目录生成审阅合并，不要删状态文件覆盖。
 
-写入范围与备份见 [README](README.md)：已有目标先备份到 `<agent-dir>/backups/akis-pi-<时间戳>/targets/<目标映射>`（POSIX 去根斜杠；Windows 用 drive-C / unc/server/share，跨盘不碰撞）。不替换 mcp.json、models.json、auth.json、RESIDENT.md。新部署无需删除 npmCommand：默认没有该字段；旧配置升级在独立目录生成、审阅合并。
+写入范围与备份：已有目标先备份到 `<agent-dir>/backups/akis-pi-<时间戳>/targets/<目标映射>`（POSIX 去根斜杠；Windows 用 drive-C / unc/server/share，跨盘不碰撞）。不替换 mcp.json、models.json、auth.json、RESIDENT.md。新部署无需删除 npmCommand：默认没有该字段；旧配置升级在独立目录生成、审阅合并。
 
 ## 5. 安装插件（必须先渲染）
 
@@ -369,7 +369,7 @@ pi --print 'answer with the number of tools you can call directly, and nothing e
 **期望**：Pi 1.5.2 + pi-subagents 0.88.0 下有 **6 个直接工具**：ask_user / codemode / contact_supervisor / subagent / subagent_supervisor / tool_search。模型自报工具数不准，以 stub 捕获并由 `deploy-check.mjs stub-requests` 校验的集合为准。
 **失败怎么办**：出约 50 个工具核对 `codemode.mode = only`；为 0 回步骤 5 查插件与 Pi 版本。
 
-## 9. memory 模块（可选，选了才做）
+## 9. memory 模块（必装）
 
 ### 9.1 Magic Context
 
@@ -454,20 +454,20 @@ knowledge-version 同时检查版本与 dist，两个平台用同一脚本。
 
 ```sh
 pi list
-node "$REPO/scripts/doctor.mjs" --home "$HOME" --agent-dir "$PI_CODING_AGENT_DIR" --modules core,memory
+node "$REPO/scripts/doctor.mjs" --home "$HOME" --agent-dir "$PI_CODING_AGENT_DIR" --modules core,memory,magpie
 ```
 
 PowerShell：
 
 ```powershell
 pi list
-node "$Repo/scripts/doctor.mjs" --home $HOME --agent-dir $env:PI_CODING_AGENT_DIR --modules core,memory
+node "$Repo/scripts/doctor.mjs" --home $HOME --agent-dir $env:PI_CODING_AGENT_DIR --modules core,memory,magpie
 ```
 
 **期望**：`dist/index.js` 存在、版本 0.12.0、`pi list` **13 项**（11 core + MC + pi-knowledge），保留两个 filtered；此处仅查 core,memory，doctor 应 0 FAIL；MODULES 其余模块步骤 12 查。启动新 Pi 会话做步骤 7、8 验收（无 key 用 stub），静态检查不可替代。
-**失败怎么办**：补丁含尾延迟优化、真实 source span 行号对齐、复核修复和 QML 可选依赖四份。`git am` 冲突停止查 base，不要手动绕过。原生 Windows 上 `npm ci` 若卡在原生依赖（better-sqlite3、tree-sitter），先装 Python 3 与 VS Build Tools 的 C++ 工作负载；`tree-sitter-qmljs` 已由第 4 份补丁降级为可选依赖，它的编译或加载失败只会让 QML 文件退回文本分块，不影响其它语言——不要把它当成整体安装失败，也不要为此回退补丁。仍装不上就用 WSL2 的 core+memory。npm 脚本警告按步骤 5 查。仅构建不证明检索可用：在小库实测检索行号；知识库目录不可指向 resident 目录。
+**失败怎么办**：补丁含尾延迟优化、真实 source span 行号对齐、复核修复和 QML 可选依赖四份。`git am` 冲突停止查 base，不要手动绕过。原生 Windows 上 `npm ci` 若卡在原生依赖（better-sqlite3、tree-sitter），先装 Python 3 与 VS Build Tools 的 C++ 工作负载；`tree-sitter-qmljs` 已由第 4 份补丁降级为可选依赖，它的编译或加载失败只会让 QML 文件退回文本分块，不影响其它语言——不要把它当成整体安装失败，也不要为此回退补丁。仍装不上就改用 WSL2 的全套（core+magpie+memory）。npm 脚本警告按步骤 5 查。仅构建不证明检索可用：在小库实测检索行号；知识库目录不可指向 resident 目录。
 
-## 10. macos 模块（可选，仅 darwin）
+## 10. macos 模块（darwin 必装）
 
 其它平台选择 macos 会在写入前被拒；Windows/Linux 的等价能力见 manifest 与 modules/macos/README.md（Herdr/Rex pane、tmux inspector、launchd、Keychain 均不提供）。
 
@@ -507,7 +507,7 @@ agent-browser install
 **期望**：CLI 0.41.2 且位于扩展解析的同一 Node 树。安装 CLI 不等于已下载浏览器。
 **失败怎么办**：随后用 `tools.agent_browser({args:["doctor"]})` 验证 open/snapshot/close。mise 的 node/24 别名可能随新版本漂移。原生 Windows 的会话锁、恢复与 Electron 有上游限制（上游自述 best-effort），必须单独验收，并如实呈现 Electron unsupported 之类的结论，不能只以“能启动”当通过。
 
-## 11. magpie 模块（可选）
+## 11. magpie 模块（必装）
 
 从 manifest 的 [Magpie source](https://github.com/yetone/magpie) 获取并打开。确认步骤 4 包含 magpie（追加时沿用 10.1 的参数把 `--modules` 改为 `magpie`，先 dry run），将 `modules/magpie/mcp.json.example` 的两个服务合并到 agent-dir/mcp.json，不整体覆盖。原生 Windows 把示例里的 `command` 换成实际的 magpie `.exe` 路径或 PATH 上的 CLI 名。
 
@@ -532,7 +532,7 @@ PowerShell 的收尾命令：
 node "$Repo/scripts/doctor.mjs" --home $HOME --agent-dir $env:PI_CODING_AGENT_DIR --modules $Modules
 ```
 
-**期望**：0 FAIL，WARN 逐条解释。doctor 只读 settings/node_modules，**不调用 pi list、不安装包**。对照 manifest：版本同 PASS；普通偏差 WARN；Pi/MC 的 major 偏差 FAIL；缺声明包 FAIL。RTK 缺失或无 rewrite 为 WARN。未实测平台会对每个组件额外报 platform verification WARN，这是标签而非故障（实测范围见 README 的平台表）。core 11 包、core+memory 13 包，macos/magpie 不增包。
+**期望**：0 FAIL，WARN 逐条解释。doctor 只读 settings/node_modules，**不调用 pi list、不安装包**。对照 manifest：版本同 PASS；普通偏差 WARN；Pi/MC 的 major 偏差 FAIL；缺声明包 FAIL。RTK 缺失或无 rewrite 为 WARN。未实测平台会对每个组件额外报 platform verification WARN，这是标签而非故障（实测范围见 README 的平台表）。core 11 包、core+magpie+memory 13 包，macos 不增包。
 
 **失败怎么办**：FAIL packages resolve on disk 回步骤 5（memory 查 9）；placeholders 回步骤 4；MC parameters 查 9.1。确保 0 FAIL 方可交付。
 

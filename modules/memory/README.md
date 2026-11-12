@@ -110,7 +110,7 @@ npm ci && npm run build
 3. **边界修复**：修复上述改动的边界情况。
 4. **QML 可选依赖**：tree-sitter-qmljs 移入 optionalDependencies；安装或加载失败时 QML 改用文本分块，每个进程只提示一次，其余语言的 AST 解析与检索保持原有行为。原生 Windows 无预编译包时不再因 QML 编译失败阻断整个 memory 安装。重新安装成功后重启进程以重试。
 
-各补丁作者已去敏。第 4 份补丁包含并发/重复加载失败的降级测试；原生 Windows 的完整安装与查询仍需实机验收，推荐 Windows 用户优先采用 WSL2 的 core+memory。
+各补丁作者已去敏。第 4 份补丁包含并发/重复加载失败的降级测试；原生 Windows 的完整安装与查询仍需实机验收，推荐 Windows 用户优先采用 WSL2 的全套（core+magpie+memory）。
 
 补丁按文件名排序应用（`0001` → `0004`），顺序错了 `git am` 会冲突。原生 Windows 上 `npm ci` 仍可能需要 Python 3 与 VS Build Tools 的 C++ 工作负载（`better-sqlite3`、`tree-sitter` 系）；QML 语法包已改可选，它失败只让 `.qml` 文件退回文本分块，不要当成整体安装失败。WSL2 与 Linux 的源码、`node_modules`、知识库数据放在 `/home` 下，不要放 `/mnt/c`。
 

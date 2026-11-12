@@ -1,5 +1,7 @@
 # 升级与回滚
 
+本仓库只负责初始配置；装好之后建议在自己的维护项目里跟踪升级，这份文档可以当作那个项目的操作手册。
+
 原则：**一次只升一个组件，升完立即验收，未通过立即回滚**。组件间存在依赖与协作（Pi ↔ 插件 ↔ Magic Context ↔ 知识库），若同时升多个，出异常难定根因。
 
 升级前先保存基线状态与配置文件（POSIX；Windows 把重定向换成 `Out-File`，`cp` 换成 `Copy-Item`，其余参数相同）：
@@ -10,9 +12,15 @@ cp -p "$HOME/.pi/agent/settings.json" "$HOME/.pi/agent/settings.json.bak-$(date 
 ```
 
 
+## 配置与渲染回滚
+
+渲染不删除文件，改过的目标在写入前都备份到 `<agent-dir>/backups/akis-pi-<时间戳>/targets/`，路径映射与写入时一致。要退回去，把对应文件复制回原位。
+
+`<agent-dir>/.akis-pi-render.json` 记录已完成模块，删掉对应条目就能重跑同一模块。组件层面的回滚（退插件、退 Pi、退数据库）见下面各节。
+
 ## 推荐升级顺序
 
-1. Pi 本体 → 2. 插件 → 3. Magic Context → 4. pi-knowledge 补丁 → 5. 可选外部模块（Magpie / ego / pdf-parse）
+1. Pi 本体 → 2. 插件 → 3. Magic Context → 4. pi-knowledge 补丁 → 5. 外部模块（Magpie 必装；ego / pdf-parse 按需）
 
 建议从底层核心向上推进，避免底层不稳时排查上层问题。
 
@@ -126,7 +134,7 @@ npm ci && npm run build
 **回滚方案**：切回已验证的提交点：`git checkout 558e8dd && npm ci && npm run build`（验证过的 base 代码可随时复现）。本地知识库数据保存在源码仓库外，不受构建影响；但若新代码改了向量索引存储格式，可能需要重建索引。
 
 
-## 5. 可选外部模块
+## 5. 外部模块
 
 - **Magpie 网关**：网关应用升级后需重启 Pi（MCP 工具元数据仅在 Pi 启动时加载缓存），运行 `pi mcp list` 核对工具面。注意：Hub 端点在 Node fetch 下仅列出搜索工具属于正常安全过滤，并非故障。
 - **ego lite 浏览器**：升级后跑一次跨平台搜索技能，确认任务结束后浏览器窗口能正常回收；`ego-gc` 检测 `ego lite` 进程，未启动时扩展会自动跳过。Windows 上没有 `ego-gc`，这一条只需确认浏览器本体能启动。

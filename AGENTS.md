@@ -15,7 +15,7 @@
 3. **向用户确认部署参数**（一次问齐，不要分多次追问）：
    - 目标平台与入口（见 0a：macOS / Linux / WSL2 用 POSIX 入口，原生 Windows 用 PowerShell 入口）；
    - 模型供应商标识（`{{PROVIDER}}`）与各角色模型 ID：主力模型（`{{MODEL}}`）、执行模型（`{{MODEL_EXEC}}`）、复核模型（`{{MODEL_REVIEW}}`）、规划模型（`{{MODEL_PLAN}}`）、压缩模型（`{{MODEL_HISTORIAN}}`）；
-   - 要装的模块（`core` 必选；`memory` / `pdf` / `macos` / `magpie` 按用户环境选）；
+   - 要装的模块（`core`、`magpie`、`memory` 必装，darwin 再加 `macos`；只有 `pdf` 可选）；
    - 凭据注入方式：环境变量引用（`$VAR`，Windows 用 `setx` 或用户环境变量）还是 macOS 系统钥匙串（`!security find-generic-password ...`）。
 
 
@@ -25,10 +25,10 @@
 
 | 目标 | 入口 | 模块 | 标签 |
 | --- | --- | --- | --- |
-| macOS | POSIX | core，可加 memory / macos / pdf / magpie | 已实测 |
-| Linux | POSIX | core，可加 memory / pdf / magpie | 试验（由 WSL2 推断） |
-| Windows + WSL2 | POSIX（在发行版内） | core + memory（默认推荐） | core、memory 已实测 |
-| Windows 原生 | PowerShell（5.1 与 7） | core，可加 memory（QML 降级）/ pdf / magpie | **试验** |
+| macOS | POSIX | core + magpie + memory + macos，可加 pdf | 已实测 |
+| Linux | POSIX | core + magpie + memory，可加 pdf | 试验（由 WSL2 推断） |
+| Windows + WSL2 | POSIX（在发行版内） | core + magpie + memory，可加 pdf（默认推荐） | core、memory 已实测；magpie 未实测 |
+| Windows 原生 | PowerShell（5.1 与 7） | core + magpie + memory（QML 降级），可加 pdf | **试验** |
 
 - Windows 用户先问一句：需要操作 Windows 桌面或复用 Windows 登录态浏览器吗？不需要就用 WSL2，源码与 `node_modules` 留在 `/home`，不要放 `/mnt/c`。
 - macos 模块仅供 darwin；其它平台选择会在写入前被拒。PDF 独立选 pdf，Windows 用登录计划任务。

@@ -70,6 +70,6 @@ python3 tests/wsl/exit-probe.py --repo "$PWD" --agent-dir "$PI_CODING_AGENT_DIR"
 
 - `wsl -d` 会写发行版数据，所以仅在已设返回检查点的测试 VM 中运行；测试后恢复检查点。
 - **源码、`node_modules`、知识库与 Magic Context 数据必须放在 WSL 的 `/home`**，不要放 `/mnt/c`：跨文件系统访问慢一个数量级，权限与大小写语义也不同，`npm ci` 与 SQLite 都可能出错。
-- WSL 里没有 launchd / Keychain，macos 模块不可选；凭据只能用 `$VAR`。
+- WSL 里没有 launchd / Keychain，macos 模块不适用；凭据只能用 `$VAR`。
 - 需要操作 Windows 桌面或复用 Windows 登录态浏览器时不要用 WSL：那里跑的是 Linux 后端。
 - WSL 访问 Windows 侧服务（Magpie、PDF 端点）不能假定 `127.0.0.1`，先在发行版内验证可达性。

@@ -4,6 +4,7 @@ tests/results/
 
 # local noise
 .DS_Store
+.miaoyan-conflicts/
 *.log
 
 # never commit a rendered config that still has values filled in, or any credential file
