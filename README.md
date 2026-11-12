@@ -1,36 +1,36 @@
 # akis-pi
 
-一份可以直接交给 AI 部署的 Pi coding agent 配置包：将 `config/` 和所选 `modules/` 渲染到目标机器，再通过 `scripts/doctor.mjs` 进行全项自检。
-这不是插件市场，也不是 dotfiles 备份——这里只收录作者日常在用、并写明了设计取舍与实测依据的那部分配置。
+一份可以直接交给 AI 部署的 Pi coding agent 配置包：将 `config/` 和所选 `modules/` 渲染到目标机器，再通过 `scripts/doctor.mjs` 做检查。
+这不是插件市场，也不是 dotfiles 备份——这里只收录作者日常在用、有明确设计取舍和实测依据的配置。
 
 作者：Aki。问题与建议请直接提交 Issue。
 
 ## 是什么
 
-Pi 是一款轻量、灵活的 coding agent 工具 harness。默认情况下，随着安装的工具插件增多，模型每轮对话看到的系统提示与工具 schema 会急剧膨胀，容易导致首轮延迟高、上下文浪费严重，且在多代理协作时缺乏明确的角色边界与记忆管理。
+Pi 是个轻量的 coding agent harness。工具插件装多了之后，系统提示与工具 schema 容易膨胀，导致首轮延迟高、浪费上下文。
 
-akis-pi 针对上述问题提供了一套开箱即用的系统化解决方案：
-1. **单一工具通道（codemode only）**：默认仅向模型暴露 3 个直接工具（`codemode`、`ask_user`、`tool_search`），其余 50 多个扩展工具全部收敛到 QuickJS 沙箱内部按需发现并以 `await tools.<name>()` 调用。首轮提示实测降低 **-45%**（探针实测从 25,522 降至 13,954 token）。
-2. **多角色分工委派**：主会话专注规划与决策，将脚手架构建、测试、代码审查分发给不同定位的模型（便宜模型跑执行，异构模型做独立复核，强模型把控规划与架构）。
-3. **分层记忆机制**：每轮会话仅注入几百到两千字符的「常驻事实」（`RESIDENT.md`）；海量项目历史与笔记下沉到按需检索；超长会话由压缩机制（Magic Context historian）按明确阈值与超时控制归档。
-4. **弹性联网降级链**：检索与正文抓取按顺序逐级兜底，遇到 403 反爬时按规则改用第二条抓取通道，仅在需要登录态时移交浏览器。
+akis-pi 做了几点调整：
+1. **单一工具通道（codemode only）**：默认只向模型暴露 3 个工具（`codemode`、`ask_user`、`tool_search`），其余 50 多个扩展工具收进 QuickJS 沙箱，按需发现并用 `await tools.<name>()` 调用。首轮提示实测降低 **-45%**（探针从 25,522 降至 13,954 token）。
+2. **多角色分工**：主会话做规划，把测试、脚手架、代码审查分发给不同定位的模型：便宜模型执行，异构模型复核，强模型把控规划。
+3. **分层记忆**：每轮只注入几百到两千字符的常驻事实（`RESIDENT.md`）；项目历史与笔记按需检索；长会话由 Magic Context 按固定阈值与超时归档。
+4. **联网分级兜底**：搜索与正文抓取按顺序回退，遇到 403 反爬时换第二条通道，需要登录态时移交浏览器。
 
 ## 适合谁 / 不适合谁
 
 **适合**：
-- 希望降低 Pi 提示词开销、减少工具 schema 干扰的重度使用者。
-- 追求职责隔离，希望通过「多模型配合（廉价执行 + 异构复核 + 强力规划）」提升代码质量的开发者。
-- 需要跨会话持久记忆、长会话无缝压缩，同时严格控制上下文污染的人。
-- 使用 macOS 且需要本地 PDF 解析或浏览器自动化清理的人。
+- 想降低 Pi 提示词开销、减少工具 schema 干扰。
+- 想用多模型分工（廉价执行 + 异构复核 + 强力规划）协作。
+- 需要跨会话持久记忆与长会话自动压缩，控制上下文膨胀。
+- 用 macOS，需要本地 PDF 解析或浏览器窗口自动清理。
 
 **不适合**：
-- 希望一键无脑安装、完全不愿配置模型供应商与 API 凭据的人。
-- 习惯所有工具 schema 全部常驻提示词、排斥写脚本式调用的使用习惯。
-- 纯 Linux / Windows 环境使用者（目前仅在 macOS arm64 环境实测验证，Linux 缺乏环境实测，Windows 不在支持范围内）。
+- 想一键安装、不愿配置模型与 API 凭据。
+- 习惯工具 schema 全常驻、不习惯写脚本调用。
+- Linux / Windows 用户（目前仅在 macOS arm64 实测验证，Linux 未实测，不支持 Windows）。
 
 ## 快速开始
 
-这套配置推荐交给部署用的 AI 自动化安装（先让 AI 遵循 [AGENTS.md](AGENTS.md) 规则并逐步执行 [DEPLOY.md](DEPLOY.md)）。如果你选择手动部署，核心步骤如下：
+这套配置推荐交给部署用的 AI 自动化安装（让 AI 遵循 [AGENTS.md](AGENTS.md) 规则并逐步执行 [DEPLOY.md](DEPLOY.md)）。如果你手动部署，核心步骤如下：
 
 ```sh
 # 1. 运行 dry run，预览将写入的文件、差异 diff 以及占位符解析情况
@@ -59,7 +59,7 @@ node scripts/render.mjs --home "$HOME" --modules core --strict --apply \
 node scripts/doctor.mjs --home "$HOME" --modules core
 ```
 
-`render.mjs` 不会覆盖 `mcp.json`、不写 `RESIDENT.md`、不删除任何文件。写入前会自动将目标备份至 `<agent-dir>/backups/akis-pi-<时间戳>/targets/<绝对目标路径去掉根斜杠>`，包括 agent-dir 外的目标：
+`render.mjs` 不覆盖 `mcp.json`、不写 `RESIDENT.md`、不删除文件。写入前自动备份目标至 `<agent-dir>/backups/akis-pi-<时间戳>/targets/<绝对目标路径去掉根斜杠>`，含 agent-dir 外的目标：
 
 | 模块 | agent-dir 外的写入路径 |
 | --- | --- |
@@ -68,58 +68,58 @@ node scripts/doctor.mjs --home "$HOME" --modules core
 | macos | `$HOME/.local/share/pi-pdf-parse/server.py`、`requirements.txt`（PDF 服务源码） |
 | macos | `$HOME/Library/LaunchAgents/com.example.pipdfparse.plist` |
 
-此外，`<agent-dir>/.akis-pi-render.json` 会记录已完成的模块；后续追加渲染新模块时，后加 memory 只会安全合并 packages 依赖，完整保留用户现有的 core 配置和自定义修改。严格模式在写入前整体拒绝未解析占位符；非严格模式也不会写入含占位符的文件。JSON/JSONC 替换按字符串转义，`*ApiKey` / `apiKey` 只接受 `!command` 或 `$ENV_VAR` / `${ENV_VAR}` 引用，明文凭据会被直接拦截拒绝。自定义 agent-dir 或 XDG 路径详见 [DEPLOY.md](DEPLOY.md) 第 0 步。
+`<agent-dir>/.akis-pi-render.json` 记录已完成模块。追加渲染 memory 时只合并 packages，保留已有 core 设置。严格模式写入前拒绝未解析占位符；非严格模式跳过含占位符的文件。凭据只接受 `!command` 或 `$ENV_VAR` / `${ENV_VAR}` 引用，明文凭据会被拒绝。自定义路径见 [DEPLOY.md](DEPLOY.md) 第 0 步。
 
-仓库内回归测试可运行：`node --test scripts/test/*.test.mjs`。无真实 key 验收可使用仅监听本地 127.0.0.1 的 `scripts/stub-provider.mjs`，隔离验证步骤详见 DEPLOY 文末。
+回归测试：`node --test scripts/test/*.test.mjs`。无真实 key 验收见 DEPLOY 文末的回环 stub。
 
 ## 模块
 
 | 模块 | 内容 | 安装建议 | 详细说明 |
 | --- | --- | --- | --- |
-| **core** | `settings.json`、全局 `AGENTS.md`、`APPEND_SYSTEM.md`、8 个子代理角色、2 个 prompt 模板、compact-tools 显示配置、pi-web-access 搜索配置、rtk bash 重写扩展 | 必装 | 基础运行面 |
-| **memory** | Magic Context（项目记忆 + 压缩）、resident-memory 扩展、pi-knowledge 知识库及 3 个关键补丁 | 推荐（需要跨会话持久记忆时安装；仅需精简工具面可跳过） | [modules/memory](modules/memory/README.md) |
-| **macos** | herdr 面板状态扩展、ego-browser 窗口回收、本地离线 PDF→Markdown 端点、Keychain 凭据用法 | 推荐（macOS 用户安装；Linux 环境跳过） | [modules/macos](modules/macos/README.md) |
-| **magpie** | Magpie 网关接入：本地 OpenAI 兼容 provider、MCP hub、生图/生视频扩展 | 可选（使用 Magpie 网关时启用；跳过时可直接对接任意 OpenAI 兼容供应商） | [modules/magpie](modules/magpie/README.md) |
+| **core** | `settings.json`、全局 `AGENTS.md`、`APPEND_SYSTEM.md`、8 个子代理角色、2 个 prompt 模板、compact-tools 配置、pi-web-access 搜索配置、rtk bash 重写扩展 | 必装 | 基础运行面 |
+| **memory** | Magic Context（项目记忆 + 压缩）、resident-memory 扩展、pi-knowledge 知识库及 3 个补丁 | 推荐（需要持久项目记忆时装；仅需精简工具面可跳过） | [modules/memory](modules/memory/README.md) |
+| **macos** | herdr 状态面板扩展、ego-browser 窗口回收、本地离线 PDF→Markdown 端点、Keychain 凭据规范 | 推荐（macOS 装；Linux 跳过） | [modules/macos](modules/macos/README.md) |
+| **magpie** | Magpie 网关接入：本地 OpenAI 兼容 provider、MCP hub、生图/生视频扩展 | 可选（用 Magpie 网关时启用；跳过可直连任意 OpenAI 兼容服务） | [modules/magpie](modules/magpie/README.md) |
 
-模块之间仅有两处依赖解耦处理，渲染脚本已自动支持：`settings.json` 中的 pi-knowledge 与 Magic Context 包条目归属 memory 模块；`APPEND_SYSTEM.md` 中关于 Magpie 与 `ctx_*` 的规则行已明确标注「仅 X 模块」。
+模块间依赖解耦：`settings.json` 中的 pi-knowledge 与 Magic Context 包归属 memory 模块；`APPEND_SYSTEM.md` 里关于 Magpie 与 `ctx_*` 的规则已标注适用模块。
 
 ## 模型分工：三个角色，不是固定 ID
 
-模板中所有模型位置均为占位符，不绑定任何特定供应商或商业模型：
+模板中所有模型位置均为占位符，不绑定特定供应商或商业模型：
 
 | 占位符 | 角色定位 | 选取建议 |
 | --- | --- | --- |
-| `{{MODEL}}` | 主会话默认模型 | 日常主力交互模型 |
-| `{{MODEL_EXEC}}` | 廉价执行：测试、脚手架、前端、批量改动 | 单价极低、能够稳定连续执行脚本的模型 |
-| `{{MODEL_REVIEW}}` | impl-sol 与独立复核：查阅 diff、排查证据漏洞、关键改动核验 | 建议与执行模型**不同族/不同供应商**，避免同源认知盲区 |
-| `{{MODEL_PLAN}}` | 架构规划、后端核心改动、难题攻关 | 能力最强的旗舰模型 |
-| `{{MODEL_HISTORIAN}}` | 会话压缩归档（memory 模块） | 上下文窗口大、价格低廉，对深度推理要求不高 |
+| `{{MODEL}}` | 主会话默认模型 | 日常主力交互 |
+| `{{MODEL_EXEC}}` | 廉价执行：测试、脚手架、前端、批量改动 | 单价低、能稳定跑脚本的模型 |
+| `{{MODEL_REVIEW}}` | impl-sol 与独立复核：查 diff、排查漏洞、改动核验 | 建议与执行模型**不同族/不同供应商**，减少同源盲区 |
+| `{{MODEL_PLAN}}` | 架构规划、后端核心改动、难题攻关 | 最强的旗舰模型 |
+| `{{MODEL_HISTORIAN}}` | 会话压缩归档（memory 模块） | 窗口大、价格低，不要求强推理 |
 
-推荐分工原则：执行分配给低单价高响应速度的模型；复核换用异构供应商模型；规划交由最强模型把关。只需将其映射为你拥有的模型 ID 即可，角色职责边界保持不变——这是整套委派协作体系的基石。
+分工原则：执行用低单价高速度模型，复核用异构模型，规划用最强模型。映射为你持有的模型 ID 即可。
 
-角色文件名（如 `impl-*`、`opus-*`、`planner` 等）为历史命名，并不限制只能使用某一特定厂商；实际生效的仅为各角色配置文件中的 `model:` 字段。
+角色文件名（如 `impl-*`、`opus-*`、`planner`）是历史命名，不限厂商；实际生效的是各角色配置里的 `model:` 字段。
 
 ## 设计取舍摘要
 
-整套配置背后的每一次设计调整均有明确依据，详情见 [docs/decisions.md](docs/decisions.md)：
+各项设计背后的取舍依据见 [docs/decisions.md](docs/decisions.md)：
 
-- **codemode only**：首轮系统提示字符大幅削减，固定输入开销下降 45%；但由于模型需要编写 JavaScript 脚本驱动工具，多步复杂任务的总 token（input + cacheRead）约增加 **+17%**。这是用执行期轻微开销换取首轮快速响应与低常驻成本的明确交换。
-- **参数错误恢复循环**：不常驻 50+ 工具的完整 schema，而是在 `APPEND_SYSTEM.md` 约定「报错时通过 `describeTool` 查看声明并就地重试」，大幅降低常驻 token 负担。
-- **Magic Context 阈值**：将执行压缩阈值设为 400,000 tokens（小窗口自动钳位至 90%），注入预算设为 3,000 tokens，压缩超时设为 600,000 ms，避免小模型过早压缩或长任务重试浪费。
-- **紧凑工具输出（compact-tools）**：TUI 界面中默认折叠大多数长日志输出，保持思考摘要与 `edit` 代码改动完全展开，兼顾终端浏览体验与审查效率。
+- **codemode only**：首轮系统提示字符减少，固定输入开销下降 45%；但由于模型需要写脚本驱动工具，多步任务的总 token（input + cacheRead）约增加 **+17%**。这是用运行时代价换取首轮低成本的取舍。
+- **参数错误恢复规则**：不常驻 50+ 工具的完整 schema，而是在 `APPEND_SYSTEM.md` 约定「报错时通过 `describeTool` 查看声明并就地重试」，减少常驻 token 负担。
+- **Magic Context 阈值**：将执行压缩阈值设为 400,000 tokens（小窗口自动钳位至 90%），注入预算设为 3,000 tokens，压缩超时设为 600,000 ms，避免过早压缩或长任务重试浪费。
+- **紧凑工具输出（compact-tools）**：TUI 界面默认折叠大多数长日志，保持思考摘要与 `edit` 代码修改展开，兼顾终端浏览与人工审查。
 
 ## 限制与未验证
 
-- **操作系统支持**：验证环境为 macOS 27.2.1 / arm64。Linux 环境未经实测（core 与 memory 包含 onnxruntime-node、tree-sitter 等原生编译依赖，需按目标平台单独验证安装与运行时依赖；macos 模块不适用）。Windows 不在支持范围内。
-- **自检工具限制**：`scripts/doctor.mjs` 仅执行只读检查，对照 settings 与 node_modules 及 manifest 校验；普通版本偏差提示 WARN，Pi/MC 主版本偏差报告 FAIL。注意：Pi 1.5.2 的 `pi list` 会自动安装缺失包，因此自动化脚本中不调用 `pi list`。
-- **项目信任配置**：配置模板默认包含 `defaultProjectTrust: "always"`（不再逐次提示信任项目）。若希望每次确认，可手动改为 `ask`。
-- **测量数据局限**：首轮探针数据不代表模型最终任务准确率；两组探针对比时同时调整了引导提示，无法单一归因于 codemode。
+- **系统支持**：验证环境为 macOS 27.2.1 / arm64。Linux 未实测（core 和 memory 含有原生编译依赖，需自行验证；macos 模块不适用）。不支持 Windows。
+- **自检工具**：`scripts/doctor.mjs` 只读检查 settings、node_modules 和 manifest；版本偏差报 WARN，Pi/MC 主版本偏差报 FAIL。由于 Pi 1.5.2 的 `pi list` 会自动补装缺包，脚本不调用 `pi list`。
+- **项目信任**：模板默认 `defaultProjectTrust: "always"`（不逐次弹窗）。想每次确认可改为 `ask`。
+- **探针数据**：首轮探针数据不代表最终任务准确率；两组探针同时调整了引导提示，不能单一归因于 codemode。
 
 ## 升级与维护
 
-建议遵循「**一次只升级一个组件，升级后立即运行自检，若有异常迅速回滚**」的原则。各组件依赖关系如下：Pi 本体 → 插件 → Magic Context → pi-knowledge 补丁 → 可选外部模块。
+建议遵循「一次只升级一个组件，升级后立即自检，有异常迅速回滚」的原则。组件依赖关系：Pi 本体 → 插件 → Magic Context → pi-knowledge 补丁 → 可选外部模块。
 
-详细升级步骤、备份指南与回滚方案请参考 [docs/upgrade.md](docs/upgrade.md)。
+详细升级步骤、备份与回滚方案见 [docs/upgrade.md](docs/upgrade.md)。
 
 ## 仓库目录
 
