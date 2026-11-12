@@ -100,8 +100,8 @@ git clone https://github.com/nczz/pi-knowledge
 cd pi-knowledge
 git checkout 558e8dd
 # 逐份打补丁；任一失败即中止，不会带着失败继续构建
-node "$REPO/scripts/deploy-check.mjs" apply-patches "$REPO/modules/memory/patches" "$PWD"
-npm ci && npm run build
+node "$REPO/scripts/deploy-check.mjs" apply-patches "$REPO/modules/memory/patches" "$PWD" \
+  && npm ci && npm run build
 ```
 
 补丁说明（4 份）：

@@ -271,6 +271,36 @@ function main() {
     else add('FAIL', 'placeholders resolved', offenders.join('; '));
   });
 
+
+/** Accept POSIX, drive-letter and UNC paths; the deployed host decides which form is real. */
+function isAbsolutePath(value) {
+  return path.posix.isAbsolute(value) || path.win32.isAbsolute(value);
+}
+
+/** Read a frontmatter list in either inline (a, b) or block (- a / - b) form. */
+function roleExtensions(text) {
+  const lines = text.split('\n');
+  const inline = text.match(/^subagentOnlyExtensions:(.*)$/m);
+  const values = [];
+  if (inline) {
+    const rest = inline[1].trim();
+    if (rest.startsWith('[')) {
+      values.push(...rest.replace(/^\[|\]$/g, '').split(',').map((value) => value.trim()).filter(Boolean));
+    } else if (rest) {
+      values.push(...rest.split(',').map((value) => value.trim()).filter(Boolean));
+    } else {
+      const start = lines.findIndex((line) => line.startsWith('subagentOnlyExtensions:'));
+      for (let index = start + 1; index < lines.length; index += 1) {
+        const line = lines[index];
+        if (/^\S/.test(line)) break;
+        const item = line.match(/^\s*-\s*(.+)$/);
+        if (item) values.push(item[1].trim());
+      }
+    }
+  }
+  return values.map((value) => value.replace(/^["']|["']$/g, '')).filter(Boolean);
+}
+
   // 4b. Subagent role definitions: no pinned models, child-only extensions must exist after render
   guard(() => {
     const agentsDir = path.join(agent, 'agents');
@@ -279,11 +309,8 @@ function main() {
     for (const name of names) {
       const text = read(path.join(agentsDir, name)) ?? '';
       if (/^model:\s*\S/m.test(text)) problems.push('agents/' + name + ': pins a model (tiers belong in settings.subagents)');
-      const match = text.match(/^subagentOnlyExtensions:(.*)$/m);
-      if (!match) continue;
-      for (const raw of match[1].split(',').map((value) => value.trim()).filter(Boolean)) {
-        const target = raw.replace(/^["']|["']$/g, '');
-        if (!target.startsWith('/')) problems.push('agents/' + name + ': extension path is not absolute after render: ' + target);
+      for (const target of roleExtensions(text)) {
+        if (!isAbsolutePath(target)) problems.push('agents/' + name + ': extension path is not absolute after render: ' + target);
         else if (!exists(target)) problems.push('agents/' + name + ': extension missing: ' + target);
       }
     }

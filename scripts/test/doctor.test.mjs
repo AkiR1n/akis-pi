@@ -98,3 +98,27 @@ test('doctor rejects pinned role models and missing child-only extensions', (t) 
  assert.equal(pinned.status, 'FAIL');
  assert.ok(pinned.detail.includes('pins a model'), pinned.detail);
 });
+
+test('doctor accepts Windows absolute role extension paths and block-style lists', (t) => {
+ const home = fs.mkdtempSync(path.join(os.tmpdir(), 'akis-doctor-roles-win-'));
+ t.after(() => fs.rmSync(home, { recursive: true, force: true }));
+ const agent = path.join(home, 'agent');
+ const agentsDir = path.join(agent, 'agents');
+ fs.mkdirSync(agentsDir, { recursive: true });
+ const runRole = (name, body) => {
+  fs.writeFileSync(path.join(agentsDir, name), body);
+  const result = spawnSync(process.execPath, [path.resolve(import.meta.dirname, '../doctor.mjs'), '--home', home, '--agent-dir', agent, '--modules', 'core', '--json'], { encoding: 'utf8' });
+  return JSON.parse(result.stdout).results.find((entry) => entry.label === 'subagent roles');
+ };
+
+ // A Windows path is absolute; on this host it simply does not exist, which is the honest report.
+ const windows = runRole('review.md', ['---', 'name: review', 'subagentOnlyExtensions: C:\\ext\\rtk.ts', '---', '', 'Body.', ''].join('\n'));
+ assert.equal(windows.status, 'FAIL');
+ assert.ok(windows.detail.includes('extension missing'), windows.detail);
+ assert.ok(!windows.detail.includes('not absolute'), windows.detail);
+
+ // Block-style lists are valid frontmatter and must be inspected too.
+ const block = runRole('review.md', ['---', 'name: review', 'subagentOnlyExtensions:', '  - /nonexistent/rtk.ts', '---', '', 'Body.', ''].join('\n'));
+ assert.equal(block.status, 'FAIL');
+ assert.ok(block.detail.includes('extension missing'), block.detail);
+});

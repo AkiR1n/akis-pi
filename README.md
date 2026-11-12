@@ -28,7 +28,7 @@ Pi 是个轻量的 coding agent harness。工具插件装多了之后，系统�
 **不适合**：
 - 想一键安装、不愿配置模型与 API 凭据。
 - 习惯工具 schema 全常驻、不习惯写脚本调用。
-- 需要开发者对每个平台、桌面插件和原生依赖都给出验收保证。目前的实机记录只有 macOS arm64 与 WSL2 上的 core+memory。
+- 需要开发者对每个平台、桌面插件和原生依赖都给出验收保证。目前的实机记录是 macOS arm64 的全部模块，以及 WSL2 上的 core+memory。
 
 ## 安装
 
@@ -77,7 +77,7 @@ Pi 是个轻量的 coding agent harness。工具插件装多了之后，系统�
 ## 限制与未验证
 
 - **没有权限系统。** 工具直接用 Pi 进程的系统权限执行，不弹确认、也没有白名单；模板还把 `defaultProjectTrust` 设成 `always`，不再逐次询问项目配置。需要限制请自己加：写一个审批 `tool_call` 的扩展，或用容器 / 独立用户隔离。
-- **实测范围有限**：只有 macOS arm64 与 WSL2 的 core+memory 跑过实机，其余平台与模块按上文级别看。
+- **实测范围有限**：macOS arm64 的全部模块、WSL2 的 core+memory 跑过实机；其余平台与模块按上文级别看。子代理改成 5 个角色后只在本机 macOS 验证过。
 - **探针数字不是任务准确率**：首轮提示降 45% 只说明固定开销变小，那两次探针还同时改过引导提示，不能只算在 codemode 头上。
 - **自检有边界**：`doctor.mjs` 只读 settings、node_modules 与 manifest，不调用 `pi list`、不安装包。
 - **CLI 要单独装**：agent-browser 的 CLI 与浏览器不在包内；默认用普通 npm，不写 `npmCommand`。
