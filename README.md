@@ -1,13 +1,16 @@
 # akis-pi
 
-一份可以直接交给 AI 部署的 Pi coding agent 配置包：把 `config/` 和所选 `modules/` 渲染到目标机器，再用 `scripts/doctor.mjs` 逐项检查。
-它不是插件市场，也不是 dotfiles 备份，只收录作者日常在用、写明了取舍与实测依据的那部分配置。
+把一套调好的 Pi 配置交给 AI 部署到目标机器：把 `config/` 与所选 `modules/` 渲染过去，再用 `scripts/doctor.mjs` 逐项检查。内容不多，但每一处都写明了为什么这么配、在哪些平台验过。
+
+- **小**：模型直接看到的工具只有 6 个，其余收进沙箱按需发现。
+- **可核对**：每一步都有检查命令和期望输出，出错时知道停在哪一步。
+- **不是发行版**：一套起点，不是插件市场，也不是 dotfiles 备份。
 
 作者：Aki。问题与建议请直接提交 Issue。
 
-目录：[这是什么](#这是什么装完得到什么) · [适合谁](#适合谁--不适合谁) · [平台支持](#平台支持) · [前置条件](#前置条件) · [快速开始](#快速开始) · [回滚](#回滚) · [模块](#模块) · [模型分工](#模型分工三个角色不是固定-id) · [设计取舍](#设计取舍摘要) · [限制与未验证](#限制与未验证) · [升级与维护](#升级与维护)
+目录：[介绍](#介绍) · [适合谁](#适合谁--不适合谁) · [安装](#安装) · [前置条件](#前置条件) · [平台支持](#平台支持) · [交给 AI 部署](#交给-ai-部署) · [手动安装](#手动安装) · [装完核对](#装完核对) · [模块](#模块) · [模型分工](#模型分工三个角色不是固定-id) · [回滚](#回滚) · [设计取舍](#设计取舍摘要) · [限制与未验证](#限制与未验证) · [升级](#升级与维护) · [仓库结构](#仓库目录)
 
-## 这是什么，装完得到什么
+## 介绍
 
 Pi 是个轻量的 coding agent harness。工具插件装多了之后，系统提示与工具 schema 会一起膨胀，首轮变慢，上下文被无用信息占掉。
 
@@ -18,7 +21,7 @@ akis-pi 针对这四点做了调整，装完得到的是：
 3. **分层记忆**：每轮只注入几百到两千字符的常驻事实（`RESIDENT.md`）；项目历史与笔记按需检索；长会话由 Magic Context 按固定阈值与超时归档。
 4. **联网分级兜底**：搜索与正文抓取按顺序回退，遇到 403 反爬时换第二条通道，需要登录态时移交浏览器。
 
-## 适合谁 / 不适合谁
+### 适合谁 / 不适合谁
 
 **适合**：
 - 想降低 Pi 提示词开销、减少工具 schema 干扰。
@@ -31,7 +34,19 @@ akis-pi 针对这四点做了调整，装完得到的是：
 - 习惯工具 schema 全常驻、不习惯写脚本调用。
 - 需要开发者对每个平台、桌面插件和原生依赖都给出验收保证。目前的实机记录只有 macOS arm64 与 WSL2 上的 core+memory。
 
-## 平台支持
+## 安装
+
+### 前置条件
+
+| 项 | 要求 |
+| --- | --- |
+| Node | 24.22.3（不要用 24.19.0–24.21.x，原因见 [docs/upgrade.md](docs/upgrade.md) 的 Node 一节） |
+| Git | POSIX 自带即可；原生 Windows 需要 Git for Windows，Pi 的 shell 与凭据命令都走它 |
+| Pi | 1.5.2（其他版本可能改过扩展接口，见 [docs/upgrade.md](docs/upgrade.md)） |
+| Python | 只有 pdf 模块需要，3.9 以上，用于本地 PDF→Markdown 端点 |
+| 模型 | 任意 OpenAI 兼容供应商；至少准备一个主力模型和一个便宜的批量执行模型 |
+
+### 平台支持
 
 macOS arm64 与 WSL2（Ubuntu 24.04 x64）的 core+memory 已完成实机验收，其余平台与模块按下面级别使用。上游支持不等于本包已验证：manifest 的 `platforms` 表示适用平台，`verified` 单独记录实测平台，doctor 在未实测平台会对每个组件报 `WARN`。
 
@@ -55,19 +70,13 @@ Windows 用户默认选 **WSL2 的 core+memory**：源码、`node_modules`、Mag
 - Herdr/Rex pane 与 tmux inspector 没有 Windows 版，launchd 与 macOS 钥匙串也不在：服务要改成计划任务，凭据要改成环境变量。
 - `ego-browser` 上游有 Windows 安装器（首次引导后把命令注册进 PATH），但本包没有在 Windows 上实测过；`ego-gc` 这个窗口回收扩展依赖 POSIX 路径，Windows 上不提供。
 
-## 前置条件
+### 交给 AI 部署
 
-| 项 | 要求 |
-| --- | --- |
-| Node | 24.22.3（不要用 24.19.0–24.21.x，原因见 [docs/upgrade.md](docs/upgrade.md) 的 Node 一节） |
-| Git | POSIX 自带即可；原生 Windows 需要 Git for Windows，Pi 的 shell 与凭据命令都走它 |
-| Pi | 1.5.2（其他版本可能改过扩展接口，见 [docs/upgrade.md](docs/upgrade.md)） |
-| Python | 只有 pdf 模块需要，3.9 以上，用于本地 PDF→Markdown 端点 |
-| 模型 | 任意 OpenAI 兼容供应商；至少准备一个主力模型和一个便宜的批量执行模型 |
+这套配置推荐交给部署用的 AI 自动化安装。AI 先读 [AGENTS.md](AGENTS.md)（部署规则，含禁止项与交付报告要求），再按 [DEPLOY.md](DEPLOY.md) 逐步执行，两步都不要跳：规则里写了哪些文件不能覆盖、凭据只能怎么传、哪一步出 FAIL 就必须停下。
 
-## 快速开始
+### 手动安装
 
-这套配置推荐交给部署用的 AI 自动化安装（让 AI 遵循 [AGENTS.md](AGENTS.md) 规则并逐步执行 [DEPLOY.md](DEPLOY.md)）。如果你手动部署，核心步骤如下（原生 Windows 用 DEPLOY 的 PowerShell 入口，参数一致、写法按 PowerShell 调整）：
+不想交给 AI 就照下面三步做（原生 Windows 用 DEPLOY 的 PowerShell 入口，参数一致、写法按 PowerShell 调整）：
 
 ```sh
 # 1. 运行 dry run，预览将写入的文件、差异 diff 以及占位符解析情况
@@ -109,11 +118,15 @@ node scripts/doctor.mjs --home "$HOME" --modules core
 
 回归测试：`node --test scripts/test/*.test.mjs`。无真实 key 验收见 DEPLOY 文末的回环 stub。
 
-## 回滚
+### 装完核对
 
-渲染不删除文件，改过的目标在写入前都备份到 `<agent-dir>/backups/akis-pi-<时间戳>/targets/`，路径映射与写入时一致。要退回去，把对应文件复制回原位。
+装没装对不看日志，看检查结果：
 
-`<agent-dir>/.akis-pi-render.json` 记录已完成模块，删掉对应条目就能重跑同一模块。组件升级与数据库回滚是另一套流程，见 [docs/upgrade.md](docs/upgrade.md)。
+```sh
+node scripts/doctor.mjs --home "$HOME" --modules core
+```
+
+0 FAIL 才算装好，WARN 要逐条解释（未实测平台多出的 platform verification 属正常）。再开一个新会话确认工具面：模型应只看到 6 个直接工具，其余都在 `codemode` 里按需发现。等价的无 key 校验见 DEPLOY 文末的 stub 回环。
 
 ## 模块
 
@@ -142,6 +155,12 @@ node scripts/doctor.mjs --home "$HOME" --modules core
 分工原则：执行用低单价高速度模型，复核用异构模型，规划用最强模型。映射为你持有的模型 ID 即可。
 
 角色文件名（如 `impl-*`、`opus-*`、`planner`）是历史命名，不限厂商；实际生效的是各角色配置里的 `model:` 字段。
+
+## 回滚
+
+渲染不删除文件，改过的目标在写入前都备份到 `<agent-dir>/backups/akis-pi-<时间戳>/targets/`，路径映射与写入时一致。要退回去，把对应文件复制回原位。
+
+`<agent-dir>/.akis-pi-render.json` 记录已完成模块，删掉对应条目就能重跑同一模块。组件升级与数据库回滚是另一套流程，见 [docs/upgrade.md](docs/upgrade.md)。
 
 ## 设计取舍摘要
 
