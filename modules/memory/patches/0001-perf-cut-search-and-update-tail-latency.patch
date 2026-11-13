@@ -542,5 +542,5 @@ index 965e9ed..e87e5b6 100644
  	db.prepare("UPDATE knowledge_bases SET status = ?, updated_at = ? WHERE id = ?").run(status, Date.now(), id);
  }
 -- 
-2.56.0
+2.56.1
 
