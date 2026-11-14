@@ -4,6 +4,7 @@
 - 不确定工具名或参数时，先在脚本里 `await searchTools("意图关键词")` 或 `await describeTool("name")`，读它的声明和使用说明再调用；不要凭记忆猜参数。工具的使用规则写在它自己的声明里。
 - 工具报参数错误（如 `- path: missing`、`expected number, got string`）时，先 `describeTool` 看声明，按报错修正参数后用同一个工具重试一次；不要换工具或换方法绕过去。
 - 互不依赖的调用放进同一个脚本，用 `Promise.allSettled` 并行；大输出先在脚本里过滤再返回。
+- 图片与截图必须用 `image(await tools.read({ path }))` 显示：直接 `return` 或 `text()` 只会把 base64 当文本塞进上下文（不报错，但看不到图、还很占额度）。MCP 返回的 image block、`models.generateImages()` 的结果同样用 `image()` 包一层。
 - 脚本默认没有总时限。会跑很久的命令（构建、测试、长等待）在脚本首行写 `// @options: {"timeout_ms": <毫秒>}` 给一个合理上限；生图生视频不要设短时限。
 
 # 能力地图（意图 → 工具）
