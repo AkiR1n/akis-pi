@@ -1,7 +1,7 @@
 {
   "name": "akis-pi",
   "schemaVersion": 2,
-  "generatedAt": "2026-11-15T18:20:59.818Z",
+  "generatedAt": "2026-11-15T18:45:41.174Z",
   "generatedFrom": "live Pi configuration, read-only (see NEVER_COPIED in export-akis-pi.mjs)",
   "verifiedOn": {
     "os": "macOS 27.2.1",
@@ -348,7 +348,7 @@
     {
       "id": "agent-browser",
       "source": "npm -g agent-browser",
-      "version": "0.41.2",
+      "version": "0.43.0",
       "level": "float-ok",
       "module": "core",
       "platforms": [
@@ -359,9 +359,7 @@
       ],
       "lastVerified": "2026-11-12",
       "note": "must live in the node tree the extension resolves; the mise node/24 alias can drift away from it.",
-      "verified": [
-        "darwin-arm64"
-      ]
+      "verified": []
     },
     {
       "id": "magpie",

@@ -74,7 +74,7 @@ Pi 默认使用普通 npm；只有显式 `render --mise` 才生成 mise 的 `npm
 ```sh
 ls -d ~/.local/share/mise/installs/node/24*       # 查看已安装版本
 readlink ~/.local/share/mise/installs/node/24     # 查看别名指向的目标目录
-~/.local/share/mise/installs/node/<ver>/bin/npm install -g agent-browser@0.41.2
+~/.local/share/mise/installs/node/<ver>/bin/npm install -g agent-browser@0.43.0
 ~/.local/share/mise/installs/node/<ver>/bin/agent-browser --version
 ```
 

@@ -59,7 +59,7 @@
 每完成 [DEPLOY.md](DEPLOY.md) 中的一步，执行该步骤规定的**检查命令**，把真实终端输出发给用户后再进下一步。没有命令输出验证的步骤算未完成。
 
 - **验证依据**：「已安装」以命令输出和可执行文件为准，不只看文件路径；「生效」以新开 Pi 会话的行为为准，不只看 `/reload` 输出。
-- **直接工具集合**：Pi 1.5.2 + pi-subagents 0.88.0 下应有 6 个：`ask_user`、`codemode`、`contact_supervisor`、`subagent`、`subagent_supervisor`、`tool_search`。用 DEPLOY.md 的回环 stub 抓取请求体，再用 `deploy-check.mjs stub-requests` 检查；缺项或多项都不通过。
+- **直接工具集合**：Pi 1.5.2 + pi-subagents 0.88.1 下应有 6 个：`ask_user`、`codemode`、`contact_supervisor`、`subagent`、`subagent_supervisor`、`tool_search`。用 DEPLOY.md 的回环 stub 抓取请求体，再用 `deploy-check.mjs stub-requests` 检查；缺项或多项都不通过。
 - **运行自检**：所有模块部署完成后，运行自检脚本：`node scripts/doctor.mjs --home "$HOME" --modules ...`，贴出完整检查报告。若有 WARN 逐项解释原因（未实测平台的 platform verification WARN 属正常），若有 FAIL 修复后再交付。
 - **以终端输出为准**：不要只凭代码审阅或假设判断，一切看实际输出。
 

@@ -7,7 +7,7 @@
 
 ## 1. codemode only：首轮更精简，多步任务总开销更大
 
-**决策**：在 `settings.json` 中配置 `{"codemode":{"mode":"only"}}`。配合 `pi-compact-tools` 插件时，Pi 1.5.2 + pi-subagents 0.88.0 下直接向模型暴露 6 个工具：`ask_user`、`codemode`、`contact_supervisor`、`subagent`、`subagent_supervisor`、`tool_search`，其余 50 多个工具通过 QuickJS 沙箱脚本在运行时动态发现与调用。
+**决策**：在 `settings.json` 中配置 `{"codemode":{"mode":"only"}}`。配合 `pi-compact-tools` 插件时，Pi 1.5.2 + pi-subagents 0.88.1 下直接向模型暴露 6 个工具：`ask_user`、`codemode`、`contact_supervisor`、`subagent`、`subagent_supervisor`、`tool_search`，其余 50 多个工具通过 QuickJS 沙箱脚本在运行时动态发现与调用。
 
 **静态测量对比（两次探针，口径不同）**
 
@@ -16,7 +16,7 @@
 | 探针 1：on → only | 39 → 4 | 3,471 → 432 | 26,704 → 16,261（约 -39%） |
 | 探针 2：on → only + 优化系统提示 | 53 → 6 | 系统消息 35,464 → 23,913 字符 | 25,522 → 13,954（约 -45%） |
 
-两次数字差异来自提示词与依赖版本变化；当前 Pi 1.5.2 + pi-subagents 0.88.0 实际保留 6 个直接工具，包含 3 个子代理协调工具；已接受这一集合。不要把上述百分比当作任意机器上的实际节省幅度。
+两次数字差异来自提示词与依赖版本变化；当前 Pi 1.5.2 + pi-subagents 0.88.1 实际保留 6 个直接工具，包含 3 个子代理协调工具；已接受这一集合。不要把上述百分比当作任意机器上的实际节省幅度。
 
 **代价**：5 个对照任务中，only 模式输入 token 降低 29%，输出 token 增加 36%（模型需要写脚本）；多步任务中，总 token（input + cacheRead）约增加 **+17%**。首轮提示词成本下降，长链路多步调用的消耗有所上升。
 

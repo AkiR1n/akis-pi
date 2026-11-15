@@ -260,12 +260,12 @@ PowerShell 的单引号让 `$BRAVE_API_KEY` 保持引用文本，不会被当前
 
 ```sh
 pi install npm:pi-web-access@0.47.0
-pi install npm:pi-agent-browser-native@0.9.18
+pi install npm:pi-agent-browser-native@0.9.32
 pi install npm:pi-atelier@0.18.0
 pi install npm:pi-ask-user@0.17.2
 pi install npm:pi-powerpoint@1.0.0
-pi install npm:pi-subagents@0.88.0
-pi install npm:pi-compact-tools@0.17.0
+pi install npm:pi-subagents@0.88.1
+pi install npm:pi-compact-tools@0.18.0
 pi install npm:pi-mobile@0.4.0
 pi install npm:@injaneity/pi-computer-use@0.5.1
 pi install npm:pi-away@0.1.4
@@ -366,7 +366,7 @@ core-only 现在开新会话（不要用旧会话或 `/reload`）。选 memory �
 pi --print 'answer with the number of tools you can call directly, and nothing else'
 ```
 
-**期望**：Pi 1.5.2 + pi-subagents 0.88.0 下有 **6 个直接工具**：ask_user / codemode / contact_supervisor / subagent / subagent_supervisor / tool_search。模型自报工具数不准，以 stub 捕获并由 `deploy-check.mjs stub-requests` 校验的集合为准。
+**期望**：Pi 1.5.2 + pi-subagents 0.88.1 下有 **6 个直接工具**：ask_user / codemode / contact_supervisor / subagent / subagent_supervisor / tool_search。模型自报工具数不准，以 stub 捕获并由 `deploy-check.mjs stub-requests` 校验的集合为准。
 **失败怎么办**：出约 50 个工具核对 `codemode.mode = only`；为 0 回步骤 5 查插件与 Pi 版本。
 
 ## 9. memory 模块（必装）
@@ -374,11 +374,11 @@ pi --print 'answer with the number of tools you can call directly, and nothing e
 ### 9.1 Magic Context
 
 ```sh
-pi install npm:@cortexkit/pi-magic-context@0.49.50
+pi install npm:@cortexkit/pi-magic-context@0.49.56
 node "$REPO/scripts/deploy-check.mjs" mc-version
 ```
 
-**期望**：0.49.50；配置已在步骤 4 随 core,memory 渲染。此时磁盘 12 个 npm 包、settings 声明 13 项；本地 pi-knowledge 未装，**不运行 doctor 或 pi list，等 9.3 完成再查**。
+**期望**：0.49.56；配置已在步骤 4 随 core,memory 渲染。此时磁盘 12 个 npm 包、settings 声明 13 项；本地 pi-knowledge 未装，**不运行 doctor 或 pi list，等 9.3 完成再查**。
 
 三参数：`execute_threshold_tokens.default=400000`（小窗口钳至 90%）、`memory.injection_budget_tokens=3000`、`historian_timeout_ms=600000`。理由见 [decisions.md](docs/decisions.md)。MC 的 `pi.subagent_extensions: []` 保持 historian 子进程不载普通扩展。
 
@@ -498,13 +498,13 @@ herdr-agent-state.ts 由 herdr 管理，仅 HERDR_ENV、HERDR_SOCKET_PATH、HERD
 ## 10b. agent-browser（core 的通用前置依赖）
 
 ```sh
-npm install -g agent-browser@0.41.2
+npm install -g agent-browser@0.43.0
 agent-browser --version
 agent-browser install
 # Linux 系统库缺失时按上游说明选择 agent-browser install --with-deps
 ```
 
-**期望**：CLI 0.41.2 且位于扩展解析的同一 Node 树。安装 CLI 不等于已下载浏览器。
+**期望**：CLI 0.43.0 且位于扩展解析的同一 Node 树。安装 CLI 不等于已下载浏览器。
 **失败怎么办**：随后用 `tools.agent_browser({args:["doctor"]})` 验证 open/snapshot/close。mise 的 node/24 别名可能随新版本漂移。原生 Windows 的会话锁、恢复与 Electron 有上游限制（上游自述 best-effort），必须单独验收，并如实呈现 Electron unsupported 之类的结论，不能只以“能启动”当通过。
 
 ## 11. magpie 模块（必装）
