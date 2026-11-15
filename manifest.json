@@ -1,7 +1,7 @@
 {
   "name": "akis-pi",
   "schemaVersion": 2,
-  "generatedAt": "2026-11-15T18:12:34.657Z",
+  "generatedAt": "2026-11-15T18:20:59.818Z",
   "generatedFrom": "live Pi configuration, read-only (see NEVER_COPIED in export-akis-pi.mjs)",
   "verifiedOn": {
     "os": "macOS 27.2.1",
@@ -85,8 +85,8 @@
     },
     {
       "id": "pi-magic-context",
-      "source": "npm:@cortexkit/pi-magic-context@0.49.50",
-      "version": "0.49.50",
+      "source": "npm:@cortexkit/pi-magic-context@0.49.56",
+      "version": "0.49.56",
       "level": "pinned-reason",
       "module": "memory",
       "platforms": [
@@ -95,12 +95,9 @@
         "win32",
         "wsl"
       ],
-      "lastVerified": "2026-11-13",
+      "lastVerified": "2026-11-12",
       "note": "read the release notes for database migrations before upgrading; MC owns the project-memory store.",
-      "verified": [
-        "darwin-arm64",
-        "wsl-x64"
-      ]
+      "verified": []
     },
     {
       "id": "pi-knowledge",
@@ -141,8 +138,8 @@
     },
     {
       "id": "pi-agent-browser-native",
-      "source": "npm:pi-agent-browser-native@0.9.18",
-      "version": "0.9.18",
+      "source": "npm:pi-agent-browser-native@0.9.32",
+      "version": "0.9.32",
       "level": "pinned",
       "module": "core",
       "platforms": [
@@ -151,11 +148,8 @@
         "win32",
         "wsl"
       ],
-      "lastVerified": "2026-11-13",
-      "verified": [
-        "darwin-arm64",
-        "wsl-x64"
-      ]
+      "lastVerified": "2026-11-12",
+      "verified": []
     },
     {
       "id": "pi-atelier",
@@ -218,8 +212,8 @@
     },
     {
       "id": "pi-subagents",
-      "source": "npm:pi-subagents@0.88.0",
-      "version": "0.88.0",
+      "source": "npm:pi-subagents@0.88.1",
+      "version": "0.88.1",
       "level": "pinned",
       "module": "core",
       "platforms": [
@@ -228,16 +222,13 @@
         "win32",
         "wsl"
       ],
-      "lastVerified": "2026-11-13",
-      "verified": [
-        "darwin-arm64",
-        "wsl-x64"
-      ]
+      "lastVerified": "2026-11-12",
+      "verified": []
     },
     {
       "id": "pi-compact-tools",
-      "source": "npm:pi-compact-tools@0.17.0",
-      "version": "0.17.0",
+      "source": "npm:pi-compact-tools@0.18.0",
+      "version": "0.18.0",
       "level": "pinned",
       "module": "core",
       "platforms": [
@@ -246,17 +237,14 @@
         "win32",
         "wsl"
       ],
-      "lastVerified": "2026-11-13",
+      "lastVerified": "2026-11-12",
       "resourceFilters": {
         "extensions": [
           "+extensions/compact-tools.ts"
         ],
         "themes": []
       },
-      "verified": [
-        "darwin-arm64",
-        "wsl-x64"
-      ]
+      "verified": []
     },
     {
       "id": "pi-mobile",
