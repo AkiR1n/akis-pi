@@ -73,7 +73,7 @@
     "npm:@injaneity/pi-computer-use@0.5.1",
     "{{HOME}}/.pi/vendor/pi-knowledge",
     "npm:pi-away@0.1.4",
-    "npm:pi-prompt-suggestion@0.1.2",
+    "npm:pi-prompt-suggestion@0.1.3",
     "npm:@cortexkit/pi-magic-context@0.49.50"
   ],
   "hideThinkingBlock": false,
