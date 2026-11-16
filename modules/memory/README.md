@@ -98,7 +98,7 @@ if [ -e "$dst" ]; then echo "exists: $dst; 停止，不覆盖"; else cp -n "$HOM
 mkdir -p "$HOME/.pi/vendor" && cd "$HOME/.pi/vendor"
 git clone https://github.com/nczz/pi-knowledge
 cd pi-knowledge
-git checkout 558e8dd
+git checkout v0.15.0
 # 逐份打补丁；任一失败即中止，不会带着失败继续构建
 node "$REPO/scripts/deploy-check.mjs" apply-patches "$REPO/modules/memory/patches" "$PWD" \
   && npm ci && npm run build

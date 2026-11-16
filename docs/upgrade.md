@@ -125,14 +125,14 @@ node scripts/doctor.mjs --home "$HOME" --modules core,memory
 
 ```sh
 cd "$HOME/.pi/vendor/pi-knowledge"
-git fetch origin && git log --oneline 558e8dd..origin/main
+git fetch origin && git log --oneline v0.15.0..origin/main
 # 逐个补丁进行 rebase 或重新 cherry-pick 生成，遇到冲突需审阅代码逻辑，不要仅为编译通过而忽略改动语义
 npm ci && npm run build
 ```
 
 **验收判据**：在小代码仓库中实际跑一次全量索引与检索，验证耗时是否平稳、命中的代码行号是否准确。若因冲突手动调整了逻辑，需在变更记录中写明改动内容。
 
-**回滚方案**：升级前先记录打完四份补丁后的提交（`git rev-parse HEAD`），回滚就是切回它并重新构建：`git checkout <记录的提交> && npm ci && npm run build`。要回到纯上游基线，则 `git checkout 558e8dd` 后按模块 README 重新应用四份补丁——只 checkout 558e8dd 会丢掉补丁。本地知识库数据保存在源码仓库外，不受构建影响；但若新代码改了向量索引存储格式，可能需要重建索引。
+**回滚方案**：升级前先记录打完四份补丁后的提交（`git rev-parse HEAD`），回滚就是切回它并重新构建：`git checkout <记录的提交> && npm ci && npm run build`。要回到纯上游基线，则 `git checkout v0.15.0` 后按模块 README 重新应用四份补丁——只 checkout v0.15.0 会丢掉补丁。本地知识库数据保存在源码仓库外，不受构建影响；但若新代码改了向量索引存储格式，可能需要重建索引。
 
 
 ## 5. 外部模块

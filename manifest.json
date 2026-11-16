@@ -1,7 +1,7 @@
 {
   "name": "akis-pi",
   "schemaVersion": 2,
-  "generatedAt": "2026-11-16T03:39:18.703Z",
+  "generatedAt": "2026-11-16T05:54:59.753Z",
   "generatedFrom": "live Pi configuration, read-only (see NEVER_COPIED in export-akis-pi.mjs)",
   "verifiedOn": {
     "os": "macOS 27.2.1",
@@ -101,8 +101,8 @@
     },
     {
       "id": "pi-knowledge",
-      "source": "https://github.com/nczz/pi-knowledge @ 558e8dd + modules/memory/patches",
-      "version": "0.12.0+patches",
+      "source": "https://github.com/nczz/pi-knowledge @ v0.15.0 + modules/memory/patches",
+      "version": "0.15.0+patches",
       "level": "pinned",
       "module": "memory",
       "platforms": [
@@ -111,12 +111,9 @@
         "win32",
         "wsl"
       ],
-      "lastVerified": "2026-11-13",
-      "note": "4 patches on 558e8dd; QML grammar is optional. Apply with git am, then npm ci and npm run build.",
-      "verified": [
-        "darwin-arm64",
-        "wsl-x64"
-      ]
+      "lastVerified": "2026-11-12",
+      "note": "4 patches on v0.15.0; QML grammar is optional. Apply with git am, then npm ci and npm run build.",
+      "verified": []
     },
     {
       "id": "pi-web-access",

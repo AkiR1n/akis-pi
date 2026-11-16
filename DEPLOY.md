@@ -410,7 +410,7 @@ node "$REPO/scripts/deploy-check.mjs" resident-init
 ```sh
 mkdir -p "$HOME/.pi/vendor" && cd "$HOME/.pi/vendor"
 git clone https://github.com/nczz/pi-knowledge
-cd pi-knowledge && git checkout 558e8dd
+cd pi-knowledge && git checkout v0.15.0
 ```
 
 PowerShell 的 clone 入口（不含 `&&`）：
@@ -422,7 +422,7 @@ Set-Location $Vendor
 git clone https://github.com/nczz/pi-knowledge
 if ($LASTEXITCODE -ne 0) { throw 'git clone failed' }
 Set-Location (Join-Path $Vendor 'pi-knowledge')
-git checkout 558e8dd
+git checkout v0.15.0
 if ($LASTEXITCODE -ne 0) { throw 'git checkout failed' }
 ```
 
@@ -464,7 +464,7 @@ pi list
 node "$Repo/scripts/doctor.mjs" --home $HOME --agent-dir $env:PI_CODING_AGENT_DIR --modules core,memory
 ```
 
-**期望**：`dist/index.js` 存在、版本 0.12.0、`pi list` **13 项**（11 core + MC + pi-knowledge），保留两个 filtered；此处仅查 core,memory，doctor 应 0 FAIL；MODULES 其余模块步骤 12 查。启动新 Pi 会话做步骤 7、8 验收（无 key 用 stub），静态检查不可替代。
+**期望**：`dist/index.js` 存在、版本 0.15.0、`pi list` **13 项**（11 core + MC + pi-knowledge），保留两个 filtered；此处仅查 core,memory，doctor 应 0 FAIL；MODULES 其余模块步骤 12 查。启动新 Pi 会话做步骤 7、8 验收（无 key 用 stub），静态检查不可替代。
 **失败怎么办**：补丁含尾延迟优化、真实 source span 行号对齐、复核修复和 QML 可选依赖四份。`git am` 冲突停止查 base，不要手动绕过。原生 Windows 上 `npm ci` 若卡在原生依赖（better-sqlite3、tree-sitter），先装 Python 3 与 VS Build Tools 的 C++ 工作负载；`tree-sitter-qmljs` 已由第 4 份补丁降级为可选依赖，它的编译或加载失败只会让 QML 文件退回文本分块，不影响其它语言——不要把它当成整体安装失败，也不要为此回退补丁。仍装不上就改用 WSL2 的全套（core+magpie+memory）。npm 脚本警告按步骤 5 查。仅构建不证明检索可用：在小库实测检索行号；知识库目录不可指向 resident 目录。
 
 ## 10. macos 模块（darwin 必装）

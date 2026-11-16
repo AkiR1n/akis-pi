@@ -1,6 +1,6 @@
-From 268ad914f66119bd6cb10ad6522351b999e98a70 Mon Sep 17 00:00:00 2001
+From 6529e3d61cbc4ef57315c8301dec33a4eedf7f6c Mon Sep 17 00:00:00 2001
 From: AkiyamaRin <akir1n@outlook.com>
-Date: Sat, 24 Oct 2026 00:09:21 +0800
+Date: Mon, 16 Nov 2026 12:58:43 +0800
 Subject: [PATCH 1/4] perf: cut search and update tail latency
 
 Search
@@ -29,27 +29,29 @@ Update
   the missing-vector repair path still works.
 - Claim the KB with a conditional UPDATE and a cross-process lock file; a second
   writer now fails with a clear message instead of interleaving.
+
+v0.15.0 adaptation: retain upstream cooperative O(n^2) diversity and structured compatibility/miss diagnostics. Extend its query memo across auto retries. Count only the enabled 256-candidate diversity head in diagnostics; off retains the full pass-through count. The original ~60s measurement timing above is historical, not a v0.15.0 result: upstream already avoids measurement for short ASCII. Chinese unchanged-input coverage and real worker measurements are recorded in the external rebase report. Patch 3 retains symbol/metadata refresh on no-op updates.
 ---
- src/engine.ts          | 194 ++++++++++++++++++++++++++++++++++-------
- src/search/vector.ts   |  16 +++-
- src/storage/kb-lock.ts |  84 ++++++++++++++++++
- src/storage/sqlite.ts  |  20 +++++
- 4 files changed, 280 insertions(+), 34 deletions(-)
+ src/engine.ts          | 159 +++++++++++++++++++++++++++++++++++------
+ src/search/vector.ts   |  16 ++++-
+ src/storage/kb-lock.ts |  84 ++++++++++++++++++++++
+ src/storage/sqlite.ts  |  20 ++++++
+ 4 files changed, 254 insertions(+), 25 deletions(-)
  create mode 100644 src/storage/kb-lock.ts
 
 diff --git a/src/engine.ts b/src/engine.ts
-index 814b0e0..c138656 100644
+index f4c55b2..4096151 100644
 --- a/src/engine.ts
 +++ b/src/engine.ts
 @@ -3,6 +3,7 @@ import { join, resolve } from "node:path";
  import type Database from "better-sqlite3";
  import { type DiagnosticResult, diagnoseKB } from "./diagnostics/health.ts";
- import type { EmbeddingConfig } from "./embedding/provider.ts";
+ import type { EmbeddingCompatibility, EmbeddingConfig } from "./embedding/provider.ts";
 +import { acquireKnowledgeLock } from "./storage/kb-lock.ts";
  import {
- 	dispose as disposeEmbedding,
- 	embedDocuments,
-@@ -52,7 +53,7 @@ import {
+ 	describeEmbeddingCompatibility,
+ 	describeEmbeddingDecoration,
+@@ -58,7 +59,7 @@ import {
  	type SearchTuningSummary,
  	summarizeSearchTuning,
  } from "./search/tuning.ts";
@@ -58,7 +60,7 @@ index 814b0e0..c138656 100644
  import {
  	type Chunk,
  	type ChunkInsert,
-@@ -83,6 +84,7 @@ import {
+@@ -89,6 +90,7 @@ import {
  	updateKBCounts,
  	updateKBEmbeddingMetadata,
  	updateKBSourceOptions,
@@ -66,101 +68,35 @@ index 814b0e0..c138656 100644
  	updateKBStatus,
  } from "./storage/sqlite.ts";
  
-@@ -442,6 +444,25 @@ function normalizeScores(candidates: RankedChunk[]): Map<string, number> {
- 	return normalized;
+@@ -720,6 +722,24 @@ function tokenizeForSimilarity(text: string): Set<string> {
+ 	return tokenizeForSearch(text);
  }
  
-+// Diversity reranking is quadratic in the number of candidates it sees, and the
-+// candidate pool grows with the number of KBs, the requested limit and the page
-+// offset. Bound the window that pays for it; everything past the window keeps its
-+// score order and stays in the result set, so total_count/has_more are unaffected.
 +const DIVERSITY_WINDOW = 256;
 +
-+function diversifyWithWindow(
++// Bound quadratic diversity work while retaining every candidate for pagination.
++async function diversifyWithWindow(
 +	candidates: RankedChunk[],
 +	diversity: SearchOptions["diversity"],
-+	vectorsByChunkId: Map<string, Float32Array> = new Map(),
-+): RankedChunk[] {
-+	if (diversity === "off" || candidates.length <= DIVERSITY_WINDOW) {
-+		return interleaveByFile(diversifyRankedChunks(candidates, diversity, vectorsByChunkId), diversity);
-+	}
-+	const head = candidates.slice(0, DIVERSITY_WINDOW);
-+	const tail = candidates.slice(DIVERSITY_WINDOW);
-+	return [...interleaveByFile(diversifyRankedChunks(head, diversity, vectorsByChunkId), diversity), ...tail];
++	vectorsByChunkId: Map<string, Float32Array>,
++	signal?: AbortSignal,
++): Promise<RankedChunk[]> {
++	const head = diversity === "off" ? candidates : candidates.slice(0, DIVERSITY_WINDOW);
++	const diversified = interleaveByFile(
++		await diversifyRankedChunks(head, diversity, vectorsByChunkId, signal),
++		diversity,
++		signal,
++	);
++	return diversity === "off" ? diversified : [...diversified, ...candidates.slice(DIVERSITY_WINDOW)];
 +}
 +
- function diversifyRankedChunks(
- 	candidates: RankedChunk[],
- 	diversity: SearchOptions["diversity"],
-@@ -454,36 +475,41 @@ function diversifyRankedChunks(
- 		candidates.map((candidate) => [candidate.chunk.id, tokenizeForSimilarity(candidate.content)]),
- 	);
- 	const selected: RankedChunk[] = [];
--	const remaining = [...candidates];
-+	// `redundancy` is a running maximum of the similarity to the already-selected
-+	// chunks, so each selection step only has to compare against the chunk chosen in
-+	// that step. This is exactly the value the previous nested loop recomputed from
-+	// scratch every time (same similarities, same Math.max argument order, same
-+	// strict-greater tie-breaking), at O(n^2) instead of O(n^3).
-+	const redundancy = new Float64Array(candidates.length);
-+	const remaining: number[] = candidates.map((_, index) => index);
- 
- 	while (remaining.length > 0) {
--		let bestIndex = 0;
-+		let bestPosition = 0;
- 		let bestScore = Number.NEGATIVE_INFINITY;
--		for (let i = 0; i < remaining.length; i++) {
--			const candidate = remaining[i];
--			let redundancy = 0;
--			for (const chosen of selected) {
--				const lexical = jaccardSimilarity(
--					tokenSets.get(candidate.chunk.id) ?? new Set<string>(),
--					tokenSets.get(chosen.chunk.id) ?? new Set<string>(),
--				);
--				const vector = Math.max(
--					0,
--					cosineSimilarity(vectorsByChunkId.get(candidate.chunk.id), vectorsByChunkId.get(chosen.chunk.id)),
--				);
--				redundancy = Math.max(
--					redundancy,
--					Math.max(lexical, lineProximity(candidate, chosen), vector * VECTOR_REDUNDANCY_WEIGHT),
--				);
--			}
-+		for (let position = 0; position < remaining.length; position++) {
-+			const candidate = candidates[remaining[position]];
- 			const relevance = normalized.get(candidate.chunk.id) ?? 0;
--			const mmrScore = lambda * relevance - (1 - lambda) * redundancy;
-+			const mmrScore = lambda * relevance - (1 - lambda) * redundancy[remaining[position]];
- 			if (mmrScore > bestScore) {
- 				bestScore = mmrScore;
--				bestIndex = i;
-+				bestPosition = position;
- 			}
- 		}
--		selected.push(remaining.splice(bestIndex, 1)[0]);
-+		const chosenIndex = remaining[bestPosition];
-+		remaining.splice(bestPosition, 1);
-+		const chosen = candidates[chosenIndex];
-+		const chosenTokens = tokenSets.get(chosen.chunk.id) ?? new Set<string>();
-+		const chosenVector = vectorsByChunkId.get(chosen.chunk.id);
-+		for (const index of remaining) {
-+			const candidate = candidates[index];
-+			const lexical = jaccardSimilarity(tokenSets.get(candidate.chunk.id) ?? new Set<string>(), chosenTokens);
-+			const vector = Math.max(0, cosineSimilarity(vectorsByChunkId.get(candidate.chunk.id), chosenVector));
-+			redundancy[index] = Math.max(
-+				redundancy[index],
-+				Math.max(lexical, lineProximity(candidate, chosen), vector * VECTOR_REDUNDANCY_WEIGHT),
-+			);
-+		}
-+		selected.push(chosen);
- 	}
- 
- 	return selected;
-@@ -1301,7 +1327,16 @@ export class KnowledgeEngine {
+ function buildQuerySnippet(content: string, query: string, maxLength = 240): string {
+ 	const terms = [...tokenizeForSimilarity(query)].sort((a, b) => b.length - a.length);
+ 	const lower = content.toLowerCase();
+@@ -1483,10 +1503,19 @@ export class KnowledgeEngine {
  	): Promise<{ added: number; removed: number; unchanged: number }> {
  		if (!this.db) throw new Error("Engine not initialized");
  		throwIfAborted(signal);
--		updateKBStatus(this.db, kb.id, "indexing");
 +		const lock = acquireKnowledgeLock(this.knowledgeDir, kb.id, `update:${kb.name}`);
 +		if (!lock) {
 +			throw new Error(
@@ -171,10 +107,14 @@ index 814b0e0..c138656 100644
 +			lock.release();
 +			throw new Error(`Knowledge base "${kb.name}" is already being indexed; retry after that run finishes`);
 +		}
- 		startIndexingJob(this.db, kb.id, "update", `Starting update for "${kb.name}"`);
  		const scanOptions = toScanOptions(parseAddOptions(kb.source_options));
  		const embeddingConfig = resolveEmbeddingConfig();
-@@ -1418,8 +1453,33 @@ export class KnowledgeEngine {
+ 		const embeddingBatchSize = resolveIndexEmbedBatchSize();
+-		updateKBStatus(this.db, kb.id, "indexing");
+ 		startIndexingJob(this.db, kb.id, "update", `Starting update for "${kb.name}"`);
+ 		const embeddingModel = embeddingConfigLabel(embeddingConfig);
+ 		const compatibility = inspectEmbeddingCompatibility(
+@@ -1603,8 +1632,33 @@ export class KnowledgeEngine {
  				onProgress?.(storedMessage);
  			};
  
@@ -209,7 +149,7 @@ index 814b0e0..c138656 100644
  				for (const chunk of finalizedChunks) {
  					scannedChunks++;
  					const existing = reusableHashes.get(chunk.content_hash);
-@@ -1529,6 +1589,46 @@ export class KnowledgeEngine {
+@@ -1714,6 +1768,46 @@ export class KnowledgeEngine {
  			});
  			onProgress?.(changesMessage);
  
@@ -256,7 +196,7 @@ index 814b0e0..c138656 100644
  			replacementVectorPath = tempVectorPath(vectorPath);
  			const vectorWriter = openVectorWriter(replacementVectorPath);
  			const oldVectorReader = openVectorReader(vectorPath);
-@@ -1644,10 +1744,23 @@ export class KnowledgeEngine {
+@@ -1829,10 +1923,23 @@ export class KnowledgeEngine {
  				e instanceof Error ? e.message : String(e),
  			);
  			throw e;
@@ -280,18 +220,21 @@ index 814b0e0..c138656 100644
  		if (!this.db) throw new Error("Engine not initialized");
  		throwIfAborted(signal);
  		const requestedMode: SearchMode = options.mode ?? "hybrid";
-@@ -1661,7 +1774,7 @@ export class KnowledgeEngine {
+@@ -1848,7 +1955,7 @@ export class KnowledgeEngine {
  				if (tried.includes(mode)) continue;
  				tried.push(mode);
  				throwIfAborted(signal);
 -				const response = await this.search(query, { ...options, mode }, signal);
 +				const response = await this.searchWithMemo(query, { ...options, mode }, signal, embeddingMemo);
- 				lastTuning = response.tuning;
+ 				attemptSummaries.push(searchAttemptSummary(mode, response));
  				if (response.warnings) warnings.push(...response.warnings);
- 				if (!isWeakAutoResponse(query, response, primaryMode, mode)) {
-@@ -1732,6 +1845,24 @@ export class KnowledgeEngine {
+ 				if (
+@@ -1975,9 +2082,26 @@ export class KnowledgeEngine {
+ 
  		const allResults: { chunkId: string; score: number }[] = [];
  		const vectorsByChunkId = new Map<string, Float32Array>();
+-		let queryEmbedding: { vector: Float32Array; config: EmbeddingConfig } | undefined;
+ 		const embeddingIncompatibleKbIds = new Set<string>();
  
 +		// A vector sidecar whose length differs from the KB's chunk count can no longer be
 +		// paired positionally; using it would attach vectors to the wrong chunks and
@@ -314,59 +257,87 @@ index 814b0e0..c138656 100644
  		for (const kb of kbs) {
  			throwIfAborted(signal);
  			if (kb.chunk_count === 0) continue;
-@@ -1747,7 +1878,7 @@ export class KnowledgeEngine {
+@@ -1993,8 +2117,7 @@ export class KnowledgeEngine {
  					),
  				);
  			} else if (retrievalMode === "semantic") {
--				const { vector: queryVec, config: queryEmbeddingConfig } = await embedQueryWithConfig(query, signal);
+-				queryEmbedding ??= await embedQueryWithConfig(query, signal);
+-				const { vector: queryVec, config: queryEmbeddingConfig } = queryEmbedding;
 +				const { vector: queryVec, config: queryEmbeddingConfig } = await resolveQueryEmbedding();
  				throwIfAborted(signal);
- 				if (!canSearchVectors(kb, queryEmbeddingConfig, queryVec.length)) {
- 					warnings.push(embeddingMismatchWarning(kb));
-@@ -1760,6 +1891,7 @@ export class KnowledgeEngine {
- 					candidateLimit,
+ 				const compatibility = inspectEmbeddingCompatibility(
+ 					kb.embedding_signature,
+@@ -2014,6 +2137,7 @@ export class KnowledgeEngine {
+ 					retrievalLimitPerKb,
  					signal,
  				);
 +				if (!warnVectorMismatch(kb, vectorResults)) continue;
  				allResults.push(
  					...vectorResults.results.map((result) => ({ ...result, score: result.score * kbTrustMultiplier(kb) })),
  				);
-@@ -1770,7 +1902,7 @@ export class KnowledgeEngine {
+@@ -2024,8 +2148,7 @@ export class KnowledgeEngine {
  				if (bm25Results.length === 0 && !semanticHybrid) continue;
  
  				let vecResults: { chunkId: string; score: number }[] = [];
--				const { vector: queryVec, config: queryEmbeddingConfig } = await embedQueryWithConfig(query, signal);
+-				queryEmbedding ??= await embedQueryWithConfig(query, signal);
+-				const { vector: queryVec, config: queryEmbeddingConfig } = queryEmbedding;
 +				const { vector: queryVec, config: queryEmbeddingConfig } = await resolveQueryEmbedding();
  				throwIfAborted(signal);
- 				if (canSearchVectors(kb, queryEmbeddingConfig, queryVec.length)) {
- 					const vectorResults = searchVectorFile(
-@@ -1780,7 +1912,7 @@ export class KnowledgeEngine {
- 						candidateLimit,
+ 				const compatibility = inspectEmbeddingCompatibility(
+ 					kb.embedding_signature,
+@@ -2041,7 +2164,7 @@ export class KnowledgeEngine {
+ 						retrievalLimitPerKb,
  						signal,
  					);
 -					vecResults = vectorResults.results;
 +					vecResults = warnVectorMismatch(kb, vectorResults) ? vectorResults.results : [];
  					for (const [chunkId, vector] of vectorResults.vectorsByChunkId) vectorsByChunkId.set(chunkId, vector);
  				} else {
- 					warnings.push(embeddingMismatchWarning(kb));
-@@ -1868,7 +2000,7 @@ export class KnowledgeEngine {
+ 					embeddingIncompatibleKbIds.add(kb.id);
+@@ -2139,11 +2262,7 @@ export class KnowledgeEngine {
  					sourceChunkIds: [chunk.id],
  				});
  			}
--			const diversified = interleaveByFile(diversifyRankedChunks(ranked, diversity, vectorsByChunkId), diversity);
-+			const diversified = diversifyWithWindow(ranked, diversity, vectorsByChunkId);
+-			const diversified = interleaveByFile(
+-				await diversifyRankedChunks(ranked, diversity, vectorsByChunkId, signal),
+-				diversity,
+-				signal,
+-			);
++			const diversified = await diversifyWithWindow(ranked, diversity, vectorsByChunkId, signal);
  			const page = diversified.slice(offset, offset + limit);
  			const results = page.map((r) => {
  				const kb = kbById.get(r.chunk.kb_id);
-@@ -1949,7 +2081,7 @@ export class KnowledgeEngine {
+@@ -2175,7 +2294,7 @@ export class KnowledgeEngine {
+ 				threshold_candidates: thresholdCandidates,
+ 				eligible_candidates: eligibleCandidates,
+ 				filtered_candidates: filtered.length,
+-				diversity_candidates: ranked.length,
++				diversity_candidates: diversity === "off" ? ranked.length : Math.min(ranked.length, DIVERSITY_WINDOW),
+ 				candidate_pool_truncated: candidatePoolTruncated,
+ 			};
+ 			return {
+@@ -2254,11 +2373,7 @@ export class KnowledgeEngine {
  			}
  		}
  
--		const diversified = interleaveByFile(diversifyRankedChunks(ranked, diversity, vectorsByChunkId), diversity);
-+		const diversified = diversifyWithWindow(ranked, diversity, vectorsByChunkId);
+-		const diversified = interleaveByFile(
+-			await diversifyRankedChunks(ranked, diversity, vectorsByChunkId, signal),
+-			diversity,
+-			signal,
+-		);
++		const diversified = await diversifyWithWindow(ranked, diversity, vectorsByChunkId, signal);
  		const total = diversified.length;
  		const page = diversified.slice(offset, offset + limit);
  		const results: SearchResult[] = page.map((r) => ({
+@@ -2291,7 +2406,7 @@ export class KnowledgeEngine {
+ 			threshold_candidates: thresholdCandidates,
+ 			eligible_candidates: eligibleCandidates,
+ 			filtered_candidates: filtered.length,
+-			diversity_candidates: ranked.length,
++			diversity_candidates: diversity === "off" ? ranked.length : Math.min(ranked.length, DIVERSITY_WINDOW),
+ 			candidate_pool_truncated: candidatePoolTruncated,
+ 		};
+ 
 diff --git a/src/search/vector.ts b/src/search/vector.ts
 index c311616..4cdeb90 100644
 --- a/src/search/vector.ts

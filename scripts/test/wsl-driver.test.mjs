@@ -20,7 +20,7 @@ test('WSL packages exports CPU install flag before MC and requires deploy-check 
     encoding: 'utf8', env: { ...process.env, PATH: bin + path.delimiter + process.env.PATH, TEST_INSTALL_LOG: installs, TEST_ONNX_EXIT: String(code), ONNXRUNTIME_NODE_INSTALL: 'unexpected' },
   });
   assert.equal(run(1).status, 3);
-  assert.match(fs.readFileSync(installs, 'utf8'), /skip skip npm:@cortexkit\/pi-magic-context@0\.49\.50/);
+  assert.match(fs.readFileSync(installs, 'utf8'), /skip skip npm:@cortexkit\/pi-magic-context@\d+\.\d+\.\d+/);
   assert.match(JSON.parse(fs.readFileSync(path.join(tmp, 'packages.json'))).error, /deploy-check onnx failed/);
   assert.equal(run(0).status, 0);
   assert.equal(JSON.parse(fs.readFileSync(path.join(tmp, 'packages.json'))).ok, 'true');

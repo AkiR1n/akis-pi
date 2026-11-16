@@ -306,7 +306,7 @@ step_render() {
 
 step_knowledge() {
     load_env_file
-    base='558e8dd'
+    base='v0.15.0'
     if [ "$skip_knowledge" -eq 1 ] || [[ ",$modules," != *,memory,* ]]; then
         log '[knowledge] skipped; doctor still checks the explicitly selected modules'
         write_json knowledge ok=true skipped=true

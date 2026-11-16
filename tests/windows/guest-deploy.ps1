@@ -475,7 +475,7 @@ function Invoke-StepKnowledge {
         timestamp = (Get-Date).ToString('s')
         skipped   = ($SkipKnowledge -ne 0)
         path      = ''
-        base      = '558e8dd'
+        base      = 'v0.15.0'
         patches   = @()
         buildExit = -1
         distIndex = $false

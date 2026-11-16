@@ -1,6 +1,6 @@
-From cad4de4e21fc11d8857320fa9d2dc9e9a04c9b75 Mon Sep 17 00:00:00 2001
+From 843689616034ae043ef676356ce8e0e9864d9c72 Mon Sep 17 00:00:00 2001
 From: AkiyamaRin <akir1n@outlook.com>
-Date: Sat, 24 Oct 2026 00:09:21 +0800
+Date: Mon, 16 Nov 2026 12:58:43 +0800
 Subject: [PATCH 2/4] fix(indexer): record real source spans for markdown
  chunks
 
@@ -13,6 +13,8 @@ covers; chunk text is byte-identical (verified over 150 real markdown files,
 
 Side effect: appending a line to a file no longer changes the identity hash of
 its earlier chunks, so incremental updates re-embed only the tail.
+
+v0.15.0 adaptation: retain upstream chunk identity and embedding finalization contracts; carry the source-line span correction without changing chunk text.
 ---
  src/indexer/chunker.ts | 97 +++++++++++++++++++++++++++++++++---------
  1 file changed, 78 insertions(+), 19 deletions(-)

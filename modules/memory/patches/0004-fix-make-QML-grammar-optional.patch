@@ -1,6 +1,6 @@
-From 5e6ac691e591c4d779e4c71861cba8f9b863401d Mon Sep 17 00:00:00 2001
+From 37f81138c912b41bcc6824516dba8643419879c7 Mon Sep 17 00:00:00 2001
 From: AkiyamaRin <akir1n@outlook.com>
-Date: Thu, 12 Nov 2026 15:34:57 +0800
+Date: Mon, 16 Nov 2026 12:58:43 +0800
 Subject: [PATCH 4/4] fix: make QML grammar optional
 
 tree-sitter-qmljs ships no prebuilt binaries, so npm ci needs a native
@@ -9,6 +9,8 @@ optionalDependencies and cache its load: a failed load warns once and QML
 files fall back to text chunks while every other language keeps its AST.
 An ambient module declaration keeps typecheck and build working when npm
 omitted the package entirely.
+
+v0.15.0 adaptation: preserve the upstream optional grammar integration; include the ambient declaration and cached concurrent/repeated fallback regression.
 ---
  README.md                        |  2 ++
  docs/configuration.md            |  4 ++++
@@ -23,23 +25,23 @@ omitted the package entirely.
  create mode 100644 test/unit/qml-optional.test.ts
 
 diff --git a/README.md b/README.md
-index fe5dcf1..eb92601 100644
+index bf3703c..ffb5aad 100644
 --- a/README.md
 +++ b/README.md
-@@ -75,6 +75,8 @@ This is intentionally not a heavy ColBERT-style late-interaction index yet (Khat
- 
- In project-level dogfood, these changes improved a real codebase evaluation from early 3.x/5 quality to above 4.5/5 after rebuilds, with fixes for score compression, README repetition, garbage-query false positives, small-module discoverability, source-vs-test ranking, indexing stability, and auto-mode false positives. Existing KBs should be rebuilt or updated after upgrades that change indexing text.
+@@ -78,6 +78,8 @@ garbage-query false positives, small-module discoverability, source-versus-test
+ ranking, indexing stability, and auto-mode false positives. Existing KBs should
+ be rebuilt or updated after upgrades that change indexing text.
  
 +QML AST support uses optional `tree-sitter-qmljs@0.3.1`. If installation or loading fails, QML files remain searchable as text chunks and one notice is emitted per process. Other language parsers are unchanged.
 +
  ## Quick Start
  
- ```bash
+ ### Install
 diff --git a/docs/configuration.md b/docs/configuration.md
-index ec780de..6dde99f 100644
+index dde5659..c49f4ee 100644
 --- a/docs/configuration.md
 +++ b/docs/configuration.md
-@@ -102,6 +102,10 @@ Search diagnostics include result provenance and applied search tuning in both t
+@@ -107,6 +107,10 @@ Empty `knowledge_search` responses always include structured `details.miss` with
  
  When `PI_KNOWLEDGE_E2E_PDF` or `PI_KNOWLEDGE_E2E_DOCX` is unset, `npm run test:e2e` is only a smoke gate for those document formats. Do not commit fixture files, fixture paths, extracted text, or snapshots.
  
@@ -51,7 +53,7 @@ index ec780de..6dde99f 100644
  
  `pi-knowledge` supports direct Pi extension loading through `pi -e ./extension.js` and OMP-compatible loading through the same packaged entry shim. The root `extension.js` and `index.ts` stay startup-light so install-time validation can inspect the extension without resolving native runtime dependencies such as `better-sqlite3` or `onnxruntime-node`.
 diff --git a/docs/known-pitfalls.md b/docs/known-pitfalls.md
-index 7e16e2f..15f47c3 100644
+index 92e546f..65bbdea 100644
 --- a/docs/known-pitfalls.md
 +++ b/docs/known-pitfalls.md
 @@ -27,7 +27,7 @@ npm install from the packed tarball and the supported AST language smoke tests.
@@ -64,7 +66,7 @@ index 7e16e2f..15f47c3 100644
  
  ## PDF/DOCX — 已解決 (v0.2.0)
 diff --git a/package-lock.json b/package-lock.json
-index ff46e12..c16b71a 100644
+index 00f053f..3bf1076 100644
 --- a/package-lock.json
 +++ b/package-lock.json
 @@ -21,7 +21,6 @@
@@ -94,7 +96,7 @@ index ff46e12..c16b71a 100644
  				"node-addon-api": "^8.2.1",
  				"node-gyp-build": "^4.8.2"
 diff --git a/package.json b/package.json
-index 1f218b6..a65e785 100644
+index 488a204..0fd97f9 100644
 --- a/package.json
 +++ b/package.json
 @@ -62,11 +62,13 @@
