@@ -10,3 +10,6 @@ tests/results/
 # never commit a rendered config that still has values filled in, or any credential file
 .env
 *.local.json
+
+# pi-schedule 的项目级调度文件（prompt/命令/状态），不入库
+.pi/
