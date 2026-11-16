@@ -54,7 +54,7 @@
     "npm:pi-web-access@0.47.0",
     "npm:pi-agent-browser-native@0.9.32",
     {
-      "source": "npm:pi-atelier@0.18.0",
+      "source": "npm:pi-atelier@0.20.0",
       "extensions": [
         "+extensions/index.ts"
       ]

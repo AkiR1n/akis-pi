@@ -261,7 +261,7 @@ PowerShell 的单引号让 `$BRAVE_API_KEY` 保持引用文本，不会被当前
 ```sh
 pi install npm:pi-web-access@0.47.0
 pi install npm:pi-agent-browser-native@0.9.32
-pi install npm:pi-atelier@0.18.0
+pi install npm:pi-atelier@0.20.0
 pi install npm:pi-ask-user@0.17.2
 pi install npm:pi-powerpoint@1.0.0
 pi install npm:pi-subagents@0.88.1

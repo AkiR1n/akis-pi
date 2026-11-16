@@ -1,7 +1,7 @@
 {
   "name": "akis-pi",
   "schemaVersion": 2,
-  "generatedAt": "2026-11-15T18:45:41.174Z",
+  "generatedAt": "2026-11-16T03:39:18.703Z",
   "generatedFrom": "live Pi configuration, read-only (see NEVER_COPIED in export-akis-pi.mjs)",
   "verifiedOn": {
     "os": "macOS 27.2.1",
@@ -153,8 +153,8 @@
     },
     {
       "id": "pi-atelier",
-      "source": "npm:pi-atelier@0.18.0",
-      "version": "0.18.0",
+      "source": "npm:pi-atelier@0.20.0",
+      "version": "0.20.0",
       "level": "pinned",
       "module": "core",
       "platforms": [
@@ -163,16 +163,13 @@
         "win32",
         "wsl"
       ],
-      "lastVerified": "2026-11-13",
+      "lastVerified": "2026-11-12",
       "resourceFilters": {
         "extensions": [
           "+extensions/index.ts"
         ]
       },
-      "verified": [
-        "darwin-arm64",
-        "wsl-x64"
-      ]
+      "verified": []
     },
     {
       "id": "pi-ask-user",
