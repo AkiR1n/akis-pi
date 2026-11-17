@@ -269,7 +269,7 @@ pi install npm:pi-compact-tools@0.18.0
 pi install npm:pi-mobile@0.4.0
 pi install npm:@injaneity/pi-computer-use@0.5.1
 pi install npm:pi-away@0.1.4
-pi install npm:pi-prompt-suggestion@0.1.2
+pi install npm:pi-prompt-suggestion@0.1.3
 ```
 
 pi install 在空 settings 只写字符串条目；资源过滤来自步骤 4 渲染，已有过滤对象才会被保留。pi-atelier 的 extensions 与 pi-compact-tools 的 extensions/themes: [] 不能丢。
