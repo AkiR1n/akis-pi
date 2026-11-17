@@ -62,7 +62,7 @@ POSIX 系统自带。原生 Windows 必须装 Git for Windows：Pi 的 shell 与
 
 macOS arm64 与 WSL2（Ubuntu 24.04 x64）的 core+memory 完成过实机验收，其余平台与模块按 README 表格里的级别使用。**那几轮验收跑在旧的角色定义上**（8 个角色、角色自带模型）；现在的 5 个角色与档位映射只在本机 macOS 上验证过，没在 WSL2 或 Windows 上重跑。
 
-上游支持不等于本包已验证：manifest 的 `platforms` 表示适用平台，`verified` 单独记录实测平台，doctor 在未实测平台会对每个组件报 `WARN`。`pi-prompt-suggestion` 钉在 0.1.2，而验收环境当时装的是浮动的 0.1.3，所以它的 `verified` 为空——不是遗漏，是没验过。
+上游支持不等于本包已验证：manifest 的 `platforms` 表示适用平台，`verified` 单独记录实测平台，doctor 在未实测平台会对每个组件报 `WARN`。`pi-prompt-suggestion` 钉在 0.1.3（与 `config/settings.json`、`manifest.json` 一致），`verified` 为空表示还没有在任何平台专项实测——不是遗漏，是没验过。
 
 **Windows 默认选 WSL2 的 core+magpie+memory**：源码、`node_modules`、Magic Context 数据库与知识库都放在 WSL 的 `/home` 下，不要放 `/mnt/c`（跨文件系统访问慢一个数量级，权限与大小写语义也不同）。只有需要操作 Windows 桌面、或复用 Windows 登录态浏览器时才选原生 Windows。
 

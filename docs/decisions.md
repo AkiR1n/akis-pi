@@ -5,7 +5,7 @@
 数字口径：token 计算按 chars/4 估算，或直接采用会话 JSONL 中的 `usage` 字段。**估算不能等同于实测**，两者的差异已在对应部分标注。
 
 
-## 1. codemode only：首轮更精简，多步任务总开销更大
+## 1. codemode only：首轮更精简，多步任务总开销无定论
 
 **决策**：在 `settings.json` 中配置 `{"codemode":{"mode":"only"}}`。配合 `pi-compact-tools` 插件时，Pi 1.5.2 + pi-subagents 0.88.1 下直接向模型暴露 6 个工具：`ask_user`、`codemode`、`contact_supervisor`、`subagent`、`subagent_supervisor`、`tool_search`，其余 50 多个工具通过 QuickJS 沙箱脚本在运行时动态发现与调用。
 
@@ -18,7 +18,7 @@
 
 两次数字差异来自提示词与依赖版本变化；当前 Pi 1.5.2 + pi-subagents 0.88.1 实际保留 6 个直接工具，包含 3 个子代理协调工具；已接受这一集合。不要把上述百分比当作任意机器上的实际节省幅度。
 
-**代价**：5 个对照任务中，only 模式输入 token 降低 29%，输出 token 增加 36%（模型需要写脚本）；多步任务中，总 token（input + cacheRead）约增加 **+17%**。首轮提示词成本下降，长链路多步调用的消耗有所上升。
+**代价**：5 个对照任务中，only 模式输入 token 降低 29%，输出 token 增加 36%（模型需要写脚本）。多步任务总 token（input + cacheRead）曾测得约 +17%，但那是同一道任务跑三次的结果，剔除其中一次即变为 −9.4%，**不足以作为结论**。站得住的是固定开销：网关记录的首轮 `in` 中位数从 7,785 降到 3,953（−49%）。
 
 **结论边界**：探针 2 同时改动了 `AGENTS.md` 和 `APPEND_SYSTEM.md`，效果差异无法单一归因于 codemode；评测脚本依据关键词判定，部分答案可在文档中检索到，不能据此推断 only 模式在任务准确率或错误率上的绝对高低。
 
@@ -27,13 +27,13 @@
 **未采纳方案**：核心工具常驻（把 read/bash/edit/write 设为直接可见）。目前暂不采用，建议先观察会话里的参数错误率、探测调用占比与单工具脚本比例，有瓶颈再调。
 
 
-## 2. 不设核心工具常驻，转而引入「参数错误恢复」规则
+## 2. 不设核心工具常驻，靠 describeTool 按需查声明
 
 工具从声明列表移除后，模型的常见错误变成**参数结构偏差**（如缺少必填的 `- path` 字段、把数字写成字符串），而不是工具名不存在。
 
 因此没有重新暴露几十个常驻工具，而是在 `APPEND_SYSTEM.md` 里约定：
 
-> 工具报参数错误时，先 `describeTool` 看声明，按报错修正参数后用**同一个**工具重试一次；不要换工具或换方法绕过去。
+> 脚本里找工具用全局 `searchTools("动词 名词")` 和 `describeTool(name)`，它们不在 `tools` 上。`bash`/`read`/`edit`/`grep` 常被 3000 token 预算挤出描述，不确定返回结构时先 `describeTool` 看声明。（原文见 `config/APPEND_SYSTEM.md`）
 
 这样单次开销只是一次 `describeTool`（几十 token），省掉了每轮固定传输完整 schema 的开销。
 
