@@ -6,7 +6,7 @@ advertise: true
 acceptanceRole: writer
 tools: read, grep, find, ls, bash, edit, write, codemode, subagent, web_search, fetch_content, get_search_content, source_check
 allowedAgents: implement, explore
-maxSubagentDepth: 1
+maxSubagentDepth: 2
 subagentOnlyExtensions: {{AGENT_DIR}}/extensions/rtk.ts
 inheritProjectContext: true
 inheritGlobalContext: true
