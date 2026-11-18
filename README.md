@@ -76,6 +76,8 @@ Pi 是个轻量的 coding agent harness。工具插件装多了之后，系统�
 
 ## 限制与未验证
 
+- **支持范围**：维护者只在 **macOS arm64** 上保证可用并跟进问题；原生 Windows、Linux 与 WSL2 按上表的「试验」等级使用，不承诺跟进。子代理 5 角色、`lead` 深度 2、`toolBudget` 与 `decision records` 闸门只在 macOS 上验过。
+
 - **没有权限系统。** 工具直接用 Pi 进程的系统权限执行，不弹确认、也没有白名单；模板还把 `defaultProjectTrust` 设成 `always`，不再逐次询问项目配置。需要限制请自己加：写一个审批 `tool_call` 的扩展，或用容器 / 独立用户隔离。
 - **实测范围有限**：macOS arm64 的全部模块、WSL2 的 core+memory 跑过实机；其余平台与模块按上文级别看。子代理改成 5 个角色后只在本机 macOS 验证过。
 - **探针数字不是任务准确率**：首轮提示降 45% 只说明固定开销变小，那两次探针还同时改过引导提示，不能只算在 codemode 头上。

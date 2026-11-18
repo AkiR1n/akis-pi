@@ -9,7 +9,7 @@
 | 入口 | 适用平台 | 前置 | 状态 |
 | --- | --- | --- | --- |
 | POSIX 入口 | macOS、Linux、WSL2 | 系统 Bash、Node 24.22.3、Git | macOS、WSL2 已实测；Linux 原生试验 |
-| PowerShell 入口 | 原生 Windows x64 | Windows PowerShell 5.1 或 7、Node 24.22.3、Git for Windows | **试验**：部署检查已通过，长时间运行与桌面能力未验收 |
+| PowerShell 入口 | 原生 Windows x64 | Windows PowerShell 5.1 或 7、Node 24.22.3、Git for Windows | **试验**：旧配置（8 角色）的部署检查通过；当前 5 角色 / `lead` 深度 2 / `toolBudget` / `decision records` **未在 Windows 上报验证** |
 
 Windows 用户默认选 WSL2（core+magpie+memory）：Linux 用户态下 Bash、路径和安装流程与本文的 POSIX 部分一致。只有需要操作 Windows 桌面、或复用 Windows 登录态的浏览器时，才选原生 Windows。
 

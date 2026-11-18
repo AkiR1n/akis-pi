@@ -3,7 +3,7 @@ name: implement
 description: Implementation worker. Writes and tests the change in the named paths.
 thinking: high
 advertise: true
-acceptanceRole: writer
+acceptanceRole: false
 tools: read, grep, find, ls, bash, edit, write, codemode, web_search, fetch_content, get_search_content, source_check
 subagentOnlyExtensions: {{AGENT_DIR}}/extensions/rtk.ts
 inheritProjectContext: true

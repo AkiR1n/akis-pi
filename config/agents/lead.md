@@ -3,7 +3,7 @@ name: lead
 description: Owner-level worker. Splits the task, delegates to implement and explore, verifies their reports and keeps the judgment calls.
 thinking: high
 advertise: true
-acceptanceRole: writer
+acceptanceRole: false
 tools: read, grep, find, ls, bash, edit, write, codemode, subagent, web_search, fetch_content, get_search_content, source_check
 allowedAgents: implement, explore
 maxSubagentDepth: 2
