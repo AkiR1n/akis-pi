@@ -66,7 +66,7 @@ Pi 是个轻量的 coding agent harness。工具插件装多了之后，系统�
 
 | 模块 | 内容 | 安装建议 | 详细说明 |
 | --- | --- | --- | --- |
-| **core** | `settings.json`、全局 `AGENTS.md`、`APPEND_SYSTEM.md`、5 个子代理角色、2 个 prompt 模板、compact-tools 配置、pi-web-access 搜索配置、rtk bash 重写扩展 | 必装 | 基础运行面 |
+| **core** | `settings.json`、全局 `AGENTS.md`、`APPEND_SYSTEM.md`、5 个子代理角色、1 个 prompt 模板、compact-tools 配置、pi-web-access 搜索配置、rtk bash 重写扩展 | 必装 | 基础运行面 |
 | **memory** | Magic Context（项目记忆 + 压缩）、resident-memory 扩展、pi-knowledge 知识库及 4 个补丁（QML 可选） | **必装** | [modules/memory](modules/memory/README.md) |
 | **macos** | herdr 状态面板扩展、ego-gc 窗口回收（`ego-browser` 本体各平台都有） | **darwin 必装**；其它平台拒绝选择 | [modules/macos](modules/macos/README.md) |
 | **pdf** | 本地 PDF→Markdown 端点；launchd / systemd user / Windows 登录任务说明 | 可选，独立于 macos | [modules/pdf](modules/pdf/README.md) |
@@ -76,7 +76,7 @@ Pi 是个轻量的 coding agent harness。工具插件装多了之后，系统�
 
 ## 限制与未验证
 
-- **支持范围**：维护者只在 **macOS arm64** 上保证可用并跟进问题；原生 Windows、Linux 与 WSL2 按上表的「试验」等级使用，不承诺跟进。子代理 5 角色、`lead` 深度 2、`toolBudget` 与 `decision records` 闸门只在 macOS 上验过。
+- **支持范围**：维护者只在 **macOS arm64** 上保证可用并跟进问题；原生 Windows 与 Linux 按上表的「试验」等级使用，不承诺跟进；WSL2 的 core+memory 有实机记录，其余模块同样按试验看待。子代理 5 角色、`lead` 深度 2、`toolBudget` 与 `decision records` 闸门只在 macOS 上验过。
 
 - **没有权限系统。** 工具直接用 Pi 进程的系统权限执行，不弹确认、也没有白名单；模板还把 `defaultProjectTrust` 设成 `always`，不再逐次询问项目配置。需要限制请自己加：写一个审批 `tool_call` 的扩展，或用容器 / 独立用户隔离。
 - **实测范围有限**：macOS arm64 的全部模块、WSL2 的 core+memory 跑过实机；其余平台与模块按上文级别看。子代理改成 5 个角色后只在本机 macOS 验证过。
