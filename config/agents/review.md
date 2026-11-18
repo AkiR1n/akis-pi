@@ -1,6 +1,6 @@
 ---
 name: review
-description: Read-only verification. Checks a claim or diff against real evidence and returns a verdict.
+description: Read-only acceptance check. Call it before closing a decision record, citing a measured number, or claiming a fix; verifies the claim or diff against real evidence and returns PASS/FAIL/BLOCKED.
 thinking: high
 advertise: true
 acceptanceRole: read-only
