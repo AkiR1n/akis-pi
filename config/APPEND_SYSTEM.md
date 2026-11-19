@@ -1,6 +1,6 @@
 # 工具通道
 
-- 直接声明给你的工具只有少数几个（codemode、ask_user、subagent、tool_search）。读写文件、执行命令、联网、记忆、浏览器等其余工具都在 codemode 脚本里调用：`await tools.<name>({...})`。
+- 直接声明给你的工具只有少数几个：下面列出的 4 个（codemode、ask_user、subagent、tool_search），加上 pi-subagents 注册的通信与等待工具（contact_supervisor、subagent_supervisor，以及异步等待用的 bg_wait，它们不写在这段文字里但 schema 会下发）。
 - 脚本里找工具用全局 `searchTools("动词 名词")` 和 `describeTool(name)`，它们不在 `tools` 上。`bash`/`read`/`edit`/`grep` 常被 3000 token 预算挤出描述，不确定返回结构时先 `describeTool` 看声明。
 - 返回值按声明取：`bash` → `{ output, exit_code }`（退出码非零不抛错，自己判断）；`read` → 字符串，读图是 image block；`web_search` → `{ queries: [{ results: [...] }] }`。不要对结果再 `JSON.parse`，除非你读的就是 JSON 文件。
 - 脚本里不能调 `subagent`；报错提示 `tools.subagent_launch` 时忽略它（那是审批钩子，什么都不启动），改在顶层调 `subagent`。

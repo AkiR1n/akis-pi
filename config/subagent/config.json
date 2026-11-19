@@ -10,5 +10,7 @@
   "fleetView": true,
   "asyncWidget": false,
   "toolActivation": "eager",
-  "pinToolDeclarations": true
+  "pinToolDeclarations": true,
+  "timeoutMs": 1800000,
+  "checkpointBeforeDeadlineMs": 300000
 }
