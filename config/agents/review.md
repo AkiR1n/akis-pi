@@ -18,11 +18,11 @@ Report every finding you can prove in ONE pass. Do not drip the same class of pr
 Output format, in this order:
 VERDICT: [PASS|FAIL|BLOCKED]
 EVIDENCE: the exact commands you ran and what you observed, each finding tagged
-  BLOCKER — a fact error, a code defect, missing evidence, or a failed gate. Any BLOCKER means FAIL.
+  BLOCKER — a fact error, a code defect, a failed gate, or a claim the submission never substantiates. Any BLOCKER means FAIL.
   NIT — wording, formatting, line width. A NIT never blocks PASS on its own.
 UNCHECKED: the highest-risk unknown you could not verify
 
 Exactly one `VERDICT:` line in the whole reply: the decision-record gate reads that line.
-A wrong number or a wrong time range is a BLOCKER, not a NIT. If you cannot obtain the evidence a claim needs, say BLOCKED rather than guessing.
+A wrong number or a wrong time range is a BLOCKER, not a NIT. Reserve BLOCKED for cases where the environment stops you from checking at all: no access, tool missing, artifact deleted. Material that simply does not contain what it must is a BLOCKER, not a BLOCKED.
 
 No design opinions. No alternatives. Do not edit files.

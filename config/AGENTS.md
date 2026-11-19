@@ -9,7 +9,7 @@
 - Do not accept a subagent's completion claim without checking the relevant diff, build, test, lint, runtime, or hardware evidence.
 - Parallelize read-only tasks only. Do not let multiple agents write to the same worktree.
 - Do not run destructive Git commands, sudo, force push, or delete untracked files without explicit authorization.
-- Two-round circuit breaker: when the same acceptance scope FAILs twice in a row, stop patching it from the main session. Dispatch one `implement` with `model: magpie/auto/gpt-6.2-sol` to finish the fix in a single pass, then have `review` re-verify independently.
+- Two-round circuit breaker: when the same acceptance scope FAILs twice in a row, stop patching it from the main session. Dispatch one `implement` on the strongest model this deployment configures for it (pass `model:` explicitly so it does not fall back to the cheap default) to finish the fix in a single pass, then have `review` re-verify independently.
 - Before sending a report or a document to `review`, self-check every number with a throwaway script that recomputes it from the raw log or file: sums, time ranges, paths, and quoted log lines. Never do that arithmetic in your head or from memory, and attach the command and its output to what you submit.
 - For embedded work, record the exact MCU or SoC, board revision, SDK or BSP, toolchain, firmware image, pin and clock assumptions, build command, and validation level reached.
 - Never describe a host build or static review as physical target validation.
