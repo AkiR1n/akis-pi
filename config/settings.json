@@ -52,7 +52,7 @@
   ],
   "packages": [
     "npm:pi-web-access@0.48.0",
-    "npm:pi-agent-browser-native@0.9.39",
+    "npm:pi-agent-browser-native@0.9.41",
     {
       "source": "npm:pi-atelier@0.20.1",
       "extensions": [
