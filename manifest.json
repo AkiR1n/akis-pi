@@ -1,12 +1,12 @@
 {
   "name": "akis-pi",
   "schemaVersion": 2,
-  "generatedAt": "2026-11-19T17:21:39.843Z",
+  "generatedAt": "2026-11-20T13:20:36.495Z",
   "generatedFrom": "live Pi configuration, read-only (see NEVER_COPIED in export-akis-pi.mjs)",
   "verifiedOn": {
     "os": "macOS 27.2.1",
     "arch": "arm64",
-    "pi": "1.5.2",
+    "pi": "1.6.0",
     "node": "v24.22.3"
   },
   "levels": {
@@ -29,8 +29,8 @@
   "components": [
     {
       "id": "pi",
-      "source": "npm:@earendil-works/pi-coding-agent@1.5.2",
-      "version": "1.5.2",
+      "source": "npm:@earendil-works/pi-coding-agent@1.6.0",
+      "version": "1.6.0",
       "level": "pinned",
       "module": "core",
       "platforms": [
@@ -39,12 +39,9 @@
         "win32",
         "wsl"
       ],
-      "lastVerified": "2026-11-13",
+      "lastVerified": "2026-11-12",
       "note": "tested 1.5.2. The official installer installs the newest release; the npm command in DEPLOY.md reproduces 1.5.2 exactly.",
-      "verified": [
-        "darwin-arm64",
-        "wsl-x64"
-      ]
+      "verified": []
     },
     {
       "id": "node",
@@ -117,8 +114,8 @@
     },
     {
       "id": "pi-web-access",
-      "source": "npm:pi-web-access@0.47.0",
-      "version": "0.47.0",
+      "source": "npm:pi-web-access@0.48.0",
+      "version": "0.48.0",
       "level": "pinned",
       "module": "core",
       "platforms": [
@@ -127,16 +124,13 @@
         "win32",
         "wsl"
       ],
-      "lastVerified": "2026-11-13",
-      "verified": [
-        "darwin-arm64",
-        "wsl-x64"
-      ]
+      "lastVerified": "2026-11-12",
+      "verified": []
     },
     {
       "id": "pi-agent-browser-native",
-      "source": "npm:pi-agent-browser-native@0.9.32",
-      "version": "0.9.32",
+      "source": "npm:pi-agent-browser-native@0.9.39",
+      "version": "0.9.39",
       "level": "pinned",
       "module": "core",
       "platforms": [
@@ -150,8 +144,8 @@
     },
     {
       "id": "pi-atelier",
-      "source": "npm:pi-atelier@0.20.0",
-      "version": "0.20.0",
+      "source": "npm:pi-atelier@0.20.1",
+      "version": "0.20.1",
       "level": "pinned",
       "module": "core",
       "platforms": [
@@ -206,8 +200,8 @@
     },
     {
       "id": "pi-subagents",
-      "source": "npm:pi-subagents@0.88.1",
-      "version": "0.88.1",
+      "source": "npm:pi-subagents@0.89.1",
+      "version": "0.89.1",
       "level": "pinned",
       "module": "core",
       "platforms": [

@@ -51,17 +51,17 @@
     "{{PROVIDER}}/{{MODEL_PLAN}}"
   ],
   "packages": [
-    "npm:pi-web-access@0.47.0",
-    "npm:pi-agent-browser-native@0.9.32",
+    "npm:pi-web-access@0.48.0",
+    "npm:pi-agent-browser-native@0.9.39",
     {
-      "source": "npm:pi-atelier@0.20.0",
+      "source": "npm:pi-atelier@0.20.1",
       "extensions": [
         "+extensions/index.ts"
       ]
     },
     "npm:pi-ask-user@0.17.2",
     "npm:pi-powerpoint@1.0.0",
-    "npm:pi-subagents@0.88.1",
+    "npm:pi-subagents@0.89.1",
     {
       "source": "npm:pi-compact-tools@0.18.0",
       "extensions": [
