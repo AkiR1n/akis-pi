@@ -1,7 +1,7 @@
 {
   "name": "akis-pi",
   "schemaVersion": 2,
-  "generatedAt": "2026-11-20T18:35:04.769Z",
+  "generatedAt": "2026-11-22T16:33:45.533Z",
   "generatedFrom": "live Pi configuration, read-only (see NEVER_COPIED in export-akis-pi.mjs)",
   "verifiedOn": {
     "os": "macOS 27.2.1",
@@ -287,21 +287,6 @@
         "darwin-arm64",
         "wsl-x64"
       ]
-    },
-    {
-      "id": "pi-prompt-suggestion",
-      "source": "npm:pi-prompt-suggestion@0.1.3",
-      "version": "0.1.3",
-      "level": "pinned",
-      "module": "core",
-      "platforms": [
-        "darwin",
-        "linux",
-        "win32",
-        "wsl"
-      ],
-      "lastVerified": "2026-11-12",
-      "verified": []
     },
     {
       "id": "pi-mox",
