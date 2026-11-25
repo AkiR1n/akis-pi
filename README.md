@@ -87,7 +87,14 @@ akis-pi/
 ├── scripts/            render.mjs (dry-run + backup), doctor.mjs, deploy-check.mjs, tests
 ├── tests/              Windows VM and WSL2 verification drivers
 └── docs/
+    ├── index.html      Interactive architecture map (GitHub Pages)
     ├── reference.md    Version pins, dependency rationale & platform notes
     ├── decisions.md    Measured benchmarks & architectural trade-offs
     └── upgrade.md      Upgrade order, silent touchpoints & rollback handbook
 ```
+
+## References & Acknowledgements
+
+- **Core ecosystem**: Built on the [Pi coding agent](https://pi.dev) and [Magpie](https://github.com/yetone/magpie), integrating community packages including [`@gotgenes/pi-permission-system`](https://github.com/gotgenes/pi-packages/tree/main/packages/pi-permission-system), [`@mzwing/pi-permission-auto-review`](https://github.com/mzwing/pi-packages/tree/main/packages/pi-permission-auto-review), [`pi-subagents`](https://github.com/nicobailon/pi-subagents), [`@cortexkit/pi-magic-context`](https://www.npmjs.com/package/@cortexkit/pi-magic-context), [`pi-knowledge`](https://github.com/nczz/pi-knowledge), [`pi-atelier`](https://github.com/michaelmjhhhh/pi-atelier), [`pi-compact-tools`](https://github.com/nedleeds/pi-compact-tools), [`pi-web-access`](https://github.com/nicobailon/pi-web-access), and the other upstream projects catalogued in [docs/reference.md](docs/reference.md) and the [Architecture Map](https://akir1n.github.io/akis-pi/).
+- **Design references**: Several workflow patterns in this bundle (automated permission review presets, long-session compaction, and the optional companion single-track PTY execution model) draw inspiration from open-source CLI coding agents and community engineering discussions.
+- **Affiliation & licensing notice**: This repository is an independent personal configuration bundle and is not affiliated with or endorsed by Pi, OpenAI, or any upstream plugin author. All third-party packages and patches remain subject to their respective upstream licenses.

@@ -72,3 +72,9 @@ flowchart TD
 - **权限门禁自查**：`settings.json` 默认 `defaultProjectTrust: "always"`，安全边界由 `pi-permission-system` 与 `pi-permission-auto-review` 承担；启用自动审批前请审阅 `config/pi-permission-system/config.json` 与 `config/pi-permission-auto-review/config.json` 中的路径规则。
 - **外部 CLI 需单独安装**：`agent-browser` CLI（`pi-agent-browser-native@0.9.42` 要求 `≥0.44.0`）与 `rtk`（`≥1.1.0`）不在 npm 插件包内。
 - **定位边界**：本仓库负责初始可复现配置；装完后的持续升级与快照回滚建议放到独立的本地维护项目中，参考 [docs/upgrade.md](docs/upgrade.md)。
+
+## 参考与致谢
+
+- **上游生态**：本配置包构建于 [Pi coding agent](https://pi.dev) 与 [Magpie](https://github.com/yetone/magpie) 之上，组合了 [`@gotgenes/pi-permission-system`](https://github.com/gotgenes/pi-packages/tree/main/packages/pi-permission-system)、[`@mzwing/pi-permission-auto-review`](https://github.com/mzwing/pi-packages/tree/main/packages/pi-permission-auto-review)、[`pi-subagents`](https://github.com/nicobailon/pi-subagents)、[`@cortexkit/pi-magic-context`](https://www.npmjs.com/package/@cortexkit/pi-magic-context)、[`pi-knowledge`](https://github.com/nczz/pi-knowledge)、[`pi-atelier`](https://github.com/michaelmjhhhh/pi-atelier)、[`pi-compact-tools`](https://github.com/nedleeds/pi-compact-tools)、[`pi-web-access`](https://github.com/nicobailon/pi-web-access) 等社区扩展；完整版本与出处见 [docs/reference.md](docs/reference.md) 与 [架构图谱](https://akir1n.github.io/akis-pi/)。
+- **设计参考**：工作流中的部分模式（如自动审批预设、长会话异步压缩、可选配套单轨 PTY 执行模型）参考了现代 CLI 编码 Agent 的工程实践与社区讨论。
+- **独立性声明**：本仓库为独立的个人配置整理，与 Pi 官方、OpenAI 及各上游扩展作者均无隶属或背书关系；所有第三方组件均遵循各自原有开源协议。
