@@ -6,7 +6,7 @@
   - `bash` → 字符串（或带 `output` 字段的对象）；退出码非零会报错。
   - `read` → 字符串，读图是 image block；`web_search` → `{ queries: [{ results: [...] }] }`；`searchTools()` 直接返回对象/数组。**绝不对 `searchTools()`或 `read` 图片结果调 `JSON.parse`**，除非你读的就是 JSON 文件文本。
 - 脚本里不能调 `subagent`；报错提示 `tools.subagent_launch` 时忽略它（那是审批钩子，什么都不启动），改在顶层调 `subagent`。
-- 改已有文件直接用 `tools.edit`（不要在 `codemode` 里用 JS 数组或反引号嵌套拼 Python 补丁脚本）；必须写入含引号、反斜杠、反引号或 Shell `${VAR}` 的多行内容时，直接拆成 `tools.write` 并核对转义，绝不把 Shell `${VAR}` 放进未转义的反引号模板字符串。
+- 改已有文件直接用 `tools.edit({ path, edits: [{ oldText, newText }] })`（不要在 `codemode` 里用 JS 数组或反引号嵌套拼 Python 补丁脚本）；必须写入含引号、反斜杠、反引号或 Shell `${VAR}` 的多行内容时，直接拆成 `tools.write` 并核对转义，绝不把 Shell `${VAR}` 放进未转义的反引号模板字符串。
 - 沙箱是 QuickJS：没有 `Buffer`、`require`、`fs`、`setTimeout`；上个脚本的变量到下个就没了，要跨脚本保留用 `store()`/`load()`。
 - 权限门禁：`bash` 已接入 `pi-permission-system`（安全命令 0ms 放行，危险命令走 AST 拦截并经 `pi-permission-auto-review` 自动审核）。
 - 读 `Script error` 首行：`is not defined` → 拼错、跨脚本变量或 Node API；`not a function` → 返回值形状看错或误写 `tools.`；`SyntaxError` → 模板字符串被引号截断。末尾列出的调用已经生效，重跑前先确认副作用。
