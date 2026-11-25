@@ -1,6 +1,6 @@
 # akis-pi
 
-English | [简体中文](README.zh-CN.md)
+English | [简体中文](README.zh-CN.md) | [Interactive Architecture Map (GitHub Pages)](https://akir1n.github.io/akis-pi/)
 
 A shareable, evidence-backed configuration bundle for the [Pi coding agent](https://pi.dev) by AkiyamaRin—designed so you can hand the repository to an AI agent to deploy step by step, and read the exact rationale and measurements behind every choice.
 

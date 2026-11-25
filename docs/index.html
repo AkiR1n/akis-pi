@@ -1,0 +1,1894 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>akis-pi · Interactive Pi Coding Agent Architecture</title>
+<style>
+  :root {
+    --bg: #f7f5f0;
+    --bg-glow-1: rgba(201, 82, 45, 0.065);
+    --bg-glow-2: rgba(56, 114, 85, 0.06);
+    --surface: #ffffff;
+    --surface-soft: #f2efe8;
+    --surface-hover: #fcfbf8;
+    --border: rgba(28, 25, 23, 0.09);
+    --border-strong: rgba(28, 25, 23, 0.20);
+    --ink: #1c1917;
+    --ink-muted: #57534e;
+    --ink-dim: #8c867e;
+    --terra: #c9522d;
+    --terra-soft: rgba(201, 82, 45, 0.10);
+    --sage: #387255;
+    --sage-soft: rgba(56, 114, 85, 0.10);
+    --ochre: #b57614;
+    --ochre-soft: rgba(181, 118, 20, 0.11);
+    --slate: #3f6070;
+    --slate-soft: rgba(63, 96, 112, 0.10);
+    --danger: #c63b32;
+    --danger-soft: rgba(198, 59, 50, 0.10);
+    --wire: rgba(28, 25, 23, 0.14);
+    --backdrop: rgba(28, 25, 23, 0.34);
+    --shadow-sm: 0 2px 10px rgba(28, 25, 23, 0.045);
+    --shadow-md: 0 14px 38px rgba(28, 25, 23, 0.08);
+    --shadow-lg: 0 32px 84px rgba(28, 25, 23, 0.18);
+  }
+
+  [data-theme="dark"] {
+    --bg: #151412;
+    --bg-glow-1: rgba(226, 114, 78, 0.09);
+    --bg-glow-2: rgba(103, 176, 136, 0.07);
+    --surface: #1e1d1a;
+    --surface-soft: #262420;
+    --surface-hover: #2b2924;
+    --border: rgba(245, 240, 230, 0.09);
+    --border-strong: rgba(245, 240, 230, 0.20);
+    --ink: #f3efe8;
+    --ink-muted: #b5afa5;
+    --ink-dim: #7f7970;
+    --terra: #e2724e;
+    --terra-soft: rgba(226, 114, 78, 0.15);
+    --sage: #67b088;
+    --sage-soft: rgba(103, 176, 136, 0.14);
+    --ochre: #dfa145;
+    --ochre-soft: rgba(223, 161, 69, 0.15);
+    --slate: #7ea3b5;
+    --slate-soft: rgba(126, 163, 181, 0.15);
+    --danger: #e4665c;
+    --danger-soft: rgba(228, 102, 92, 0.16);
+    --wire: rgba(245, 240, 230, 0.16);
+    --backdrop: rgba(0, 0, 0, 0.56);
+    --shadow-sm: 0 4px 14px rgba(0, 0, 0, 0.28);
+    --shadow-md: 0 16px 44px rgba(0, 0, 0, 0.44);
+    --shadow-lg: 0 36px 90px rgba(0, 0, 0, 0.68);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "PingFang SC", "Hiragino Sans GB", sans-serif;
+    background: var(--bg);
+    background-image:
+      radial-gradient(640px circle at 14% 8%, var(--bg-glow-1), transparent 68%),
+      radial-gradient(660px circle at 86% 24%, var(--bg-glow-2), transparent 68%);
+    color: var(--ink);
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+  .mono, code { font-family: "SF Mono", "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace; }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: none; }
+  }
+  @keyframes explodeZone {
+    from { opacity: 0; transform: scale(0.86); }
+    to { opacity: 1; transform: scale(1); }
+  }
+  @keyframes collapseZone {
+    from { opacity: 1; transform: scale(1); }
+    to { opacity: 0; transform: scale(0.88); }
+  }
+  @keyframes burstChild {
+    from { opacity: 0; transform: translate(var(--bx, 0px), var(--by, 14px)) scale(0.84); }
+    to { opacity: 1; transform: translate(0, 0) scale(1); }
+  }
+
+  .enter { animation: fadeUp 0.55s cubic-bezier(0.22, 1, 0.36, 1) both; }
+  .d1 { animation-delay: 0.07s; }
+
+  /* Nav */
+  .nav {
+    position: sticky; top: 0; z-index: 30;
+    backdrop-filter: blur(18px);
+    background: color-mix(in srgb, var(--bg) 84%, transparent);
+    border-bottom: 1px solid var(--border);
+  }
+  .nav-inner {
+    max-width: 1200px; margin: 0 auto; padding: 12px 24px;
+    display: flex; align-items: center; justify-content: space-between; gap: 14px;
+  }
+  .brand { display: flex; align-items: center; gap: 10px; text-decoration: none; color: var(--ink); }
+  .brand-dot {
+    width: 30px; height: 30px; border-radius: 50%;
+    background: var(--ink); color: var(--bg);
+    display: grid; place-items: center; font-weight: 600; font-size: 15px;
+  }
+  .brand-name { font-size: 14.5px; font-weight: 650; }
+  .brand-sub { font-size: 12px; color: var(--ink-dim); font-weight: 400; margin-left: 4px; }
+
+  .nav-actions { display: flex; align-items: center; gap: 8px; }
+  .pill-btn {
+    border: 1px solid var(--border-strong); background: var(--surface); color: var(--ink);
+    border-radius: 999px; padding: 6px 14px; font-size: 12.5px; font-weight: 500;
+    cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; gap: 5px;
+    transition: transform .15s, background .15s, box-shadow .15s;
+  }
+  .pill-btn:hover { transform: translateY(-1px); box-shadow: var(--shadow-sm); background: var(--surface-hover); }
+  .pill-btn.subtle { background: transparent; border-color: transparent; color: var(--ink-muted); }
+  .pill-btn.subtle:hover { background: var(--surface-soft); color: var(--ink); box-shadow: none; transform: none; }
+
+  .wrap {
+    max-width: 1200px; width: 100%; margin: 0 auto; padding: 0 24px;
+    flex: 1; display: flex; flex-direction: column;
+  }
+  .canvas-sec {
+    flex: 1; display: flex; flex-direction: column;
+  }
+
+  /* Compact Hero */
+  .hero {
+    padding: 24px 0 16px;
+    display: flex; align-items: center; justify-content: space-between; gap: 20px; flex-wrap: wrap;
+  }
+  .hero-copy { max-width: 680px; flex: 1 1 420px; }
+  .hero h1 {
+    font-size: clamp(22px, 2.3vw, 28px); font-weight: 700; letter-spacing: -0.025em; line-height: 1.24;
+  }
+
+  .hero-pills {
+    display: flex; gap: 16px; flex-shrink: 0;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 20px; padding: 12px 18px; box-shadow: var(--shadow-sm);
+  }
+  .hp { display: flex; flex-direction: column; white-space: nowrap; }
+  .hp b { font-size: 17px; letter-spacing: -0.02em; }
+  .hp span { font-size: 11px; color: var(--ink-dim); }
+
+  /* Story Switcher */
+  .toolbar {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+    margin-bottom: 12px;
+  }
+  .stories { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
+  .story-btn {
+    border: 1px solid var(--border); background: var(--surface); color: var(--ink-muted);
+    border-radius: 999px; padding: 6px 13px; font-size: 12.5px; font-weight: 500;
+    cursor: pointer; transition: all .18s;
+  }
+  .story-btn:hover { border-color: var(--border-strong); color: var(--ink); }
+  .story-btn.active { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+  .story-btn.fault.active { background: var(--danger); border-color: var(--danger); color: #fff; }
+  .stage-hint { font-size: 12px; color: var(--ink-dim); }
+
+  /* Main Interactive Canvas */
+  .canvas-card {
+    position: relative;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 28px;
+    box-shadow: var(--shadow-md);
+    padding: 26px;
+    overflow: hidden;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+
+  .stage {
+    position: relative;
+    flex: 1;
+    min-height: 468px;
+    display: grid;
+    grid-template-columns: 0.96fr 1.14fr 1.04fr 0.96fr;
+    grid-template-rows: 1fr 1fr;
+    gap: 26px 34px;
+    align-items: center;
+    padding: 18px 6px 10px;
+  }
+
+  .stage-svg {
+    position: absolute; inset: 0; width: 100%; height: 100%;
+    pointer-events: none; z-index: 0;
+    transition: opacity .25s ease;
+  }
+  .stage.is-exploded .stage-svg { opacity: 0.14; }
+
+  .curve {
+    fill: none; stroke: var(--wire); stroke-width: 1.85; stroke-linecap: round;
+    transition: stroke .3s, stroke-width .3s, opacity .3s;
+  }
+  .curve.dashed { stroke-dasharray: 6 6; }
+  .curve.active { stroke: var(--terra); stroke-width: 2.5; }
+  .curve.active-sage { stroke: var(--sage); stroke-width: 2.5; }
+  .curve.active-danger { stroke: var(--danger); stroke-width: 2.2; stroke-dasharray: 5 6; }
+  .curve.dim { opacity: 0.18; }
+  .orb { fill: var(--terra); opacity: 0.88; }
+  .orb.sage { fill: var(--sage); }
+
+  /* Start-here gentle pulse */
+  @keyframes softPing {
+    0% { transform: scale(1); opacity: 0.75; }
+    70%, 100% { transform: scale(2.2); opacity: 0; }
+  }
+  .start-dot {
+    width: 7px; height: 7px; border-radius: 50%; background: var(--terra);
+    position: relative; display: inline-block; flex-shrink: 0;
+  }
+  .start-dot::after {
+    content: ""; position: absolute; inset: 0; border-radius: 50%; background: var(--terra);
+    animation: softPing 2.4s cubic-bezier(0, 0, 0.2, 1) infinite;
+  }
+
+  /* Level 1: Minimal Domain Bubbles (Flowing Left-to-Right Journey 01 -> 05) */
+  .d-node {
+    position: relative; z-index: 2;
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: 22px;
+    padding: 18px 19px;
+    cursor: pointer; text-align: left; color: var(--ink);
+    display: flex; flex-direction: column; gap: 6px;
+    box-shadow: var(--shadow-sm);
+    transition: transform .26s cubic-bezier(0.22, 1, 0.36, 1), opacity .26s ease, border-color .2s, box-shadow .22s;
+  }
+  .d-node:hover {
+    transform: translateY(-3px);
+    border-color: var(--dc);
+    box-shadow: var(--shadow-md);
+  }
+  .d-node.dimmed { opacity: 0.30; transform: scale(0.97); }
+  .stage.is-exploded .d-node {
+    opacity: 0.20;
+    transform: scale(0.94);
+    filter: blur(0.4px);
+  }
+  .stage.is-exploded .d-node:hover {
+    opacity: 0.78;
+    transform: scale(0.98);
+    filter: none;
+  }
+  .stage.is-exploded .d-node.is-source {
+    opacity: 0;
+    pointer-events: none;
+    transform: scale(1.06);
+  }
+
+  /* Organic staggered left-to-right flow (no rigid crosshair) */
+  .pos-s1 { grid-column: 1; grid-row: 1 / span 2; align-self: center; transform: translateY(-18px); }
+  .pos-s1:hover { transform: translateY(-21px); }
+  .pos-s2 {
+    grid-column: 2; grid-row: 1 / span 2; align-self: center; transform: translateY(12px);
+    padding: 23px 22px;
+    border-radius: 26px;
+    background: linear-gradient(155deg, color-mix(in srgb, var(--terra) 7%, var(--surface)), var(--surface));
+    border-color: color-mix(in srgb, var(--terra) 38%, var(--border));
+    box-shadow: 0 10px 30px color-mix(in srgb, var(--terra) 9%, transparent), var(--shadow-sm);
+  }
+  .pos-s2:hover { transform: translateY(9px); }
+  .pos-s3 { grid-column: 3; grid-row: 1; align-self: end; transform: translateY(-6px); }
+  .pos-s3:hover { transform: translateY(-9px); }
+  .pos-s4 { grid-column: 3; grid-row: 2; align-self: start; transform: translateY(6px); }
+  .pos-s4:hover { transform: translateY(3px); }
+  .pos-s5 { grid-column: 4; grid-row: 1 / span 2; align-self: center; transform: translateY(16px); }
+  .pos-s5:hover { transform: translateY(13px); }
+
+  .dn-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .dn-step {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 11px; font-weight: 650; color: var(--dc);
+    background: color-mix(in srgb, var(--dc) 11%, transparent);
+    padding: 2.5px 9px; border-radius: 999px;
+  }
+  .dn-expand-hint { font-size: 11px; color: var(--ink-dim); white-space: nowrap; }
+  .dn-title { font-size: 16px; font-weight: 700; letter-spacing: -0.02em; }
+  .pos-s2 .dn-title { font-size: 18px; }
+  .dn-sub { font-size: 12.5px; color: var(--ink-muted); line-height: 1.5; }
+  .flow-caption {
+    font-size: 10.5px; fill: var(--ink-dim); font-weight: 500;
+  }
+
+  /* Level 2: Exploded Dashed Zone — always mounted at viewport level so it can NEVER be clipped */
+  .exploded-layer {
+    position: fixed; inset: 0; z-index: 55;
+    display: flex; align-items: center; justify-content: center;
+    padding: 20px;
+    pointer-events: none;
+    background: transparent;
+    transition: background .24s ease, backdrop-filter .24s ease;
+  }
+  .exploded-layer.open {
+    pointer-events: auto;
+    background: color-mix(in srgb, var(--backdrop) 62%, transparent);
+    backdrop-filter: blur(5px);
+  }
+
+  .exploded-zone {
+    width: min(880px, 100%);
+    max-height: 88dvh;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    background: color-mix(in srgb, var(--surface) 95%, var(--ec, var(--terra)));
+    backdrop-filter: blur(14px);
+    border: 2px dashed color-mix(in srgb, var(--ec, var(--terra)) 62%, transparent);
+    border-radius: 28px;
+    padding: 22px 24px 24px;
+    box-shadow: 0 28px 80px rgba(28, 25, 23, 0.18), 0 0 0 8px color-mix(in srgb, var(--ec, var(--terra)) 6%, transparent);
+    animation: explodeZone 0.32s cubic-bezier(0.22, 1, 0.36, 1) both;
+    position: relative;
+  }
+  .exploded-zone.closing {
+    animation: collapseZone 0.22s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+    pointer-events: none;
+  }
+  .exploded-zone.closing .child-card {
+    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.18s ease;
+    transform: translate(var(--bx, 0px), var(--by, 12px)) scale(0.88);
+    opacity: 0;
+  }
+  .ez-head {
+    display: flex; align-items: flex-start; justify-content: space-between; gap: 14px;
+    margin-bottom: 18px;
+  }
+  .ez-kicker {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 11.5px; font-weight: 650; color: var(--ec);
+    background: color-mix(in srgb, var(--ec) 12%, transparent);
+    padding: 3px 10px; border-radius: 999px; margin-bottom: 6px;
+  }
+  .ez-title { font-size: 20px; font-weight: 700; letter-spacing: -0.02em; }
+  .ez-desc { font-size: 13px; color: var(--ink-muted); margin-top: 2px; }
+  .ez-close {
+    border: 1px solid var(--border-strong); background: var(--surface); color: var(--ink-muted);
+    border-radius: 999px; padding: 6px 13px; font-size: 12.5px; font-weight: 550;
+    cursor: pointer; flex-shrink: 0; transition: all .15s;
+  }
+  .ez-close:hover { color: var(--ink); border-color: var(--ink); }
+
+  .ez-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+    gap: 12px;
+  }
+  .ez-grid.cols-4 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  @media (min-width: 1120px) {
+    .ez-grid.cols-4 { grid-template-columns: repeat(4, 1fr); }
+    .exploded-zone.wide { width: min(980px, 100%); }
+  }
+  .child-card {
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: 20px;
+    padding: 18px 18px 16px;
+    cursor: pointer; text-align: left; color: var(--ink);
+    display: flex; flex-direction: column; gap: 7px;
+    box-shadow: var(--shadow-sm);
+    animation: burstChild 0.42s cubic-bezier(0.22, 1, 0.36, 1) both;
+    animation-delay: var(--delay, 0s);
+    transition: transform .18s, border-color .18s, box-shadow .18s;
+  }
+  .child-card:hover {
+    transform: translateY(-3px);
+    border-color: var(--ec);
+    box-shadow: var(--shadow-md);
+  }
+  .cc-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .cc-tag {
+    font-size: 11px; font-weight: 600; color: var(--ec);
+    background: color-mix(in srgb, var(--ec) 11%, transparent);
+    padding: 2px 9px; border-radius: 999px;
+  }
+  .cc-name { font-size: 15.5px; font-weight: 700; letter-spacing: -0.015em; }
+  .cc-desc { font-size: 12.8px; color: var(--ink-muted); flex: 1; }
+  .cc-foot {
+    margin-top: 4px; font-size: 12px; font-weight: 600; color: var(--ec);
+    display: flex; align-items: center; justify-content: space-between;
+  }
+
+  /* Bottom Story Strip inside Canvas (only shown when a specific question is active) */
+  .story-strip {
+    display: none;
+    margin-top: 14px; padding: 11px 16px;
+    background: var(--surface-soft); border-radius: 14px;
+    font-size: 13px; color: var(--ink-muted);
+    animation: fadeUp 0.25s ease both;
+  }
+  .story-strip.visible { display: block; }
+  .story-strip strong { color: var(--ink); font-weight: 650; }
+  .story-strip.fault {
+    background: var(--danger-soft); color: var(--ink);
+    border: 1px solid color-mix(in srgb, var(--danger) 28%, transparent);
+  }
+
+  /* Level 3: Floating Detail Card Modal */
+  .modal-backdrop {
+    position: fixed; inset: 0; z-index: 60;
+    background: var(--backdrop);
+    backdrop-filter: blur(8px);
+    opacity: 0; pointer-events: none; transition: opacity .22s ease;
+  }
+  .modal-backdrop.open { opacity: 1; pointer-events: auto; }
+
+  .modal-card {
+    position: fixed; top: 50%; left: 50%; z-index: 65;
+    transform: translate(-50%, -47%) scale(0.94);
+    width: min(620px, 92vw);
+    max-height: 86vh;
+    background: var(--surface);
+    border: 1px solid var(--border-strong);
+    border-radius: 26px;
+    box-shadow: var(--shadow-lg);
+    display: flex; flex-direction: column; overflow: hidden;
+    opacity: 0; pointer-events: none; visibility: hidden;
+    transition: opacity 0.22s ease, transform 0.26s cubic-bezier(0.22, 1, 0.36, 1), visibility 0.26s;
+  }
+  .modal-card.open {
+    opacity: 1; pointer-events: auto; visibility: visible;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  .m-head {
+    padding: 22px 26px 16px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: flex-start; justify-content: space-between; gap: 14px;
+  }
+  .m-crumb { font-size: 12px; color: var(--mc, var(--terra)); font-weight: 600; margin-bottom: 4px; }
+  .m-title { font-size: 21px; font-weight: 700; letter-spacing: -0.02em; }
+  .m-close {
+    width: 32px; height: 32px; border-radius: 50%;
+    border: 1px solid var(--border); background: var(--surface-soft); color: var(--ink-muted);
+    font-size: 18px; cursor: pointer; display: grid; place-items: center; flex-shrink: 0;
+  }
+  .m-close:hover { color: var(--ink); border-color: var(--border-strong); }
+
+  .m-body {
+    padding: 20px 26px 24px; overflow-y: auto;
+    display: flex; flex-direction: column; gap: 16px;
+  }
+  .m-lead { font-size: 14.5px; color: var(--ink); line-height: 1.65; }
+
+  .analogy {
+    background: color-mix(in srgb, var(--mc, var(--terra)) 8%, var(--surface-soft));
+    border: 1px solid color-mix(in srgb, var(--mc, var(--terra)) 22%, transparent);
+    border-radius: 16px; padding: 13px 16px;
+  }
+  .analogy-lbl { font-size: 11.5px; font-weight: 700; color: var(--mc, var(--terra)); display: block; margin-bottom: 3px; }
+  .analogy-txt { font-size: 13.5px; color: var(--ink); line-height: 1.6; }
+
+  .m-sec h4 { font-size: 11.5px; font-weight: 650; color: var(--ink-dim); margin-bottom: 8px; }
+  .m-list { list-style: none; display: flex; flex-direction: column; gap: 7px; }
+  .m-list li { font-size: 13.5px; padding-left: 15px; position: relative; color: var(--ink-muted); line-height: 1.58; }
+  .m-list li::before {
+    content: ""; position: absolute; left: 0; top: 9px; width: 5px; height: 5px;
+    border-radius: 50%; background: var(--mc, var(--terra));
+  }
+
+  .m-links { display: flex; flex-wrap: wrap; gap: 8px; }
+  .repo-pill {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: var(--surface-soft); border: 1px solid var(--border);
+    border-radius: 999px; padding: 7px 13px; text-decoration: none; color: var(--ink);
+    font-size: 12.8px; font-weight: 550; transition: all .15s;
+  }
+  .repo-pill:hover { transform: translateY(-1px); border-color: var(--mc, var(--terra)); background: var(--surface); }
+  .repo-pill span.arr { color: var(--mc, var(--terra)); }
+
+  details.m-paths { border-top: 1px dashed var(--border-strong); padding-top: 11px; }
+  details.m-paths summary { font-size: 12px; color: var(--ink-dim); cursor: pointer; list-style: none; }
+  details.m-paths summary:hover { color: var(--ink); }
+  .p-wrap { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 8px; }
+  .p-chip {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: var(--surface-soft); border: 1px solid var(--border); border-radius: 8px;
+    padding: 4px 9px; font-size: 11.5px; color: var(--ink-muted);
+  }
+  .p-chip button {
+    border: none; background: var(--surface); color: var(--ink-muted);
+    border-radius: 5px; padding: 1px 6px; font-size: 10.5px; cursor: pointer;
+  }
+
+  .m-foot {
+    padding: 12px 22px; border-top: 1px solid var(--border);
+    background: var(--surface-soft);
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  }
+  .m-nav-btn {
+    border: 1px solid var(--border-strong); background: var(--surface); color: var(--ink);
+    border-radius: 999px; padding: 5px 13px; font-size: 12px; font-weight: 550; cursor: pointer;
+  }
+  .m-nav-btn:hover { background: var(--surface-hover); }
+
+  /* Collapsible Directory */
+  .dir-section { margin: 18px 0 22px; }
+  .dir-toggle {
+    width: 100%; background: var(--surface); border: 1px solid var(--border);
+    border-radius: 20px; padding: 15px 22px; cursor: pointer; color: var(--ink);
+    display: flex; align-items: center; justify-content: space-between; gap: 14px;
+    box-shadow: var(--shadow-sm); transition: border-color .15s;
+  }
+  .dir-toggle:hover { border-color: var(--border-strong); }
+  .dir-toggle h3 { font-size: 14.5px; font-weight: 650; text-align: left; }
+  .dir-toggle p { font-size: 12.5px; color: var(--ink-muted); text-align: left; }
+  .dir-chev {
+    width: 30px; height: 30px; border-radius: 50%; background: var(--surface-soft);
+    display: grid; place-items: center; transition: transform .22s; flex-shrink: 0;
+  }
+  .dir-section.open .dir-chev { transform: rotate(180deg); }
+  .dir-body {
+    display: none; margin-top: 12px;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 22px;
+    padding: 20px 22px; box-shadow: var(--shadow-sm);
+  }
+  .dir-section.open .dir-body { display: block; animation: fadeUp 0.25s ease both; }
+  .dir-search {
+    border: 1px solid var(--border-strong); background: var(--surface-soft); color: var(--ink);
+    border-radius: 999px; padding: 7px 15px; font-size: 12.5px; width: 260px; outline: none; margin-bottom: 14px;
+  }
+  .dir-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(255px, 1fr)); gap: 10px; }
+  .dir-card {
+    background: var(--surface-soft); border-radius: 15px; padding: 12px 14px;
+    display: flex; flex-direction: column; gap: 5px; border: 1px solid transparent;
+    transition: border-color .15s, background .15s;
+  }
+  .dir-card:hover { border-color: var(--border-strong); background: var(--surface); }
+  .dir-top { display: flex; justify-content: space-between; gap: 8px; font-size: 13px; font-weight: 650; }
+  .dir-ver { font-size: 11px; color: var(--ink-dim); font-weight: 400; }
+  .dir-desc { font-size: 12px; color: var(--ink-muted); flex: 1; }
+  .dir-foot { display: flex; justify-content: space-between; font-size: 11.5px; margin-top: 3px; }
+  .dir-foot button { border: none; background: none; color: var(--terra); font-weight: 600; cursor: pointer; padding: 0; font-size: 11.5px; }
+  .dir-foot a { color: var(--ink-muted); text-decoration: none; }
+  .dir-foot a:hover { color: var(--ink); text-decoration: underline; }
+
+  footer {
+    max-width: 1200px; width: 100%; margin: 0 auto 20px; padding: 0 24px;
+    font-size: 12px; color: var(--ink-dim);
+    display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px;
+  }
+  footer a { color: var(--ink-muted); text-decoration: none; }
+
+  /* Tablet & Narrow Window (641px - 1040px) */
+  @media (max-width: 1040px) {
+    .canvas-card { padding: 20px; }
+    .stage {
+      grid-template-columns: 1fr 1fr;
+      grid-template-rows: auto;
+      gap: 16px;
+      min-height: auto;
+      padding: 4px 0;
+    }
+    .stage-svg { display: none; }
+    .pos-s1, .pos-s2, .pos-s3, .pos-s4, .pos-s5 {
+      grid-column: auto; grid-row: auto; align-self: stretch; transform: none !important;
+    }
+    .pos-s5 { grid-column: 1 / -1; }
+    .exploded-zone { max-height: 82vh; overflow-y: auto; }
+  }
+
+  /* Mobile (<= 640px): vertical guided timeline + bottom sheets */
+  @media (max-width: 640px) {
+    .nav-inner { padding: 10px 14px; gap: 8px; }
+    .brand { gap: 8px; min-width: 0; }
+    .brand-dot { width: 26px; height: 26px; font-size: 13px; flex-shrink: 0; }
+    .brand-name { font-size: 13.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .brand-sub, .hide-mobile { display: none; }
+    .nav-actions { gap: 6px; flex-shrink: 0; }
+    .pill-btn { padding: 5px 10px; font-size: 11.5px; white-space: nowrap; }
+    .wrap { padding: 0 16px; }
+    .hero { padding: 16px 0 12px; gap: 12px; }
+    .hero h1 { font-size: 20px; line-height: 1.32; }
+    .hero-pills {
+      width: 100%; display: grid; grid-template-columns: repeat(3, 1fr);
+      gap: 8px; padding: 11px 12px; border-radius: 16px;
+    }
+    .hp { white-space: normal; }
+    .hp b { font-size: 14px; }
+    .hp span { font-size: 10.5px; }
+
+    .toolbar { margin-bottom: 10px; }
+    .stories {
+      flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch;
+      scrollbar-width: none; padding-bottom: 2px; width: 100%;
+    }
+    .stories::-webkit-scrollbar { display: none; }
+    .story-btn { flex-shrink: 0; padding: 6px 12px; font-size: 12px; }
+
+    .canvas-sec { flex: 0 0 auto; }
+    .canvas-card { padding: 16px 14px; border-radius: 22px; flex: 0 0 auto; }
+    .stage {
+      grid-template-columns: 1fr; gap: 12px; padding: 2px 0 2px 22px;
+    }
+    .stage::before {
+      content: ""; position: absolute; left: 7px; top: 22px; bottom: 22px; width: 0;
+      border-left: 2px dashed var(--wire); z-index: 0;
+    }
+    .d-node { padding: 15px 16px; border-radius: 18px; }
+    .d-node::before {
+      content: ""; position: absolute; left: -20px; top: 24px;
+      width: 10px; height: 10px; border-radius: 50%;
+      background: var(--surface); border: 2px solid var(--dc, var(--terra));
+      z-index: 3;
+    }
+    .pos-s1::before { background: var(--terra); border-color: var(--terra); }
+    .pos-s5 { grid-column: auto; }
+
+    /* Exploded view becomes a sleek full-viewport bottom sheet on mobile */
+    .exploded-layer {
+      position: fixed; inset: 0; z-index: 55;
+      background: transparent; padding: 0;
+      align-items: flex-end; justify-content: center;
+      transition: background .22s ease;
+    }
+    .exploded-layer.open {
+      background: var(--backdrop);
+      backdrop-filter: blur(6px);
+    }
+    .exploded-zone {
+      width: 100%; max-height: 84dvh; overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      border-radius: 26px 26px 0 0; border-bottom: none;
+      padding: 14px 18px calc(28px + env(safe-area-inset-bottom, 0px));
+      box-shadow: 0 -16px 48px rgba(0, 0, 0, 0.22);
+    }
+    .exploded-zone::before {
+      content: ""; display: block; width: 38px; height: 4px; border-radius: 99px;
+      background: var(--border-strong); margin: 0 auto 14px;
+    }
+    .ez-head { flex-wrap: wrap; gap: 10px; margin-bottom: 14px; }
+    .ez-title { font-size: 18px; }
+    .ez-grid, .ez-grid.cols-4 { grid-template-columns: 1fr; gap: 10px; padding-bottom: 6px; }
+
+    /* Floating card also becomes a thumb-friendly bottom sheet on mobile */
+    .modal-card {
+      top: auto; bottom: 0; left: 0; right: 0;
+      width: 100%; max-width: 100%; max-height: 86dvh;
+      border-radius: 26px 26px 0 0; border-bottom: none;
+      transform: translateY(100%);
+    }
+    .modal-card.open { transform: translateY(0); }
+    .m-head { padding: 18px 20px 14px; }
+    .m-body { padding: 16px 20px 20px; }
+    .m-foot { padding: 12px 18px calc(12px + env(safe-area-inset-bottom, 0px)); }
+
+    .dir-toggle { padding: 14px 16px; border-radius: 18px; }
+    .dir-search { width: 100%; }
+    footer { padding: 0 16px; font-size: 11.5px; }
+  }
+
+  /* Landscape phone & short viewport (<= 560px tall, e.g. iPhone landscape 932x430) */
+  @media (max-height: 560px) {
+    .exploded-layer {
+      padding: 10px calc(14px + env(safe-area-inset-right, 0px)) 10px calc(14px + env(safe-area-inset-left, 0px));
+      align-items: center;
+    }
+    .exploded-zone {
+      width: min(860px, 100%);
+      max-height: 92dvh;
+      border-radius: 22px;
+      border-bottom: 2px dashed color-mix(in srgb, var(--ec, var(--terra)) 62%, transparent);
+      padding: 14px 18px 16px;
+    }
+    .exploded-zone::before { display: none; }
+    .ez-head { margin-bottom: 10px; gap: 10px; }
+    .ez-kicker { margin-bottom: 3px; }
+    .ez-title { font-size: 17px; }
+    .ez-desc { font-size: 12px; }
+    .ez-grid, .ez-grid.cols-4 { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+    .child-card { padding: 12px 14px; border-radius: 15px; gap: 4px; }
+    .cc-name { font-size: 14px; }
+    .cc-desc { font-size: 12px; }
+
+    .modal-card {
+      top: 50%; bottom: auto; left: 50%; right: auto;
+      width: min(640px, 92vw); max-height: 92dvh;
+      border-radius: 22px; border-bottom: 1px solid var(--border-strong);
+      transform: translate(-50%, -47%) scale(0.95);
+    }
+    .modal-card.open { transform: translate(-50%, -50%) scale(1); }
+    .m-head { padding: 14px 20px 10px; }
+    .m-title { font-size: 18px; }
+    .m-body { padding: 12px 20px 14px; gap: 11px; }
+    .m-foot { padding: 9px 18px; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .enter, .d1, .exploded-zone, .child-card, .modal-card { animation: none !important; }
+    .orb { display: none !important; }
+  }
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-inner">
+    <a class="brand" href="#">
+      <span class="brand-dot">π</span>
+      <span class="brand-name"><span id="brandTitle">akis-pi Workbench</span> <span id="brandSub" class="brand-sub">· Pi 1.6.0</span></span>
+    </a>
+    <div class="nav-actions">
+      <a id="navCodexExec" class="pill-btn subtle hide-mobile" href="#" target="_blank" rel="noopener">pi-codex-exec ↗</a>
+      <a id="navRepo" class="pill-btn subtle" href="#" target="_blank" rel="noopener">GitHub ↗</a>
+      <button id="langBtn" class="pill-btn" type="button">EN / 中文</button>
+      <button id="themeBtn" class="pill-btn" type="button">◐</button>
+    </div>
+  </div>
+</nav>
+
+<div class="wrap">
+  <header class="hero enter">
+    <div class="hero-copy">
+      <h1 id="heroTitle"></h1>
+    </div>
+    <div class="hero-pills" id="heroPills"></div>
+  </header>
+
+  <section class="canvas-sec enter d1">
+    <div class="toolbar">
+      <div class="stories" role="tablist" id="storyBar"></div>
+    </div>
+
+    <div class="canvas-card">
+      <div id="stage" class="stage">
+        <svg id="stageSvg" class="stage-svg" aria-hidden="true"></svg>
+      </div>
+
+      <div id="storyStrip" class="story-strip">
+        <span id="storyText"></span>
+      </div>
+    </div>
+  </section>
+
+  <section id="dirSection" class="dir-section">
+    <button id="dirToggle" class="dir-toggle" type="button" aria-expanded="false">
+      <div>
+        <h3 id="dirTitle"></h3>
+        <p id="dirSub"></p>
+      </div>
+      <span class="dir-chev">⌄</span>
+    </button>
+    <div class="dir-body">
+      <input id="dirSearch" class="dir-search" type="search" />
+      <div id="dirGrid" class="dir-grid"></div>
+    </div>
+  </section>
+</div>
+
+<footer>
+  <span id="footLeft"></span>
+  <span id="footRight"></span>
+</footer>
+
+<div id="explodedLayer" class="exploded-layer"></div>
+
+<div id="modalBackdrop" class="modal-backdrop"></div>
+<div id="modalCard" class="modal-card" role="dialog" aria-modal="true" aria-hidden="true">
+  <div class="m-head">
+    <div>
+      <div id="mCrumb" class="m-crumb"></div>
+      <h2 id="mTitle" class="m-title"></h2>
+    </div>
+    <button id="mClose" class="m-close" type="button" aria-label="Close">×</button>
+  </div>
+  <div id="mBody" class="m-body"></div>
+  <div class="m-foot">
+    <button id="mPrev" class="m-nav-btn" type="button"></button>
+    <span id="mIdx" style="font-size:12px;color:var(--ink-dim)"></span>
+    <button id="mNext" class="m-nav-btn" type="button"></button>
+  </div>
+</div>
+
+<script>
+const GH_OWNER = /\.github\.io$/i.test(location.hostname) ? location.hostname.split(".")[0] : "";
+const GH_REPO = GH_OWNER ? (location.pathname.split("/").filter(Boolean)[0] || "akis-pi") : "";
+const REPO_URL = GH_OWNER ? `https://github.com/${GH_OWNER}/${GH_REPO}` : "../";
+const CODEX_EXEC_URL = GH_OWNER ? `https://github.com/${GH_OWNER}/pi-codex-exec` : "";
+
+document.getElementById("navRepo").href = REPO_URL;
+const navCE = document.getElementById("navCodexExec");
+if (CODEX_EXEC_URL) {
+  navCE.href = CODEX_EXEC_URL;
+} else {
+  navCE.style.display = "none";
+}
+
+const CONTENT = {
+  en: {
+    htmlLang: "en",
+    pageTitle: "akis-pi · Interactive Pi Coding Agent Architecture",
+    brandTitle: "akis-pi Workbench",
+    brandSub: "· Pi 1.6.0",
+    themeLabel: "◐ Theme",
+    heroTitle: "Deconstructing Codex into a Lean, Auditable Personal AI Workbench",
+    pills: [
+      { val: "$0.2–0.7/day", lbl: "98% prompt cache hit", color: "var(--sage)" },
+      { val: "5 Roles", lbl: "Cheap exec · Strong review", color: "" },
+      { val: "24/24 PASS", lbl: "Automated guards & 36 snapshots", color: "var(--terra)" }
+    ],
+    stories: {
+      overview: { label: "Overview", active: null, fault: false, text: "<strong>Read left to right:</strong> 01 Terminal & Safety Gate → 02 Main Hub (codemode: only) → 03 Specialist Subagents / 04 Dual-Track Memory → 05 Gateway, Fallback & Automated Guards." },
+      daily: { label: "Why so cheap?", active: ["interface","core","memory","infra"], fault: false, text: "<strong>Why so cheap?</strong> A fast, low-cost main model runs the long-lived loop at ~98% cache hit ($0.2–0.7/day). Expensive reasoning models only enter short-lived specialist subagents." },
+      review: { label: "Anti-loop Review", active: ["core","orchestration","infra"], fault: false, text: "<strong>When edits keep failing:</strong> Run a script to verify numbers before review → strict read-only reviewer lists all blockers once → 2 consecutive FAILs trigger a circuit breaker to escalate." },
+      memory: { label: "Weeks Without Forgetting", active: ["core","memory"], fault: false, text: "<strong>Weeks-long context:</strong> Magic Context 0.49.76 silently archives old turns on demand; personal notes & past chats stay physically isolated in patched pi-knowledge + RESIDENT.md." },
+      fallback: { label: "Gateway Down?", active: ["interface","core","infra"], fault: true, text: "<strong>Gateway offline?</strong> Open a clean session and manually switch via /model to direct provider fallback. Intentionally manual so request redaction is never silently bypassed." }
+    },
+    ui: {
+      blocks: "blocks ↗",
+      openCard: "Inspect details",
+      inside: "Inside",
+      nextStop: "Next",
+      collapse: "Collapse ×",
+      prev: "← Prev",
+      next: "Next →",
+      analogy: "Codex Comparison",
+      keyDesign: "Key Engineering Choices",
+      repos: "Open-Source Packages & Repos",
+      paths: "▸ View configuration paths",
+      copy: "Copy",
+      copied: "Copied",
+      failed: "Failed",
+      dirTitle: "Browse All 20 Core Packages & Modules",
+      dirSub: "Collapsed by default to keep the map calm; expand to filter by feature and jump to GitHub.",
+      dirPlaceholder: "Search: permission, PTY, memory, vision, browser...",
+      openNote: "Open card ↑",
+      localOnly: "Local / Included",
+      footLeft: `Pi 1.6.0 · Magic Context 0.49.76 · Shareable config: <a href="${REPO_URL}" target="_blank" rel="noopener">akis-pi</a>`,
+      footRight: "Baseline verified 2026-11-25 · Click any node to explode"
+    },
+    domains: [
+      {
+        id: "interface", step: "01", pos: "pos-s1", color: "var(--slate)", start: true,
+        tag: "01 · Entry & Guard", title: "Terminal UI & Safety Gate",
+        sub: "AST permission gate · Auto-review · Vision · Web & Desktop",
+        intro: "Fast daily ergonomics with defense-in-depth: safe commands pass in 0 ms while risky actions are AST-gated and auto-reviewed.",
+        children: [
+          {
+            id: "if-host", name: "Polished Terminal Workbench", tag: "6 UX extensions",
+            short: "Live sidebar telemetry, keyboard menus, clipboard images, encrypted mobile handoff.",
+            lead: "Runs inside Ghostty + Herdr persistent panes with live context/cost telemetry, Ctrl+V image pasting, collapsible tool output, and mobile continuation.",
+            analogy: "Adds live side-panel telemetry, arrow-key decision modals, native clipboard image paste, and encrypted phone continuation on top of a Codex-class CLI.",
+            bullets: [
+              "pi-atelier 0.21.0 sidebar/footer + pi-compact-tools 0.18.0 (edit expanded by default, noisy output folded).",
+              "pi-ask-user 0.17.2 for structured prompts, @getpipher/vision 0.5.3 for [Image-#N] paste, pi-mobile 0.4.0 & pi-away 0.1.4."
+            ],
+            paths: ["~/.pi/agent/pi-atelier.json", "~/.pi/agent/compact-tools.json"],
+            links: [
+              { name: "pi-atelier", url: "https://github.com/michaelmjhhhh/pi-atelier" },
+              { name: "pi-compact-tools", url: "https://github.com/nedleeds/pi-compact-tools" },
+              { name: "pi-ask-user", url: "https://github.com/edlsh/pi-ask-user" },
+              { name: "@getpipher/vision", url: "https://github.com/getpipher/vision" },
+              { name: "pi-mobile", url: "https://github.com/jkeskikangas/pi-mobile" }
+            ]
+          },
+          {
+            id: "if-perm", name: "Two-Layer Permission Gate", tag: "AST + Auto-Review",
+            short: "0 ms allow for safe commands; AST rules + 9-tier failover reviewer for risky ops.",
+            lead: "Combines deterministic bash AST rules with an automated reviewer model (codex preset). Unreachable reviewer or external/sensitive path writes always fail-closed to human approval.",
+            analogy: "Brings Codex-style auto-approval to Pi—plus native shellTools parity cut approval overhead by 94.6% (684.8s → 37.0s) in head-to-head benchmarks.",
+            bullets: [
+              "pi-permission-system 42.2.1 parses composite shell commands via tree-sitter-bash, including rtk-rewritten commands and codemode nested calls.",
+              "pi-permission-auto-review 1.0.2 routes through an ordered fallback model group; external_directory & path_write stay human-gated.",
+              "Both depersonalised templates ship directly in akis-pi core and render cleanly via render.mjs."
+            ],
+            paths: ["~/.pi/agent/extensions/pi-permission-system/config.json", "~/.pi/agent/extensions/pi-permission-auto-review/config.json"],
+            links: [
+              { name: "pi-permission-system", url: "https://github.com/gotgenes/pi-packages/tree/main/packages/pi-permission-system" },
+              { name: "pi-permission-auto-review", url: "https://github.com/mzwing/pi-packages/tree/main/packages/pi-permission-auto-review" }
+            ]
+          },
+          {
+            id: "if-cap", name: "Web, Browser & Desktop Tools", tag: "Right tool per task",
+            short: "Fast public web/PDF fetch, automated browser CLI 0.44.0, headless macOS UI control.",
+            lead: "Separates fast unauthenticated web/PDF scraping from full browser automation and macOS Accessibility desktop control.",
+            analogy: "Extends beyond pure terminal coding with structured search routing (Exa/Brave/Bocha/Gemini), browser automation, local PyMuPDF parsing, and PPT generation.",
+            bullets: [
+              "pi-web-access 0.48.0 with multi-provider search fallback + optional local PyMuPDF PDF endpoint.",
+              "pi-agent-browser-native 0.9.42 paired with agent-browser CLI 0.44.0 and @injaneity/pi-computer-use 0.5.1."
+            ],
+            paths: ["~/.pi/agent/web-search.json", "~/.pi/agent/extensions/pi-computer-use.json"],
+            links: [
+              { name: "pi-web-access", url: "https://github.com/nicobailon/pi-web-access" },
+              { name: "pi-agent-browser-native", url: "https://github.com/fitchmultz/pi-agent-browser-native" },
+              { name: "pi-computer-use", url: "https://github.com/injaneity/pi-computer-use" }
+            ]
+          }
+        ]
+      },
+      {
+        id: "core", step: "02", pos: "pos-s2", color: "var(--terra)",
+        tag: "02 · Core Hub", title: "Main Loop & Execution Engine",
+        sub: "codemode: only · 6 direct tools · Optional Codex-style PTY",
+        intro: "Keep the main loop lean, cache-friendly, and fast—delegate heavy reasoning to short-lived roles.",
+        children: [
+          {
+            id: "core-econ", name: "Main-Loop Cost Discipline", tag: "$0.2–0.7/day",
+            short: "Fast affordable model manages the long session; flagship models enter only on demand.",
+            lead: "Long conversations re-read hundreds of thousands of tokens on every turn. Keeping a fast, high-cache model in the driver's seat preserves ~98% cache hits at pennies per day.",
+            analogy: "Like having a steady project lead track the whole repo all day, calling a principal engineer in for 5-minute reviews when it counts.",
+            bullets: [
+              "Provider retries disabled (maxRetries: 0) to prevent client × gateway retry amplification.",
+              "Decoupled role placeholders in akis-pi let any OpenAI-compatible provider slot right in."
+            ],
+            paths: ["~/.pi/agent/settings.json"],
+            links: [{ name: "akis-pi config templates", url: REPO_URL }]
+          },
+          {
+            id: "core-tools", name: "Minimal Tool Surface (codemode: only)", tag: "13-day verified",
+            short: "6 direct tools visible; 50+ tools discovered on demand inside QuickJS sandbox.",
+            lead: "Cuts first-turn prompt overhead by ~45% and keeps directSchemaChars at 22,405 (well under the 26,682 warn line).",
+            analogy: "Instead of dumping 50+ tool manuals on the desk every turn, keep 6 clean buttons and let scripts batch calls in one round-trip.",
+            bullets: [
+              "13-day production audit (2,842 scripts): 3.48% total failure rate, only 2.2% discovery probes, 0% edit parameter-name guessing.",
+              "61.6% of script errors were JS SyntaxError/ReferenceError from nested quoting—fixed directly via concise rules in APPEND_SYSTEM.md."
+            ],
+            paths: ["~/.pi/agent/APPEND_SYSTEM.md"],
+            links: []
+          },
+          {
+            id: "core-exec", name: "Unified PTY Execution (Optional Add-on)", tag: "pi-codex-exec v1.2",
+            short: "Single-track exec_command + write_stdin, real-time 0600 logs, opt-in macOS Seatbelt.",
+            lead: "Portable akis-pi uses built-in bash + rtk.ts out of the box. For full Codex-style interactive PTYs (debuggers, REPLs, SSH), drop in our open-source pi-codex-exec extension.",
+            analogy: "Replaces dual-track bash + interactive shell with Codex's unified model: short commands return inline; long ones yield a session_id with unbroken disk logs.",
+            bullets: [
+              "Real-time full_output_path mirroring (0600, 24h auto-prune) + setsid-aware process-tree reaping.",
+              "Opt-in macOS sandbox-exec (PI_CODEX_EXEC_SANDBOX=protect-sensitive) kernel-blocks writes to ~/.ssh, sessions, and permission configs."
+            ],
+            paths: ["~/.pi/vendor/pi-codex-exec/index.ts", "~/.pi/agent/extensions/rtk.ts"],
+            links: CODEX_EXEC_URL ? [{ name: "pi-codex-exec (MIT)", url: CODEX_EXEC_URL }] : []
+          },
+          {
+            id: "core-rules", name: "Two Executable Safeguards", tag: "No fluff prompts",
+            short: "Script-verified math before review + 2-round failure circuit breaker.",
+            lead: "Replaces vague 'be careful' instructions with two concrete, enforceable habits in AGENTS.md.",
+            analogy: "Eliminates the two classic agent failure modes: mental arithmetic errors on logs, and endless retry loops.",
+            bullets: [
+              "Totals, durations, and log counts must be computed by a one-off script from raw files.",
+              "2 consecutive review FAILs on the same scope automatically halt the main loop and escalate to the strongest model."
+            ],
+            paths: ["~/.pi/agent/AGENTS.md"],
+            links: []
+          }
+        ]
+      },
+      {
+        id: "orchestration", step: "03", pos: "pos-s3", color: "var(--ochre)",
+        tag: "03 · Delegation", title: "5-Role Specialist Subagents",
+        sub: "Role-based tool isolation · Decoupled model tiers · Strict reviewer",
+        intro: "Split monolithic coding loops into 5 focused roles where writers can never approve their own work.",
+        children: [
+          {
+            id: "sub-exec", name: "Execution Trio (explore / implement / lead)", tag: "Fast & cheap",
+            short: "Scout, edit, and orchestrate without polluting the main session context.",
+            lead: "explore is strictly read-only with no shell; implement is the focused code writer; lead decomposes multi-step tasks up to depth 2.",
+            analogy: "Scanning 200 files stays inside explore's throwaway context, returning only a crisp summary to your main thread.",
+            bullets: [
+              "Role files carry zero concrete model IDs—model tiers live centrally in settings.json.",
+              "pi-subagents 0.90.0 with inline summary display + FleetView below the editor."
+            ],
+            paths: ["~/.pi/agent/agents/explore.md", "~/.pi/agent/agents/implement.md", "~/.pi/agent/agents/lead.md"],
+            links: [{ name: "pi-subagents", url: "https://github.com/nicobailon/pi-subagents" }]
+          },
+          {
+            id: "sub-review", name: "Independent Reviewer + Circuit Breaker", tag: "Read-only judge",
+            short: "Runs real commands to falsify claims; classifies BLOCKER vs NIT; single VERDICT.",
+            lead: "A heterogeneous stronger model reviews completed work in a fresh read-only context with bash + rtk compression and a 200/300 toolBudget guard.",
+            analogy: "Prevents an agent from grading its own homework; 2 consecutive FAILs trigger automatic escalation.",
+            bullets: [
+              "Lists all confirmed issues in one pass: BLOCKER (bugs, wrong math, failed gates) fails; NIT never blocks.",
+              "Strictly read-only—cannot silently edit files while reviewing."
+            ],
+            paths: ["~/.pi/agent/agents/review.md"],
+            links: [{ name: "Role templates (akis-pi)", url: REPO_URL }]
+          },
+          {
+            id: "sub-analyze", name: "Architecture Advisor (analyze)", tag: "Evidence first",
+            short: "Reads source, compares trade-offs, and separates verified facts from guesses.",
+            lead: "Read-only strong reasoning role invoked before high-impact changes or upgrades to audit diffs, constraints, and risks.",
+            analogy: "Like a dedicated Plan mode running in an uncontaminated context window.",
+            bullets: [
+              "Protected by soft 200 / hard 300 toolBudget to stop runaway exploration.",
+              "Outputs concrete evidence and options; never modifies production files."
+            ],
+            paths: ["~/.pi/agent/agents/analyze.md"],
+            links: []
+          }
+        ]
+      },
+      {
+        id: "memory", step: "04", pos: "pos-s4", color: "var(--sage)",
+        tag: "04 · Dual Memory", title: "Isolated Dual-Track Memory",
+        sub: "Project compaction (MC 0.49.76) · Personal knowledge · Data ≠ Instructions",
+        intro: "Project context and personal knowledge are physically isolated—and retrieved memories are treated strictly as data, never authorization.",
+        children: [
+          {
+            id: "mem-mc", name: "Project Long Memory (Magic Context 0.49.76)", tag: "400k threshold",
+            short: "Silent background archival for weeks-long threads with on-demand ctx_expand.",
+            lead: "Archives older conversation segments without breaking flow, keeping project decisions searchable via ctx_search / ctx_memory.",
+            analogy: "Like Codex compaction with a filing cabinet: archived turns stay retrievable verbatim whenever needed.",
+            bullets: [
+              "Tuned thresholds: 400k token trigger, 3,000-token injection budget, 600s historian timeout.",
+              "v0.49.76 fixes Gemini cache-loss edge cases, large-memory summary bloat, and symlink safety—with zero DB migration."
+            ],
+            paths: ["~/.config/cortexkit/magic-context.jsonc"],
+            links: [{ name: "@cortexkit/pi-magic-context", url: "https://www.npmjs.com/package/@cortexkit/pi-magic-context" }]
+          },
+          {
+            id: "mem-personal", name: "Personal Knowledge + RESIDENT Card", tag: "0.15.0 + 4 patches",
+            short: "6,000-char resident profile + local semantic/hybrid search over notes and archives.",
+            lead: "Injects a concise RESIDENT.md section without overwriting system prompts or breaking KV cache; deeper history lives in local pi-knowledge indexes.",
+            analogy: "One crisp cheat-sheet always on the desk + an offline private library searched only when relevant.",
+            bullets: [
+              "4 curated patches on pi-knowledge v0.15.0: tail-latency optimization, true markdown line spans, lock/mismatch guards, optional QML grammar.",
+              "Intentionally pinned on v0.15.0 rather than v0.16.x's background daemon + schema v8 overhaul."
+            ],
+            paths: ["~/.pi/agent/memory/RESIDENT.md", "~/.pi/vendor/pi-knowledge"],
+            links: [{ name: "nczz/pi-knowledge", url: "https://github.com/nczz/pi-knowledge" }]
+          },
+          {
+            id: "mem-dream", name: "Overnight Distillation & Boundaries", tag: "Data ≠ Commands",
+            short: "Scheduled extraction keeps summaries tagged unconfirmed and never overwrites curated notes.",
+            lead: "Separates raw machine-extracted notes from human-curated RESIDENT.md, with explicit privacy filtering before persistence.",
+            analogy: "Like reviewing daily scratch notes overnight—helpful pointers, never blindly promoted into permanent truth.",
+            bullets: [
+              "Historical assistant replies are never treated as user preferences or execution approval.",
+              "macOS caffeinate -i guards scheduled runs against idle sleep timeouts."
+            ],
+            paths: ["~/.pi/agent/extensions/resident-memory.ts"],
+            links: []
+          }
+        ]
+      },
+      {
+        id: "infra", step: "05", pos: "pos-s5", color: "var(--terra)",
+        tag: "05 · Infra & Gates", title: "Gateway · Fallback · Governance",
+        sub: "Magpie redaction gateway · Direct escape hatch · Automated verification",
+        intro: "Treat your agent configuration like real software: unified routing, explicit fallback, repeatable verification, and clean sharing.",
+        children: [
+          {
+            id: "in-magpie", name: "Local Gateway (Magpie)", tag: "Routing + Redaction",
+            short: "Single local gateway for model routing, request masking, media MCP, and skill index.",
+            lead: "Centralizes provider keys and model catalogs at 127.0.0.1:3425, applies outbound PII/secret redaction, and trims Pi's skill index by 42%.",
+            analogy: "A surge-protected power strip for all LLM providers—switch upstreams or failover groups without editing agent configs.",
+            bullets: [
+              "Supports ordered failover routing groups (e.g. dedicated 9-tier auto-review failover chain).",
+              "Dedicated stdio magpie mcp image bypasses browser-UA filtering for reliable media generation."
+            ],
+            paths: ["~/.pi/agent/mcp.json", "~/.pi/agent/extensions/magpie.ts"],
+            links: [{ name: "Magpie", url: "https://github.com/yetone/magpie" }]
+          },
+          {
+            id: "in-fallback", name: "Manual Escape Hatch", tag: "Explicit failover",
+            short: "If the local gateway goes down, open a clean session and switch via /model.",
+            lead: "Keeps direct official provider entries ready for emergencies without silent auto-failover that could bypass request redaction.",
+            analogy: "An emergency stairwell: clearly marked, manually chosen when the elevator is out.",
+            bullets: [
+              "Prevents accidental unredacted leaks or long-session cache busting during transient gateway restarts.",
+              "Clean fallback session can even diagnose and repair the gateway itself."
+            ],
+            paths: ["~/.pi/agent/settings.json"],
+            links: []
+          },
+          {
+            id: "in-gov", name: "Automated Checks & Snapshots", tag: "24/24 PASS",
+            short: "One command verifies config drift, tool-surface budget, redaction, and regression suites.",
+            lead: "Guards tool-surface size, redaction flags, model role alignment, permission probes, and declarative 36-file SHA-256 config snapshots.",
+            analogy: "A car dashboard for your AI setup: every upgrade runs through repeatable red/green checks instead of guesswork.",
+            bullets: [
+              "Includes 5 silent upgrade touchpoints (AST permission probe, rtk rewrite, atelier UI, vision paste, knowledge compatibility).",
+              "pi-mox 0.3.1 + pi-schedule 0.6.1 handle lightweight session timers and scheduled read-only checks."
+            ],
+            paths: ["scripts/doctor.mjs", "scripts/deploy-check.mjs"],
+            links: [
+              { name: "pi-mox", url: "https://github.com/jals1212/pi-mox" },
+              { name: "pi-schedule", url: "https://github.com/pungggi/pi-schedule" }
+            ]
+          },
+          {
+            id: "in-akis", name: "Shareable Bundle (akis-pi)", tag: "Public & Verified",
+            short: "Automated secret + PII gates scrub personal paths and export a reproducible bundle.",
+            lead: "Derives templates, parameterised permission configs, manifest pins, and patch files from live configs—failing closed if any key or personal identifier survives.",
+            analogy: "Packages a battle-tested workbench into a clean starter kit you can hand directly to an AI to deploy.",
+            bullets: [
+              "38 automated tests covering render dry-run/backups, doctor checks, WSL2/Windows handling, and loopback stub validation.",
+              "Bilingual README + step-by-step DEPLOY.md for POSIX, WSL2, and Windows."
+            ],
+            paths: ["DEPLOY.md", "manifest.json", "scripts/render.mjs"],
+            links: [{ name: "akis-pi on GitHub", url: REPO_URL }]
+          }
+        ]
+      }
+    ],
+    directory: [
+      { name: "akis-pi", ver: "Pi 1.6.0", domain: "infra", child: "in-akis", desc: "Shareable, privacy-gated Pi workbench bundle with AI deployment guide", url: REPO_URL },
+      { name: "pi-codex-exec", ver: "v1.2.0 · MIT", domain: "core", child: "core-exec", desc: "Optional Codex-style single-track PTY (exec_command + write_stdin) + macOS Seatbelt", url: CODEX_EXEC_URL },
+      { name: "Magpie Gateway", ver: "Required", domain: "infra", child: "in-magpie", desc: "Unified model routing, outbound redaction, media MCP & skill router", url: "https://github.com/yetone/magpie" },
+      { name: "pi-subagents", ver: "v0.90.0", domain: "orchestration", child: "sub-exec", desc: "5-role subagent orchestration with FleetView & toolBudget guards", url: "https://github.com/nicobailon/pi-subagents" },
+      { name: "pi-permission-system", ver: "v42.2.1", domain: "interface", child: "if-perm", desc: "AST-based shell & path permission gate with shellTools support", url: "https://github.com/gotgenes/pi-packages/tree/main/packages/pi-permission-system" },
+      { name: "pi-permission-auto-review", ver: "v1.0.2", domain: "interface", child: "if-perm", desc: "Codex-preset automated permission reviewer with fail-closed defer", url: "https://github.com/mzwing/pi-packages/tree/main/packages/pi-permission-auto-review" },
+      { name: "@cortexkit/pi-magic-context", ver: "v0.49.76", domain: "memory", child: "mem-mc", desc: "Long-session silent compaction & project memory retrieval", url: "https://www.npmjs.com/package/@cortexkit/pi-magic-context" },
+      { name: "pi-knowledge (+4 patches)", ver: "v0.15.0", domain: "memory", child: "mem-personal", desc: "Offline semantic/hybrid search for personal notes & archives", url: "https://github.com/nczz/pi-knowledge" },
+      { name: "pi-atelier", ver: "v0.21.0", domain: "interface", child: "if-host", desc: "TUI sidebar & footer telemetry (context, cache, cost, subagents)", url: "https://github.com/michaelmjhhhh/pi-atelier" },
+      { name: "pi-compact-tools", ver: "v0.18.0", domain: "interface", child: "if-host", desc: "Auto-folds verbose tool output while keeping edit diffs expanded", url: "https://github.com/nedleeds/pi-compact-tools" },
+      { name: "pi-ask-user", ver: "v0.17.2", domain: "interface", child: "if-host", desc: "Interactive keyboard choice modals inside the terminal", url: "https://github.com/edlsh/pi-ask-user" },
+      { name: "@getpipher/vision", ver: "v0.5.3", domain: "interface", child: "if-host", desc: "Paste clipboard screenshots directly into Pi as image blocks", url: "https://github.com/getpipher/vision" },
+      { name: "pi-mobile", ver: "v0.4.0", domain: "interface", child: "if-host", desc: "End-to-end encrypted mobile handoff for live desktop sessions", url: "https://github.com/jkeskikangas/pi-mobile" },
+      { name: "pi-away", ver: "v0.1.4", domain: "interface", child: "if-host", desc: "One-line catch-up summary when returning to a session", url: "https://github.com/pringled/pi-extensions/tree/main/packages/pi-away" },
+      { name: "pi-web-access", ver: "v0.48.0", domain: "interface", child: "if-cap", desc: "Multi-provider web search, content extraction & PDF integration", url: "https://github.com/nicobailon/pi-web-access" },
+      { name: "pi-agent-browser-native", ver: "v0.9.42", domain: "interface", child: "if-cap", desc: "Browser automation (paired with agent-browser CLI 0.44.0)", url: "https://github.com/fitchmultz/pi-agent-browser-native" },
+      { name: "pi-computer-use", ver: "v0.5.1", domain: "interface", child: "if-cap", desc: "Headless macOS Accessibility UI observation and interaction", url: "https://github.com/injaneity/pi-computer-use" },
+      { name: "pi-powerpoint", ver: "v1.0.0", domain: "interface", child: "if-cap", desc: "CLI slide deck generation and editing", url: "https://github.com/tmustier/powerpoint-cli" },
+      { name: "pi-mox", ver: "v0.3.1", domain: "infra", child: "in-gov", desc: "In-session timers and delayed reminders", url: "https://github.com/jals1212/pi-mox" },
+      { name: "pi-schedule", ver: "v0.6.1", domain: "infra", child: "in-gov", desc: "Periodic read-only checks and scheduled agent triggers", url: "https://github.com/pungggi/pi-schedule" }
+    ]
+  },
+  zh: {
+    htmlLang: "zh-CN",
+    pageTitle: "akis-pi · Pi 个人 AI 工作台交互式架构图谱",
+    brandTitle: "akis-pi 工作台",
+    brandSub: "· Pi 1.6.0",
+    themeLabel: "◐ 昼 / 夜",
+    heroTitle: "把 Codex 拆开重组：一套省钱、可验证的个人 AI 工作台",
+    pills: [
+      { val: "$0.2–0.7/天", lbl: "98% 走缓存", color: "var(--sage)" },
+      { val: "5 种角色", lbl: "干活便宜 · 质检用强模型", color: "" },
+      { val: "24/24 全绿", lbl: "自动体检 · 36 份快照", color: "var(--terra)" }
+    ],
+    stories: {
+      overview: { label: "全局分工", active: null, fault: false, text: "<strong>从左到右读一遍：</strong>01 终端与安全门 → 02 大管家（codemode: only）→ 按需分流到 03 专家团 / 04 双轨记忆 → 05 统一经网关脱敏发出并受 24 项守卫体检。" },
+      daily: { label: "怎么这么省钱？", active: ["interface","core","memory","infra"], fault: false, text: "<strong>怎么这么省钱？</strong>98% 历史走缓存的便宜大管家管全程，重度用一天约 $0.2–0.7；贵模型只在需要验收或攻坚时按次进短命子窗口。" },
+      review: { label: "老改不对怎么办？", active: ["core","orchestration","infra"], fault: false, text: "<strong>老改不对怎么办？</strong>送审前先跑脚本算数字 → 严格只读质检员一次列全硬伤 → 连打回 2 次自动熔断换最强模型修。" },
+      memory: { label: "聊几周不忘事？", active: ["core","memory"], fault: false, text: "<strong>聊几周不忘事？</strong>Magic Context 0.49.76 后台静默归档项目长对话随时翻原件；个人笔记与旧聊物理隔离存在补丁版 pi-knowledge + RESIDENT.md。" },
+      fallback: { label: "网关挂了？", active: ["interface","core","infra"], fault: true, text: "<strong>网关挂了？</strong>新开干净窗口手动 `/model` 切官方直连逃生线顶上；刻意不做静默自动切换，防止绕过隐私打码。" }
+    },
+    ui: {
+      blocks: "块 ↗",
+      openCard: "点开看卡片",
+      inside: "内部结构",
+      nextStop: "下一站",
+      collapse: "收起 ×",
+      prev: "← 上一个",
+      next: "下一个 →",
+      analogy: "如果拿 Codex 类比",
+      keyDesign: "关键工程设计",
+      repos: "相关开源包与仓库",
+      paths: "▸ 查看配置文件路径",
+      copy: "复制",
+      copied: "已复制",
+      failed: "失败",
+      dirTitle: "想直接抄作业？展开全部 20 个核心包与模块",
+      dirSub: "默认收起保持清爽；展开可搜功能并直达 GitHub。",
+      dirPlaceholder: "搜功能：审批、PTY、记忆、贴图、浏览器...",
+      openNote: "打开说明卡片 ↑",
+      localOnly: "内置 / 本地",
+      footLeft: `Pi 1.6.0 · Magic Context 0.49.76 · 公开配置见 <a href="${REPO_URL}" target="_blank" rel="noopener">akis-pi</a>`,
+      footRight: "2026-11-25 实测基线 · 点击任意模块展开内部结构"
+    },
+    domains: [
+      {
+        id: "interface", step: "01", pos: "pos-s1", color: "var(--slate)", start: true,
+        tag: "01 · 入口与安全门", title: "终端界面 & 安全门",
+        sub: "AST 规则 + 自动审批 · 直接贴图 · 手机续聊 · 联网",
+        intro: "兼顾心流体验与纵深防御：安全命令 0 ms 放行，高危操作经 AST 解析与自动评审把关。",
+        children: [
+          {
+            id: "if-host", name: "顺手的终端工作台", tag: "6 个体验扩展",
+            short: "状态侧栏、多选题弹窗、剪贴板贴图、手机加密续聊。",
+            lead: "在 Ghostty + Herdr 持久窗格中叠加轻插件：实时看上下文/缓存/花销、Ctrl+V 直接贴图、长输出自动折叠，出门用手机端到端加密接着聊。",
+            analogy: "比原版 Codex 多了四件顺手体验：右侧实时仪表盘、方向键拍板弹窗、直接贴图、手机续聊。",
+            bullets: [
+              "pi-atelier 0.21.0 侧栏底栏 + pi-compact-tools 0.18.0（edit 默认展开审 diff，其余输出自动折叠）。",
+              "pi-ask-user 0.17.2 交互弹窗、@getpipher/vision 0.5.3 原子贴图、pi-mobile 0.4.0、pi-away 0.1.4。"
+            ],
+            paths: ["~/.pi/agent/pi-atelier.json", "~/.pi/agent/compact-tools.json"],
+            links: [
+              { name: "pi-atelier", url: "https://github.com/michaelmjhhhh/pi-atelier" },
+              { name: "pi-compact-tools", url: "https://github.com/nedleeds/pi-compact-tools" },
+              { name: "pi-ask-user", url: "https://github.com/edlsh/pi-ask-user" },
+              { name: "@getpipher/vision", url: "https://github.com/getpipher/vision" },
+              { name: "pi-mobile", url: "https://github.com/jkeskikangas/pi-mobile" }
+            ]
+          },
+          {
+            id: "if-perm", name: "双层智能安全门", tag: "AST + 自动审批",
+            short: "安全命令 0 ms 直过；高危操作经 AST 与多级回退评审模型把关。",
+            lead: "第一层由 tree-sitter-bash 做确定性 AST 规则拦截，第二层交自动评审模型（codex preset）判风险；外部目录与敏感路径写操作始终降级给你亲自确认。",
+            analogy: "把 Codex 的自动审命令搬进 Pi——配合原生 shellTools 映射，实测审批耗时直降 94.6%（684.8s → 37.0s），断网自动 fail-closed 绝不糊涂放行。",
+            bullets: [
+              "pi-permission-system 42.2.1 完整覆盖 rtk 改写命令与 codemode 嵌套调用，不留绕过口子。",
+              "pi-permission-auto-review 1.0.2 支持网关有序多模型回退组，避免单通道抖动卡顿。",
+              "两份脱敏权限配置模板已随 akis-pi core 模块一并分发，render.mjs 开箱渲染。"
+            ],
+            paths: ["~/.pi/agent/extensions/pi-permission-system/config.json", "~/.pi/agent/extensions/pi-permission-auto-review/config.json"],
+            links: [
+              { name: "pi-permission-system", url: "https://github.com/gotgenes/pi-packages/tree/main/packages/pi-permission-system" },
+              { name: "pi-permission-auto-review", url: "https://github.com/mzwing/pi-packages/tree/main/packages/pi-permission-auto-review" }
+            ]
+          },
+          {
+            id: "if-cap", name: "联网、浏览器与桌面能力", tag: "按场景分级",
+            short: "多源搜索回退、本地 PDF 解析、浏览器自动化与无头桌面操控。",
+            lead: "公开检索与文档抓取走高速无登录通道，复杂交互走浏览器 CLI，macOS 桌面任务走无头 Accessibility 控制。",
+            analogy: "补齐终端 Agent 联网与 GUI 短板，支持 Exa/Brave/Bocha/Gemini 多源回退和命令行生成 PPT。",
+            bullets: [
+              "pi-web-access 0.48.0 搭配可选本地 PyMuPDF 端点，扫描件自动回退 OCR。",
+              "pi-agent-browser-native 0.9.42 配套 agent-browser CLI 0.44.0，桌面控制接 pi-computer-use 0.5.1。"
+            ],
+            paths: ["~/.pi/agent/web-search.json", "~/.pi/agent/extensions/pi-computer-use.json"],
+            links: [
+              { name: "pi-web-access", url: "https://github.com/nicobailon/pi-web-access" },
+              { name: "pi-agent-browser-native", url: "https://github.com/fitchmultz/pi-agent-browser-native" },
+              { name: "pi-computer-use", url: "https://github.com/injaneity/pi-computer-use" }
+            ]
+          }
+        ]
+      },
+      {
+        id: "core", step: "02", pos: "pos-s2", color: "var(--terra)",
+        tag: "02 · 核心枢纽", title: "大管家 · 主对话与执行引擎",
+        sub: "codemode: only · 6 个直出工具 · 可选 Codex 单轨 PTY",
+        intro: "主会话追求轻量、高缓存与低成本，把重推理留给短命专家子代理。",
+        children: [
+          {
+            id: "core-econ", name: "为什么便宜模型当主力", tag: "$0.2–0.7/天",
+            short: "高缓存长驻省钱稳跑，贵模型绝不放进主窗口循环。",
+            lead: "长会话每发一句都要重读历史上下文。用便宜快速的模型配合 98% 缓存命中跑主循环，重度使用一天仅需几毛美元。",
+            analogy: "像请一位稳重的项目经理全天盯进度，遇到难题或验收再请架构师进场 5 分钟，性价比拉满。",
+            bullets: [
+              "关闭底层 provider 重试（maxRetries: 0），避免与本地网关重试叠加放大等待。",
+              "akis-pi 模板全用角色占位符，任意 OpenAI 兼容模型即插即用。"
+            ],
+            paths: ["~/.pi/agent/settings.json"],
+            links: [{ name: "完整配置模板 (akis-pi)", url: REPO_URL }]
+          },
+          {
+            id: "core-tools", name: "极简工具面（codemode: only）", tag: "13 天实证",
+            short: "顶层只暴露 6 个工具，50+ 工具收进 QuickJS 沙箱按需发现。",
+            lead: "首轮固定提示压缩约 45%，常驻声明稳定在 22,405 字符（低于 26,682 告警线），多步调用可在单次脚本里批处理完成。",
+            analogy: "把桌上 50 把工具收进工具箱只留 6 个常用按钮，界面清爽且 Prompt Cache 极稳。",
+            bullets: [
+              "13 天 2,842 次生产脚本复查：总失败率 3.48%、探测调用仅占 2.2%、edit 参数名猜错为 0%。",
+              "失败中 61.6% 为嵌套拼脚本引发的 JS 语法/引用错，已通过 APPEND_SYSTEM.md 极简规则精准治本。"
+            ],
+            paths: ["~/.pi/agent/APPEND_SYSTEM.md"],
+            links: []
+          },
+          {
+            id: "core-exec", name: "Codex 单轨 PTY 执行（可选扩展）", tag: "pi-codex-exec v1.2",
+            short: "exec_command + write_stdin 统一模型，实时日志镜像 + macOS 内核写保护。",
+            lead: "akis-pi 便携模板默认走内置 bash + rtk.ts；若需要像 Codex CLI 一样流畅驱动调试器/REPL/SSH，可直接搭配开源自研扩展 pi-codex-exec。",
+            analogy: "告别 bash 与交互终端双轨分裂：短命令同步返回，长任务自动切后台并实时镜像完整 0600 日志（full_output_path）。",
+            bullets: [
+              "支持 setsid 后代进程树严格回收与 24 小时旧日志自动清理，TUI 与无头模式行为一致。",
+              "内置可选 macOS Seatbelt 灰度开关（PI_CODEX_EXEC_SANDBOX=protect-sensitive），内核级拦截对 ~/.ssh、sessions 与权限配置的写入。"
+            ],
+            paths: ["~/.pi/vendor/pi-codex-exec/index.ts", "~/.pi/agent/extensions/rtk.ts"],
+            links: CODEX_EXEC_URL ? [{ name: "pi-codex-exec (MIT 开源)", url: CODEX_EXEC_URL }] : []
+          },
+          {
+            id: "core-rules", name: "两条可执行硬习惯", tag: "不写空话",
+            short: "送审前脚本算数字；连错 2 次自动熔断换强模型。",
+            lead: "不写“请仔细检查”这类空话，直接把踩过最痛的坑固化为两条可验证纪律。",
+            analogy: "专治 Agent 两类通病：心算日志耗时老算错，以及改不对却反复原地打转。",
+            bullets: [
+              "报告中的求和、时间区间与日志引用必须由一次性脚本从原文件重算。",
+              "同一验收范围连续 2 次 FAIL，主会话立刻停手，改派强模型一次修完再复验。"
+            ],
+            paths: ["~/.pi/agent/AGENTS.md"],
+            links: []
+          }
+        ]
+      },
+      {
+        id: "orchestration", step: "03", pos: "pos-s3", color: "var(--ochre)",
+        tag: "03 · 分工质检", title: "5 角色专家子代理",
+        sub: "按工具面最小权限隔离 · 模型解耦 · 独立只读裁判",
+        intro: "把单打独斗拆成 5 个职责清晰的角色：写代码的人永远不能自己给自己发验收通过。",
+        children: [
+          {
+            id: "sub-exec", name: "执行三人组（explore / implement / lead）", tag: "便宜快速",
+            short: "探路、写码、拆活并行，脏输出不污染主上下文。",
+            lead: "explore 只读无 shell；implement 专注代码修改；lead 负责多步任务拆解并可递归派工（深度上限 2）。",
+            analogy: "翻几百个文件都在 explore 的临时上下文里消化，只把 3 行精炼结论带回主对话。",
+            bullets: [
+              "角色文件不写死模型 ID，档位统一在 settings.json 管理，换新模型只改一行。",
+              "pi-subagents 0.90.0 采用单行摘要 + FleetView 精简显示，不刷屏。"
+            ],
+            paths: ["~/.pi/agent/agents/explore.md", "~/.pi/agent/agents/implement.md", "~/.pi/agent/agents/lead.md"],
+            links: [{ name: "pi-subagents", url: "https://github.com/nicobailon/pi-subagents" }]
+          },
+          {
+            id: "sub-review", name: "独立裁判（review）+ 2 轮熔断", tag: "异构强模型",
+            short: "用真实命令逐条证伪，区分 BLOCKER 与 NIT，输出唯一 VERDICT。",
+            lead: "在全新只读上下文里调用更强的异构模型复核交付，配 bash + rtk 压缩与 soft 200 / hard 300 的 toolBudget 护栏。",
+            analogy: "彻底杜绝 AI “自己说改好了”，连续 2 轮不过质检直接熔断升级处理。",
+            bullets: [
+              "单轮一次列齐所有可证实问题：代码缺陷/算错数/闸门失败为 BLOCKER，排版措辞为 NIT 不卡关。",
+              "严格只读，评审过程中绝不会顺手改代码。"
+            ],
+            paths: ["~/.pi/agent/agents/review.md"],
+            links: [{ name: "角色模板 (akis-pi)", url: REPO_URL }]
+          },
+          {
+            id: "sub-analyze", name: "架构军师（analyze）", tag: "先取证后动手",
+            short: "动大手术前先读源码、比方案、查风险。",
+            lead: "只读强推理角色：遇模糊需求或大版本升级先派它取证权衡，把“实测事实”与“推测”严格分开。",
+            analogy: "相当于运行在干净独立窗口里的 Plan 模式，不被历史闲聊带偏。",
+            bullets: [
+              "受 toolBudget 护栏保护，防止无限探索烧光额度。",
+              "只输出方案与证据，不改文件、不替代最终 review。"
+            ],
+            paths: ["~/.pi/agent/agents/analyze.md"],
+            links: []
+          }
+        ]
+      },
+      {
+        id: "memory", step: "04", pos: "pos-s4", color: "var(--sage)",
+        tag: "04 · 双轨记忆", title: "物理隔离的双轨记忆",
+        sub: "项目长会话压缩（MC 0.49.76）· 个人知识库 · 数据不当指令",
+        intro: "项目归项目、个人归个人，双库物理隔离不串味，所有召回内容均只作参考数据、绝不当授权指令。",
+        children: [
+          {
+            id: "mem-mc", name: "项目长记忆（Magic Context 0.49.76）", tag: "40 万触发",
+            short: "旧对话后台静默归档，随时用 ctx_expand 调出原话。",
+            lead: "聊几周也不会卡死或丢失上下文：到 40 万 token 自动静默归档历史并沉淀项目记忆，按需检索召回。",
+            analogy: "类似 Codex 自动压缩的增强版：不打断聊天，压掉的原文进了文件柜随时一键展开。",
+            bullets: [
+              "核心参数：400k 触发、3,000 token 注入预算、600s historian 超时。",
+              "v0.49.76 修复 Gemini 路由丢缓存、大记忆摘要膨胀与软链安全问题，零 DB 迁移。"
+            ],
+            paths: ["~/.config/cortexkit/magic-context.jsonc"],
+            links: [{ name: "@cortexkit/pi-magic-context", url: "https://www.npmjs.com/package/@cortexkit/pi-magic-context" }]
+          },
+          {
+            id: "mem-personal", name: "个人知识库 + RESIDENT 档案卡", tag: "0.15.0 + 4 补丁",
+            short: "6,000 字精简常驻档案 + 本地语义/混合检索笔记与历史。",
+            lead: "每轮通过独立 section 注入 RESIDENT.md（不覆写系统提示、不伤 KV Cache），更细的资料放进本地 pi-knowledge 按需检索。",
+            analogy: "桌上一页随手可看的个人简介 + 一座离线私人图书馆，问到才去查。",
+            bullets: [
+              "基于 pi-knowledge v0.15.0 维护 4 份补丁：尾延迟优化、markdown 真实行号 span、并发锁守卫、QML 可选构建。",
+              "审慎钉留在 v0.15.0，暂不盲追引入常驻 daemon 与 schema v8 迁移的 v0.16.x。"
+            ],
+            paths: ["~/.pi/agent/memory/RESIDENT.md", "~/.pi/vendor/pi-knowledge"],
+            links: [{ name: "nczz/pi-knowledge", url: "https://github.com/nczz/pi-knowledge" }]
+          },
+          {
+            id: "mem-dream", name: "夜间离线蒸馏与防污染边界", tag: "数据 ≠ 指令",
+            short: "自动提炼摘要标注“未确认”，绝不自动覆盖人工策展笔记。",
+            lead: "机器自动提取结果与人工维护的 RESIDENT.md 严格分层，落盘前经过本地隐私与凭据过滤。",
+            analogy: "像睡前整理便签——提供线索，绝不把机器猜测直接当永久事实。",
+            bullets: [
+              "历史对话中的模型回复绝不代表用户立场，检索内容不具备执行授权效力。",
+              "macOS 下配合 caffeinate -i 保护凌晨定时任务不被空闲休眠打断。"
+            ],
+            paths: ["~/.pi/agent/extensions/resident-memory.ts"],
+            links: []
+          }
+        ]
+      },
+      {
+        id: "infra", step: "05", pos: "pos-s5", color: "var(--terra)",
+        tag: "05 · 出口与治理", title: "网关 · 逃生舱 · 自动体检",
+        sub: "Magpie 脱敏路由 · 官方直连备线 · 24 项自动守卫",
+        intro: "把 Agent 配置当正经工程来维护：统一入口、显式兜底、自动化体检与一键脱敏分享。",
+        children: [
+          {
+            id: "in-magpie", name: "本地网关（Magpie）", tag: "路由 + 脱敏",
+            short: "统一管理模型目录、出站隐私打码、生图 MCP 与技能路由。",
+            lead: "在 127.0.0.1:3425 集中管理所有上游渠道与凭据，发出请求前自动脱敏，并把 Pi 技能索引开销压缩 42%。",
+            analogy: "像带防漏电和稳压保护的总插排：上游抽风随时换路，顺手给隐私多加一层盾。",
+            bullets: [
+              "支持自建有序回退路由组（例如 9 级权限自动审批回退链）。",
+              "独立 stdio magpie mcp image 绕开浏览器 UA 过滤，稳定提供生图与生视频。"
+            ],
+            paths: ["~/.pi/agent/mcp.json", "~/.pi/agent/extensions/magpie.ts"],
+            links: [{ name: "Magpie", url: "https://github.com/yetone/magpie" }]
+          },
+          {
+            id: "in-fallback", name: "应急直连逃生舱", tag: "显式切换",
+            short: "网关真挂了？另开干净窗口手动 `/model` 切官方直连顶上。",
+            lead: "保留官方直连模型条目用于应急，但刻意不做静默自动切换，防止不知情绕过网关脱敏或击穿长会话缓存。",
+            analogy: "像大楼的消防楼梯：平时走电梯，停电手动走楼梯，绝不偷偷把你传送出保护区。",
+            bullets: [
+              "干净应急会话甚至可以直接让 Agent 帮你排查并修复本地网关。",
+              "清晰接受网关宕机期间子代理与自动审批暂停的边界。"
+            ],
+            paths: ["~/.pi/agent/settings.json"],
+            links: []
+          },
+          {
+            id: "in-gov", name: "24 道自动体检 & 36 份快照", tag: "24/24 全绿",
+            short: "一条命令核查配置漂移、工具面字节上限、脱敏开关与回归测试。",
+            lead: "把工具面大小、模型分档、脱敏开关、权限探针与声明式 SHA-256 快照全部代码化守护。",
+            analogy: "像汽车仪表盘：任何插件升级或配置修改，跑一条命令立刻见红绿灯。",
+            bullets: [
+              "沉淀 5 个升级静默触点探针（AST 权限、rtk 改写、atelier UI、vision 贴图、知识库兼容）。",
+              "配套 pi-mox 0.3.1 与 pi-schedule 0.6.1 实现会话提醒与只读周期巡检。"
+            ],
+            paths: ["scripts/doctor.mjs", "scripts/deploy-check.mjs"],
+            links: [
+              { name: "pi-mox", url: "https://github.com/jals1212/pi-mox" },
+              { name: "pi-schedule", url: "https://github.com/pungggi/pi-schedule" }
+            ]
+          },
+          {
+            id: "in-akis", name: "一键脱敏分享仓（akis-pi）", tag: "公开可复现",
+            short: "内置密钥与个人信息双门禁，一键导出给 AI 按步骤部署。",
+            lead: "从生产配置派生参数化模板、权限配置、manifest 锁与补丁集，命中任何密钥或个人标识整批拒写。",
+            analogy: "把调教好的工作台打包成纯净开源模板，直接交给 AI 即可复现并自检。",
+            bullets: [
+              "内置 38 条自动化测试覆盖 dry-run 备份渲染、doctor 自检、跨平台与回环 stub 验证。",
+              "提供中英双语 README 与覆盖 POSIX / WSL2 / Windows 的分步 DEPLOY.md。"
+            ],
+            paths: ["DEPLOY.md", "manifest.json", "scripts/render.mjs"],
+            links: [{ name: "akis-pi (GitHub)", url: REPO_URL }]
+          }
+        ]
+      }
+    ],
+    directory: [
+      { name: "akis-pi", ver: "Pi 1.6.0", domain: "infra", child: "in-akis", desc: "整套工作台的脱敏公开配置包，含 AI 分步部署与自检脚本", url: REPO_URL },
+      { name: "pi-codex-exec", ver: "v1.2.0 · MIT", domain: "core", child: "core-exec", desc: "可选开源扩展：Codex 单轨 PTY（exec_command + write_stdin）+ macOS Seatbelt", url: CODEX_EXEC_URL },
+      { name: "Magpie 本地网关", ver: "必装", domain: "infra", child: "in-magpie", desc: "统一模型路由、出站隐私打码、生图 MCP 与技能索引路由", url: "https://github.com/yetone/magpie" },
+      { name: "pi-subagents", ver: "v0.90.0", domain: "orchestration", child: "sub-exec", desc: "5 角色子代理编排，支持 FleetView 与 toolBudget 预算护栏", url: "https://github.com/nicobailon/pi-subagents" },
+      { name: "pi-permission-system", ver: "v42.2.1", domain: "interface", child: "if-perm", desc: "AST 级命令与路径权限门，支持 shellTools 映射", url: "https://github.com/gotgenes/pi-packages/tree/main/packages/pi-permission-system" },
+      { name: "pi-permission-auto-review", ver: "v1.0.2", domain: "interface", child: "if-perm", desc: "Codex preset 自动审命令插件，不可达时 fail-closed", url: "https://github.com/mzwing/pi-packages/tree/main/packages/pi-permission-auto-review" },
+      { name: "@cortexkit/pi-magic-context", ver: "v0.49.76", domain: "memory", child: "mem-mc", desc: "长会话静默归档压缩与项目记忆检索", url: "https://www.npmjs.com/package/@cortexkit/pi-magic-context" },
+      { name: "pi-knowledge (+4 补丁)", ver: "v0.15.0", domain: "memory", child: "mem-personal", desc: "离线语义/混合检索个人笔记与历史档案", url: "https://github.com/nczz/pi-knowledge" },
+      { name: "pi-atelier", ver: "v0.21.0", domain: "interface", child: "if-host", desc: "终端侧栏/底栏实时仪表盘（上下文、缓存、花销、子代理）", url: "https://github.com/michaelmjhhhh/pi-atelier" },
+      { name: "pi-compact-tools", ver: "v0.18.0", domain: "interface", child: "if-host", desc: "长输出自动折叠、edit 默认展开便于审阅 diff", url: "https://github.com/nedleeds/pi-compact-tools" },
+      { name: "pi-ask-user", ver: "v0.17.2", domain: "interface", child: "if-host", desc: "终端内方向键多选决策弹窗", url: "https://github.com/edlsh/pi-ask-user" },
+      { name: "@getpipher/vision", ver: "v0.5.3", domain: "interface", child: "if-host", desc: "剪贴板截图直接粘贴进终端给 AI 看图", url: "https://github.com/getpipher/vision" },
+      { name: "pi-mobile", ver: "v0.4.0", domain: "interface", child: "if-host", desc: "手机端端到端加密续聊电脑会话", url: "https://github.com/jkeskikangas/pi-mobile" },
+      { name: "pi-away", ver: "v0.1.4", domain: "interface", child: "if-host", desc: "离席回来一句话回顾会话进展", url: "https://github.com/pringled/pi-extensions/tree/main/packages/pi-away" },
+      { name: "pi-web-access", ver: "v0.48.0", domain: "interface", child: "if-cap", desc: "多源搜索回退、公开网页抓取与本地 PDF 解析集成", url: "https://github.com/nicobailon/pi-web-access" },
+      { name: "pi-agent-browser-native", ver: "v0.9.42", domain: "interface", child: "if-cap", desc: "浏览器自动化（配套 agent-browser CLI 0.44.0）", url: "https://github.com/fitchmultz/pi-agent-browser-native" },
+      { name: "pi-computer-use", ver: "v0.5.1", domain: "interface", child: "if-cap", desc: "无头 macOS 桌面界面观察与操控", url: "https://github.com/injaneity/pi-computer-use" },
+      { name: "pi-powerpoint", ver: "v1.0.0", domain: "interface", child: "if-cap", desc: "命令行生成与编辑 PPT", url: "https://github.com/tmustier/powerpoint-cli" },
+      { name: "pi-mox", ver: "v0.3.1", domain: "infra", child: "in-gov", desc: "会话内轻量定时器与延迟提醒", url: "https://github.com/jals1212/pi-mox" },
+      { name: "pi-schedule", ver: "v0.6.1", domain: "infra", child: "in-gov", desc: "周期自动只读巡检与定时触发", url: "https://github.com/pungggi/pi-schedule" }
+    ]
+  }
+};
+
+let lang = (() => {
+  const p = new URLSearchParams(location.search).get("lang");
+  if (p === "en" || p === "zh") return p;
+  return (navigator.language || "").toLowerCase().startsWith("zh") ? "zh" : "en";
+})();
+let currentStory = "overview";
+let explodedId = null;
+let modalDomainId = null;
+let modalChildId = null;
+let pulsesOn = true;
+let collapseTimer = null;
+
+function cur() { return CONTENT[lang]; }
+function domainMap() { return Object.fromEntries(cur().domains.map(d => [d.id, d])); }
+function esc(s) { return String(s).replace(/[&<>"']/g, m => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[m])); }
+const STEP_ORDER = ["interface", "core", "orchestration", "memory", "infra"];
+
+function updateBodyScrollLock() {
+  document.body.style.overflow = (modalDomainId || explodedId) ? "hidden" : "";
+}
+
+function applyChrome() {
+  const c = cur();
+  document.documentElement.lang = c.htmlLang;
+  document.title = c.pageTitle;
+  document.getElementById("brandTitle").textContent = c.brandTitle;
+  document.getElementById("brandSub").textContent = c.brandSub;
+  document.getElementById("themeBtn").textContent = c.themeLabel;
+  document.getElementById("langBtn").textContent = lang === "en" ? "中文" : "EN";
+  document.getElementById("heroTitle").textContent = c.heroTitle;
+  document.getElementById("heroPills").innerHTML = c.pills.map(p =>
+    `<div class="hp"><b${p.color ? ` style="color:${p.color}"` : ""}>${esc(p.val)}</b><span>${esc(p.lbl)}</span></div>`
+  ).join("");
+
+  const bar = document.getElementById("storyBar");
+  bar.innerHTML = Object.entries(c.stories).map(([id, st]) =>
+    `<button class="story-btn${id === currentStory ? " active" : ""}${st.fault ? " fault" : ""}" data-story="${id}" type="button">${esc(st.label)}</button>`
+  ).join("");
+  bar.querySelectorAll(".story-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      if (collapseTimer) { clearTimeout(collapseTimer); collapseTimer = null; }
+      currentStory = btn.dataset.story;
+      explodedId = null;
+      applyStoryStrip();
+      bar.querySelectorAll(".story-btn").forEach(b => b.classList.toggle("active", b === btn));
+      renderStage();
+    });
+  });
+  applyStoryStrip();
+
+  document.getElementById("dirTitle").textContent = c.ui.dirTitle;
+  document.getElementById("dirSub").textContent = c.ui.dirSub;
+  document.getElementById("dirSearch").placeholder = c.ui.dirPlaceholder;
+  document.getElementById("footLeft").innerHTML = c.ui.footLeft;
+  document.getElementById("footRight").textContent = c.ui.footRight;
+  document.getElementById("mPrev").textContent = c.ui.prev;
+  document.getElementById("mNext").textContent = c.ui.next;
+}
+
+function applyStoryStrip() {
+  const st = cur().stories[currentStory];
+  const strip = document.getElementById("storyStrip");
+  const showStrip = currentStory !== "overview";
+  strip.classList.toggle("visible", showStrip);
+  strip.classList.toggle("fault", !!st.fault);
+  if (showStrip) document.getElementById("storyText").innerHTML = st.text;
+}
+
+function renderStage() {
+  const stage = document.getElementById("stage");
+  stage.querySelectorAll(".d-node").forEach(el => el.remove());
+  stage.classList.toggle("is-exploded", !!explodedId);
+
+  const map = domainMap();
+  const st = cur().stories[currentStory];
+  const activeSet = st.active ? new Set(st.active) : null;
+
+  STEP_ORDER.map(id => map[id]).forEach(d => {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = `d-node ${d.pos}`;
+    btn.dataset.id = d.id;
+    btn.style.setProperty("--dc", d.color);
+    if (activeSet && !activeSet.has(d.id)) btn.classList.add("dimmed");
+    if (explodedId === d.id) btn.classList.add("is-source");
+
+    btn.innerHTML = `
+      <div class="dn-row">
+        <span class="dn-step">${d.start ? '<span class="start-dot"></span>' : ''}${esc(d.tag)}</span>
+        <span class="dn-expand-hint">${d.children.length} ${esc(cur().ui.blocks)}</span>
+      </div>
+      <div class="dn-title">${esc(d.title)}</div>
+      <div class="dn-sub">${esc(d.sub)}</div>
+    `;
+    btn.addEventListener("click", e => {
+      e.stopPropagation();
+      explodeDomain(d.id);
+    });
+    stage.appendChild(btn);
+  });
+
+  renderExploded();
+  updateBodyScrollLock();
+  requestAnimationFrame(drawCurves);
+}
+
+function explodeDomain(id) {
+  if (collapseTimer) { clearTimeout(collapseTimer); collapseTimer = null; }
+  explodedId = id;
+  renderStage();
+}
+
+function collapseDomain() {
+  if (!explodedId) return;
+  if (collapseTimer) { clearTimeout(collapseTimer); collapseTimer = null; }
+  const layer = document.getElementById("explodedLayer");
+  const zone = layer.querySelector(".exploded-zone");
+  const stage = document.getElementById("stage");
+  stage.classList.remove("is-exploded");
+  stage.querySelectorAll(".d-node.is-source").forEach(el => el.classList.remove("is-source"));
+  if (zone) {
+    zone.classList.add("closing");
+    layer.classList.remove("open");
+    explodedId = null;
+    updateBodyScrollLock();
+    requestAnimationFrame(drawCurves);
+    collapseTimer = setTimeout(() => {
+      collapseTimer = null;
+      if (!explodedId) layer.innerHTML = "";
+    }, 230);
+  } else {
+    explodedId = null;
+    renderStage();
+  }
+}
+
+function renderExploded() {
+  const layer = document.getElementById("explodedLayer");
+  if (!explodedId) {
+    layer.classList.remove("open");
+    layer.innerHTML = "";
+    return;
+  }
+  const map = domainMap();
+  const d = map[explodedId];
+  const u = cur().ui;
+  layer.classList.add("open");
+
+  const mid = (d.children.length - 1) / 2;
+  const cardsHtml = d.children.map((c, idx) => {
+    const bx = Math.round((mid - idx) * 26);
+    const by = 18;
+    return `
+      <button class="child-card" data-cid="${c.id}" style="--bx:${bx}px;--by:${by}px;--delay:${(idx * 0.055).toFixed(3)}s" type="button">
+        <div class="cc-top"><span class="cc-tag">${esc(c.tag)}</span></div>
+        <div class="cc-name">${esc(c.name)}</div>
+        <div class="cc-desc">${esc(c.short)}</div>
+        <div class="cc-foot"><span>${esc(u.openCard)}</span><span>↗</span></div>
+      </button>
+    `;
+  }).join("");
+
+  const curIdx = STEP_ORDER.indexOf(d.id);
+  const nextId = curIdx >= 0 && curIdx < STEP_ORDER.length - 1 ? STEP_ORDER[curIdx + 1] : null;
+  const nextDomain = nextId ? map[nextId] : null;
+  const isFour = d.children.length >= 4;
+
+  layer.innerHTML = `
+    <div class="exploded-zone ${isFour ? "wide" : ""}" style="--ec:${d.color}">
+      <div class="ez-head">
+        <div>
+          <span class="ez-kicker">◎ ${esc(d.tag)} · ${esc(u.inside)}</span>
+          <div class="ez-title">${esc(d.title)}</div>
+          <div class="ez-desc">${esc(d.intro)}</div>
+        </div>
+        <div style="display:flex;gap:8px;flex-shrink:0">
+          ${nextDomain ? `<button id="ezNext" class="ez-close" style="color:var(--ec);border-color:color-mix(in srgb,var(--ec) 40%,transparent)" type="button">${esc(u.nextStop)} ${nextDomain.step} →</button>` : ""}
+          <button id="ezClose" class="ez-close" type="button">${esc(u.collapse)}</button>
+        </div>
+      </div>
+      <div class="ez-grid ${isFour ? "cols-4" : ""}">${cardsHtml}</div>
+    </div>
+  `;
+
+  if (nextId) {
+    document.getElementById("ezNext").addEventListener("click", e => { e.stopPropagation(); explodeDomain(nextId); });
+  }
+  document.getElementById("ezClose").addEventListener("click", e => { e.stopPropagation(); collapseDomain(); });
+  layer.querySelector(".exploded-zone").addEventListener("click", e => e.stopPropagation());
+  layer.querySelectorAll(".child-card").forEach(card => {
+    card.addEventListener("click", e => { e.stopPropagation(); openModal(d.id, card.dataset.cid); });
+  });
+}
+
+function openModal(domainId, childId) {
+  const d = domainMap()[domainId];
+  if (!d) return;
+  const u = cur().ui;
+  const idx = Math.max(0, d.children.findIndex(x => x.id === childId));
+  const c = d.children[idx];
+  modalDomainId = domainId;
+  modalChildId = c.id;
+
+  const card = document.getElementById("modalCard");
+  card.style.setProperty("--mc", d.color);
+  document.getElementById("mCrumb").textContent = `${d.title} · ${c.tag}`;
+  document.getElementById("mTitle").textContent = c.name;
+
+  const linksHtml = c.links && c.links.length ? `
+    <div class="m-sec">
+      <h4>${esc(u.repos)}</h4>
+      <div class="m-links">
+        ${c.links.map(l => `<a class="repo-pill" href="${esc(l.url)}" target="_blank" rel="noopener"><span>${esc(l.name)}</span><span class="arr">↗</span></a>`).join("")}
+      </div>
+    </div>` : "";
+
+  const pathsHtml = c.paths && c.paths.length ? `
+    <details class="m-paths">
+      <summary>${esc(u.paths)}</summary>
+      <div class="p-wrap">
+        ${c.paths.map(p => `<span class="p-chip mono"><code>${esc(p)}</code><button data-copy="${esc(p)}" type="button">${esc(u.copy)}</button></span>`).join("")}
+      </div>
+    </details>` : "";
+
+  const body = document.getElementById("mBody");
+  body.innerHTML = `
+    <p class="m-lead">${esc(c.lead)}</p>
+    <div class="analogy">
+      <span class="analogy-lbl">${esc(u.analogy)}</span>
+      <span class="analogy-txt">${esc(c.analogy)}</span>
+    </div>
+    <div class="m-sec">
+      <h4>${esc(u.keyDesign)}</h4>
+      <ul class="m-list">
+        ${c.bullets.map(b => `<li>${esc(b)}</li>`).join("")}
+      </ul>
+    </div>
+    ${linksHtml}
+    ${pathsHtml}
+  `;
+
+  body.querySelectorAll("[data-copy]").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      try {
+        await navigator.clipboard.writeText(btn.dataset.copy);
+        btn.textContent = u.copied;
+        setTimeout(() => btn.textContent = u.copy, 1200);
+      } catch { btn.textContent = u.failed; }
+    });
+  });
+
+  document.getElementById("mIdx").textContent = `${idx + 1} / ${d.children.length}`;
+  card.classList.add("open");
+  card.setAttribute("aria-hidden", "false");
+  document.getElementById("modalBackdrop").classList.add("open");
+  updateBodyScrollLock();
+}
+
+function closeModal() {
+  modalDomainId = null;
+  modalChildId = null;
+  const card = document.getElementById("modalCard");
+  card.classList.remove("open");
+  card.setAttribute("aria-hidden", "true");
+  document.getElementById("modalBackdrop").classList.remove("open");
+  updateBodyScrollLock();
+}
+
+function stepModal(delta) {
+  if (!modalDomainId) return;
+  const d = domainMap()[modalDomainId];
+  const i = d.children.findIndex(x => x.id === modalChildId);
+  const next = (i + delta + d.children.length) % d.children.length;
+  openModal(modalDomainId, d.children[next].id);
+}
+
+let animCurves = [];
+function drawCurves() {
+  const stage = document.getElementById("stage");
+  const svg = document.getElementById("stageSvg");
+  const sr = stage.getBoundingClientRect();
+  if (window.innerWidth <= 1040 || sr.width < 880) { svg.innerHTML = ""; animCurves = []; return; }
+
+  const box = id => {
+    const el = stage.querySelector(`.d-node[data-id="${id}"]`);
+    if (!el) return null;
+    const r = el.getBoundingClientRect();
+    return {
+      x: r.left - sr.left + r.width / 2, y: r.top - sr.top + r.height / 2,
+      l: r.left - sr.left, r: r.right - sr.left, t: r.top - sr.top, b: r.bottom - sr.top
+    };
+  };
+  const s1 = box("interface"), s2 = box("core"), s3 = box("orchestration"), s4 = box("memory"), s5 = box("infra");
+  if (!s1 || !s2 || !s3 || !s4 || !s5) return;
+
+  const st = cur().stories[currentStory];
+  const activeSet = st.active ? new Set(st.active) : null;
+  const mx12 = (s1.r + s2.l) / 2, mx23 = (s2.r + s3.l) / 2, mx35 = (s3.r + s5.l) / 2;
+
+  const links = [
+    { id: "s1-s2", a: "interface", b: "core", d: `M ${s1.r} ${s1.y} C ${mx12 + 8} ${s1.y}, ${mx12 - 8} ${s2.y}, ${s2.l - 4} ${s2.y}`, kind: "terra" },
+    { id: "s2-s3", a: "core", b: "orchestration", d: `M ${s2.r} ${s2.y - 16} C ${mx23 + 12} ${s2.y - 16}, ${mx23 - 10} ${s3.y}, ${s3.l - 4} ${s3.y}`, kind: "terra" },
+    { id: "s2-s4", a: "core", b: "memory", d: `M ${s2.r} ${s2.y + 16} C ${mx23 + 12} ${s2.y + 16}, ${mx23 - 10} ${s4.y}, ${s4.l - 4} ${s4.y}`, kind: "sage" },
+    { id: "s3-s5", a: "orchestration", b: "infra", d: `M ${s3.r} ${s3.y} C ${mx35 + 10} ${s3.y}, ${mx35 - 10} ${s5.y - 14}, ${s5.l - 4} ${s5.y - 14}`, kind: "terra", dashed: st.fault },
+    { id: "s4-s5", a: "memory", b: "infra", d: `M ${s4.r} ${s4.y} C ${mx35 + 10} ${s4.y}, ${mx35 - 10} ${s5.y + 14}, ${s5.l - 4} ${s5.y + 14}`, kind: "sage", dashed: true },
+    { id: "s2-s5", a: "core", b: "infra", d: `M ${s2.x} ${s2.b} C ${s2.x} ${sr.height - 8}, ${s5.x} ${sr.height - 8}, ${s5.x} ${s5.b + 4}`, kind: st.fault ? "danger" : "terra", dashed: true, subtle: !st.fault }
+  ];
+
+  svg.setAttribute("viewBox", `0 0 ${sr.width} ${sr.height}`);
+  const defs = `<defs>
+    <marker id="arr-wire" viewBox="0 0 8 8" refX="6" refY="4" markerWidth="5.5" markerHeight="5.5" orient="auto"><path d="M 1 1.5 L 6.5 4 L 1 6.5" fill="none" stroke="var(--wire)" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" /></marker>
+    <marker id="arr-terra" viewBox="0 0 8 8" refX="6" refY="4" markerWidth="5.5" markerHeight="5.5" orient="auto"><path d="M 1 1.5 L 6.5 4 L 1 6.5" fill="none" stroke="var(--terra)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" /></marker>
+    <marker id="arr-sage" viewBox="0 0 8 8" refX="6" refY="4" markerWidth="5.5" markerHeight="5.5" orient="auto"><path d="M 1 1.5 L 6.5 4 L 1 6.5" fill="none" stroke="var(--sage)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" /></marker>
+    <marker id="arr-danger" viewBox="0 0 8 8" refX="6" refY="4" markerWidth="5.5" markerHeight="5.5" orient="auto"><path d="M 1 1.5 L 6.5 4 L 1 6.5" fill="none" stroke="var(--danger)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" /></marker>
+  </defs>`;
+
+  svg.innerHTML = defs + links.map(l => {
+    const hit = !activeSet || (activeSet.has(l.a) && activeSet.has(l.b));
+    let cls = "curve", mk = "url(#arr-wire)";
+    if (l.dashed) cls += " dashed";
+    if (!hit) cls += " dim";
+    else if (activeSet) {
+      if (l.kind === "sage") { cls += " active-sage"; mk = "url(#arr-sage)"; }
+      else if (l.kind === "danger") { cls += " active-danger"; mk = "url(#arr-danger)"; }
+      else { cls += " active"; mk = "url(#arr-terra)"; }
+    }
+    const showOrb = pulsesOn && hit && !l.subtle && !explodedId;
+    return `<path id="p-${l.id}" class="${cls}" d="${l.d}" marker-end="${mk}" />` +
+           (showOrb ? `<circle id="o-${l.id}" class="orb ${l.kind === "sage" ? "sage" : ""}" r="3.4" cx="-20" cy="-20" />` : "");
+  }).join("");
+
+  animCurves = links.map((l, i) => {
+    const path = document.getElementById(`p-${l.id}`);
+    const orb = document.getElementById(`o-${l.id}`);
+    if (!path || !orb) return null;
+    return { path, orb, len: path.getTotalLength(), phase: (i * 0.22) % 1, period: 3.4 + (i % 3) * 0.45 };
+  }).filter(Boolean);
+}
+
+let lastT = performance.now();
+function loop(now) {
+  const dt = Math.min(0.05, (now - lastT) / 1000);
+  lastT = now;
+  if (pulsesOn && !explodedId) {
+    for (const it of animCurves) {
+      it.phase = (it.phase + dt / it.period) % 1;
+      const pt = it.path.getPointAtLength(it.phase * it.len);
+      it.orb.setAttribute("cx", pt.x.toFixed(1));
+      it.orb.setAttribute("cy", pt.y.toFixed(1));
+    }
+  }
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+
+function renderDir(q = "") {
+  const u = cur().ui;
+  const term = q.trim().toLowerCase();
+  const list = cur().directory.filter(x => !term || (x.name + x.ver + x.desc + x.url).toLowerCase().includes(term));
+  document.getElementById("dirGrid").innerHTML = list.map(x => `
+    <div class="dir-card">
+      <div class="dir-top"><span class="mono">${esc(x.name)}</span><span class="dir-ver">${esc(x.ver)}</span></div>
+      <div class="dir-desc">${esc(x.desc)}</div>
+      <div class="dir-foot">
+        <button data-d="${x.domain}" data-c="${x.child}" type="button">${esc(u.openNote)}</button>
+        ${x.url ? `<a href="${esc(x.url)}" target="_blank" rel="noopener">GitHub ↗</a>` : `<span style="color:var(--ink-dim)">${esc(u.localOnly)}</span>`}
+      </div>
+    </div>
+  `).join("");
+
+  document.querySelectorAll("#dirGrid button").forEach(btn => {
+    btn.addEventListener("click", () => {
+      explodeDomain(btn.dataset.d);
+      openModal(btn.dataset.d, btn.dataset.c);
+    });
+  });
+}
+
+document.getElementById("stage").addEventListener("click", () => collapseDomain());
+document.getElementById("explodedLayer").addEventListener("click", () => collapseDomain());
+
+document.getElementById("themeBtn").addEventListener("click", () => {
+  const curTheme = document.documentElement.getAttribute("data-theme");
+  document.documentElement.setAttribute("data-theme", curTheme === "light" ? "dark" : "light");
+});
+
+document.getElementById("langBtn").addEventListener("click", () => {
+  lang = lang === "en" ? "zh" : "en";
+  applyChrome();
+  renderStage();
+  renderDir(document.getElementById("dirSearch").value);
+  if (modalDomainId && modalChildId) openModal(modalDomainId, modalChildId);
+});
+
+document.getElementById("mClose").addEventListener("click", closeModal);
+document.getElementById("modalBackdrop").addEventListener("click", closeModal);
+document.getElementById("mPrev").addEventListener("click", () => stepModal(-1));
+document.getElementById("mNext").addEventListener("click", () => stepModal(1));
+
+const dirSec = document.getElementById("dirSection");
+const dirToggle = document.getElementById("dirToggle");
+dirToggle.addEventListener("click", () => {
+  const open = dirSec.classList.toggle("open");
+  dirToggle.setAttribute("aria-expanded", String(open));
+});
+document.getElementById("dirSearch").addEventListener("input", e => renderDir(e.target.value));
+
+document.addEventListener("keydown", e => {
+  if (e.key === "Escape") {
+    if (modalDomainId) closeModal();
+    else if (explodedId) collapseDomain();
+  } else if (modalDomainId && e.key === "ArrowRight") stepModal(1);
+  else if (modalDomainId && e.key === "ArrowLeft") stepModal(-1);
+});
+
+window.addEventListener("resize", () => { updateBodyScrollLock(); drawCurves(); });
+if (typeof ResizeObserver !== "undefined") {
+  new ResizeObserver(() => requestAnimationFrame(drawCurves)).observe(document.getElementById("stage"));
+}
+
+const urlParam = new URLSearchParams(location.search).get("explode");
+if (urlParam && domainMap()[urlParam]) explodedId = urlParam;
+
+applyChrome();
+renderStage();
+renderDir();
+</script>
+</body>
+</html>

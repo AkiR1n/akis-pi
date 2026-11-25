@@ -1,6 +1,6 @@
 # akis-pi
 
-[English](README.md) | 简体中文
+[English](README.md) | 简体中文 | [交互式架构图谱（GitHub Pages）](https://akir1n.github.io/akis-pi/)
 
 AkiyamaRin 的自用 [Pi coding agent](https://pi.dev) 配置分享包：既能直接交给 AI 按步骤部署并验收，也完整记录了每项配置取舍背后的实测数据与边界。
 
