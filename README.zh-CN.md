@@ -1,4 +1,4 @@
-# <img src="docs/assets/logo.svg" width="36" height="36" align="absmiddle" alt="akis-pi logo" /> akis-pi
+# <picture><source media="(prefers-color-scheme: light)" srcset="docs/assets/logo-light.svg"><img src="docs/assets/logo.svg" width="36" height="36" align="absmiddle" alt="akis-pi logo"></picture> akis-pi
 
 [English](README.md) | 简体中文 | [交互式架构图谱（GitHub Pages）](https://akir1n.github.io/akis-pi/)
 

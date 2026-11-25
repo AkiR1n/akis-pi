@@ -1,7 +1,7 @@
 {
   "name": "akis-pi",
   "schemaVersion": 2,
-  "generatedAt": "2026-11-25T09:18:24.513Z",
+  "generatedAt": "2026-11-25T09:46:04.494Z",
   "generatedFrom": "live Pi configuration, read-only (see NEVER_COPIED in export-akis-pi.mjs)",
   "verifiedOn": {
     "os": "macOS 27.2.1",
@@ -396,7 +396,7 @@
     {
       "id": "agent-browser",
       "source": "npm -g agent-browser",
-      "version": "0.43.0",
+      "version": "0.44.0",
       "level": "float-ok",
       "module": "core",
       "platforms": [
@@ -405,8 +405,8 @@
         "win32",
         "wsl"
       ],
-      "lastVerified": "2026-11-12",
-      "note": "must live in the node tree the extension resolves; the mise node/24 alias can drift away from it.",
+      "lastVerified": "2026-11-25",
+      "note": "pi-agent-browser-native >=0.9.42 requires agent-browser >=0.44.0; must live in the node tree the extension resolves, as the mise node/24 alias can drift away from it.",
       "verified": []
     },
     {

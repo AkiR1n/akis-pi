@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>akis-pi · Pi Coding Agent Architecture</title>
 <meta name="description" content="Modular Pi coding agent architecture: cached low-cost main loop, 5-role subagent delegation, AST permission gating, dual-track memory, and automated config governance." />
-<link rel="icon" type="image/svg+xml" href="assets/logo.svg" />
+<link id="faviconLink" rel="icon" type="image/svg+xml" href="assets/logo.svg" />
 <meta property="og:type" content="website" />
 <meta property="og:title" content="akis-pi · Modular Pi Coding Agent Architecture" />
 <meta property="og:description" content="Cached low-cost main loop, role-isolated 5-subagent delegation, AST permission gating, dual-track memory, and reproducible deployment." />
@@ -729,7 +729,7 @@
 <nav class="nav">
   <div class="nav-inner">
     <a class="brand" href="#">
-      <img class="brand-logo" src="assets/logo.svg" alt="akis-pi" width="30" height="30" />
+      <img id="brandLogo" class="brand-logo" src="assets/logo.svg" alt="akis-pi" width="30" height="30" />
       <span class="brand-name"><span id="brandTitle">akis-pi</span> <span id="brandSub" class="brand-sub">· Pi 1.6.0</span></span>
     </a>
     <div class="nav-actions">
@@ -1595,6 +1595,8 @@ function renderStage() {
 }
 
 function explodeDomain(id) {
+  const map = domainMap();
+  if (!Object.hasOwn(map, id)) return;
   if (collapseTimer) { clearTimeout(collapseTimer); collapseTimer = null; }
   explodedId = id;
   renderStage();
@@ -1626,12 +1628,13 @@ function collapseDomain() {
 
 function renderExploded() {
   const layer = document.getElementById("explodedLayer");
-  if (!explodedId) {
+  const map = domainMap();
+  if (!explodedId || !Object.hasOwn(map, explodedId)) {
+    explodedId = null;
     layer.classList.remove("open");
     layer.innerHTML = "";
     return;
   }
-  const map = domainMap();
   const d = map[explodedId];
   const u = cur().ui;
   layer.classList.add("open");
@@ -1683,8 +1686,9 @@ function renderExploded() {
 }
 
 function openModal(domainId, childId) {
-  const d = domainMap()[domainId];
-  if (!d) return;
+  const map = domainMap();
+  if (!Object.hasOwn(map, domainId)) return;
+  const d = map[domainId];
   const u = cur().ui;
   const idx = Math.max(0, d.children.findIndex(x => x.id === childId));
   const c = d.children[idx];
@@ -1757,8 +1761,9 @@ function closeModal() {
 }
 
 function stepModal(delta) {
-  if (!modalDomainId) return;
-  const d = domainMap()[modalDomainId];
+  const map = domainMap();
+  if (!modalDomainId || !Object.hasOwn(map, modalDomainId)) return;
+  const d = map[modalDomainId];
   const i = d.children.findIndex(x => x.id === modalChildId);
   const next = (i + delta + d.children.length) % d.children.length;
   openModal(modalDomainId, d.children[next].id);
@@ -1869,9 +1874,25 @@ function renderDir(q = "") {
 document.getElementById("stage").addEventListener("click", () => collapseDomain());
 document.getElementById("explodedLayer").addEventListener("click", () => collapseDomain());
 
+function syncThemeAssets() {
+  const theme = document.documentElement.getAttribute("data-theme") === "light" ? "light" : "dark";
+  const logoSrc = theme === "light" ? "assets/logo-light.svg" : "assets/logo.svg";
+  const brandLogo = document.getElementById("brandLogo") || document.querySelector(".brand-logo");
+  if (brandLogo) {
+    brandLogo.src = logoSrc;
+    brandLogo.setAttribute("src", logoSrc);
+  }
+  const favicon = document.getElementById("faviconLink") || document.querySelector('link[rel="icon"]');
+  if (favicon) {
+    favicon.href = logoSrc;
+    favicon.setAttribute("href", logoSrc);
+  }
+}
+
 document.getElementById("themeBtn").addEventListener("click", () => {
   const curTheme = document.documentElement.getAttribute("data-theme");
   document.documentElement.setAttribute("data-theme", curTheme === "light" ? "dark" : "light");
+  syncThemeAssets();
 });
 
 document.getElementById("langBtn").addEventListener("click", () => {
@@ -1909,8 +1930,9 @@ if (typeof ResizeObserver !== "undefined") {
 }
 
 const urlParam = new URLSearchParams(location.search).get("explode");
-if (urlParam && domainMap()[urlParam]) explodedId = urlParam;
+if (urlParam && Object.hasOwn(domainMap(), urlParam)) explodedId = urlParam;
 
+syncThemeAssets();
 applyChrome();
 renderStage();
 renderDir();
