@@ -1,142 +1,76 @@
-# 设计取舍与实测依据
+# 设计取舍与实测依据（Design Decisions & Evidence）
 
-这份配置中的参数对应具体的实测数据与边界约束。本文档汇总各项关键配置的决策、依据以及对使用的影响，供二次调整时参考。
+本文档记录 `akis-pi` 关键配置背后的实测数据、权衡代价与明确边界，方便二次调整时有的放矢。
 
-数字口径：token 计算按 chars/4 估算，或直接采用会话 JSONL 中的 `usage` 字段。**估算不能等同于实测**，两者的差异已在对应部分标注。
+> 口径说明：估算 token 按 `chars / 4`，实测 token 来自会话 JSONL 的 `usage` 或网关记录，文中均已区分标注。
 
+---
 
-## 1. codemode only：首轮更精简，多步任务总开销无定论
+## 1. `codemode.mode: "only"`：压缩常驻开销，且经 13 天生产复查无退步
 
-**决策**：在 `settings.json` 中配置 `{"codemode":{"mode":"only"}}`。配合 `pi-compact-tools` 插件时，Pi 1.5.2 + pi-subagents 0.88.1 下直接向模型暴露 6 个工具：`ask_user`、`codemode`、`contact_supervisor`、`subagent`、`subagent_supervisor`、`tool_search`，其余 50 多个工具通过 QuickJS 沙箱脚本在运行时动态发现与调用。
+**决策**：在 `settings.json` 中固定 `{"codemode":{"mode":"only"}}`。在 Pi `1.6.0` + `pi-subagents 0.90.0` 下，模型顶层仅直接可见 **6 个工具**（`ask_user`、`codemode`、`contact_supervisor`、`subagent`、`subagent_supervisor`、`tool_search`），其余 50+ 工具收进 QuickJS 沙箱按需发现。
 
-**静态测量对比（两次探针，口径不同）**
+**静态与生产实测数据**：
 
-| 探针条件 | 模型直接可见工具数 | 工具清单字符数 | 首轮 input token（含缓存读） |
-| --- | --- | --- | --- |
-| 探针 1：on → only | 39 → 4 | 3,471 → 432 | 26,704 → 16,261（约 -39%） |
-| 探针 2：on → only + 优化系统提示 | 53 → 6 | 系统消息 35,464 → 23,913 字符 | 25,522 → 13,954（约 -45%） |
+| 维度 | 观测结果 | 结论 |
+| --- | --- | --- |
+| 首轮固定提示词 | 53 → 6 直接工具；系统消息 35,464 → 23,913 字符；首轮 input 25,522 → 13,954 token（−45%）；网关首轮 `in` 中位数 7,785 → 3,953（−49%） | 固定开销压缩成立 |
+| 13 天生产会话复查（2026-11-12 至 11-25，61 个净主会话 / 2,842 次脚本） | 脚本总失败率 **3.48%**（合并长寿会话 5,556 次为 **3.19%**）；`searchTools`/`describeTool` 探测仅占内层调用 **2.2%** 且含探测会话比例由 46% 降至 24% | 无退步信号，不触发“核心工具直出” |
+| 失败根因拆分（99 次失败） | `SyntaxError` **45.5%**、`ReferenceError` **10.1%**、`TypeError` **6.1%**（合计 **61.6%** 为脚本自身 JS 编写错）；参数形态错仅 2 次（2.0%），且均为 `edit` 内容匹配保护而非参数名猜错 | 直出工具无法解决 JS 编写错，反而会把工具面推高到 ≥40k 字符 |
 
-两次数字差异来自提示词与依赖版本变化；当前 Pi 1.5.2 + pi-subagents 0.88.1 实际保留 6 个直接工具，包含 3 个子代理协调工具；已接受这一集合。不要把上述百分比当作任意机器上的实际节省幅度。
+**对应治理策略**：
+- **不将核心工具改为直出**，也不盲目放大 `inlineBudget`（此前 12 任务预筛已证伪“不在内联清单就不用 `edit`”的假设，control 组 11/12 任务仍靠 `describeTool` 正常调用 `edit`）；
+- **在 `APPEND_SYSTEM.md` 精准治本**：禁止在 `codemode` 的 JS 数组/反引号里三层嵌套拼 Python 补丁脚本（直接用 `tools.edit`/`tools.write`）、明确沙箱跨轮独立无 `setTimeout`、禁止对 `searchTools()` 或 `read` 图片块调用 `JSON.parse`。
 
-**代价**：5 个对照任务中，only 模式输入 token 降低 29%，输出 token 增加 36%（模型需要写脚本）。多步任务总 token（input + cacheRead）曾测得约 +17%，但那是同一道任务跑三次的结果，剔除其中一次即变为 −9.4%，**不足以作为结论**。站得住的是固定开销：网关记录的首轮 `in` 中位数从 7,785 降到 3,953（−49%）。
+---
 
-**结论边界**：探针 2 同时改动了 `AGENTS.md` 和 `APPEND_SYSTEM.md`，效果差异无法单一归因于 codemode；评测脚本依据关键词判定，部分答案可在文档中检索到，不能据此推断 only 模式在任务准确率或错误率上的绝对高低。
+## 2. 双层权限门禁：`pi-permission-system` + `pi-permission-auto-review`
 
-**适用场景**：常驻工具 schema 是每次请求的固定成本，only 模式将其压低；代价是模型要写脚本驱动工具。这靠 `APPEND_SYSTEM.md` 的调用约定和报错恢复规则弥补。如果你的主要场景是高频、多步骤工具交互，且不在意首轮提示词体积，用默认的 `on` 模式也可以。
+**决策**：在 `core` 模块中启用 `@gotgenes/pi-permission-system`（`42.2.1`）与 `@mzwing/pi-permission-auto-review`（`1.0.2`，`preset: "codex"`），同时提供脱敏基线配置 `config/pi-permission-system/config.json` 与 `config/pi-permission-auto-review/config.json`。
 
-**未采纳方案**：核心工具常驻（把 read/bash/edit/write 设为直接可见）。目前暂不采用，建议先观察会话里的参数错误率、探测调用占比与单工具脚本比例，有瓶颈再调。
+- **零开销快路径**：常规 `bash` 与只读 `rtk` 子命令（通过 `commandEffects.rtk` 声明为 `read`）直接 0 ms 放行；
+- **AST 级高危拦截**：基于 `web-tree-sitter` + `tree-sitter-bash` 拆解复合命令，拦截 `rm -r*`（放行临时目录）、`git push --force`、`git reset --hard`、`git clean`、`sudo`、`npm publish`、`pi install/remove` 等，且同时覆盖 `rtk` 重写前后的命令形态；
+- **有界委派与 Fail-Closed**：自动评审模型超时、不可达或遇到 `external_directory` / `path_write`（如 `~/.pi/agent/sessions/*`、`~/.pi/agent/memory/*`）时一律 `defer` 交由人类确认；无头 `pi -p` 模式下自动拒绝（`confirmation_unavailable`），绝不静默放行。
 
-
-## 2. 不设核心工具常驻，靠 describeTool 按需查声明
-
-工具从声明列表移除后，模型的常见错误变成**参数结构偏差**（如缺少必填的 `- path` 字段、把数字写成字符串），而不是工具名不存在。
-
-因此没有重新暴露几十个常驻工具，而是在 `APPEND_SYSTEM.md` 里约定：
-
-> 脚本里找工具用全局 `searchTools("动词 名词")` 和 `describeTool(name)`，它们不在 `tools` 上。`bash`/`read`/`edit`/`grep` 常被 3000 token 预算挤出描述，不确定返回结构时先 `describeTool` 看声明。（原文见 `config/APPEND_SYSTEM.md`）
-
-这样单次开销只是一次 `describeTool`（几十 token），省掉了每轮固定传输完整 schema 的开销。
-
-配合另外两条规则（不确定工具名先调 `searchTools`、独立调用放同一脚本并行），实现按需检索与报错自愈。
-
+---
 
 ## 3. Magic Context 的三项核心阈值
 
 | 参数 | 配置值 | 决策依据 |
 | --- | --- | --- |
-| `execute_threshold_tokens.default` | 400000 | 绝对触发阈值。插件默认策略为「上下文窗口的 65%」，在小窗口模型上容易过早触发压缩；400k 是基于公开评测中 250k–500k 区间出现的注意力衰减特征、以及主流 harness 默认窗口所取的审慎值。当模型实际窗口低于 400k 时，Magic Context 会自动钳位在 90%。 |
-| `memory.injection_budget_tokens` | 3000 | 注入预算限制。若设为 1000，60 余条已沉淀的项目记忆仅能注入 4 条，导致已有记忆无法有效发挥作用。 |
-| `historian_timeout_ms` | 600000 | 压缩任务超时时间。会话总结归档属于重度推理任务。曾设为 180000 ms 时超时率较高（完成与超时约 2:1），且超时中断后模型后台仍在生成，导致同模型重试并重复产生费用。 |
+| `execute_threshold_tokens.default` | `400000` | 避免小窗口按 65% 过早压缩，也避免超长上下文进入注意力衰减区间；模型实际窗口低于 400k 时 MC 自动钳位至 90%。 |
+| `memory.injection_budget_tokens` | `3000` | 1000 token 仅能注入约 4 条项目记忆，召回严重不足；3000 token 可覆盖核心上下文同时可控。 |
+| `historian_timeout_ms` | `600000` | 180s 时长会话归档超时率高且会触发后台重试重复计费；放宽至 600s 显著降低中断。 |
 
-**压缩阈值考量**：上下文不是越大越好。公开评测表明，部分模型在 250k 左右开始掉点；部分平台对 1M 窗口的建议归档点在 272k 到 500k 之间。方向很明确：**基础提示词和常驻层尽量精简，具体细节靠检索按需召回**。
+**同步纪律**：若本机维护了多个 MC profile，三份 `magic-context.jsonc` 必须保持一致，且 `historian.pi.thinking_level` 必须显式写出，避免静默继承交互默认档位。
 
-**多配置同步**：如果维护了多个启动配置（如独立 profile），各处的这三项参数要保持一致，避免记忆行为不一致。
+---
 
+## 4. 搜索路由与 Magpie 边界
 
-## 4. 搜索路由及回退顺序
+- **搜索链**：`searchRouting.providers = [exa, brave, bocha, gemini, degoog]`，将 `empty` 与 `domain-miss` 纳入 `fallbackOn`，避免搜索结果为空时停滞；修改路由后需重启 Pi 生效。
+- **Magpie 接管原则**：只在“降低 Pi 常驻上下文或维护复杂度”时交由 Magpie 接管（模型路由、脱敏、技能路由降 42% 索引开销、独立 stdio `magpie mcp image`、反爬 `web_fetch` 兜底）；不接管本地持久记忆与桌面/浏览器自动化；需要斜杠命令注册的技能（如 `/skill:save-topic`、`/skill:self`）保持直连。
 
-配置：`searchRouting.providers: [exa, brave, bocha, gemini, degoog]`，降级条件：`fallbackOn: [empty, domain-miss, transient, quota, network, invalid-response]`。
+---
 
-**设计**：排在最前面的是结构化输出较好的通用搜索，接着是带 API Key 的商用搜索引擎，最后用无需 Key 的搜索兜底。把 `empty` 和 `domain-miss` 纳入降级条件，是因为搜不出内容和网络超时的结果一样。
+## 5. 分层记忆与 `RESIDENT.md` 规范
 
-**调整注意**：
-- `searchRouting` 调整后需**重启 Pi 进程**生效（部分扩展缓存了路由），`/reload` 可能无法重载。
-- 不要把没有凭据的 Provider 放在首位。没 key 就从列表删掉，避免每次都白等一次超时。
+- **每轮常驻**：`resident-memory.ts` 仅注入 `RESIDENT.md`（硬预算 6000 字符，行边界截断），通过 `event.systemPromptOptions.sections` 独立挂载，不覆写主系统提示词、不破坏 KV Cache；
+- **按需检索**：个人历史与笔记放入 `pi-knowledge`（`0.15.0` + 4 个本地补丁：尾延迟优化、markdown 真实行号 span、边界复核加固、`tree-sitter-qmljs` 可选依赖）；
+- **安全边界**：检索与常驻记忆均视为数据而非指令，不可授予执行权限。
 
-**网页正文抓取链路**：主路径为 `web_search → fetch_content`；遇到 403 反爬时，模型按 `APPEND_SYSTEM.md` 规则改用 Magpie 的 `web_fetch`（提示词约定，不是插件内自动回退）。注意：`web_fetch` 会做脱敏处理，特定地址、邮箱或哈希可能被替换，**抓取内容不要直接当作凭据或配置使用**。
+---
 
+## 6. 子代理 5 角色分工与 UI 显示
 
-## 5. Magpie 外部网关的接管边界
+- **角色与模型解耦**：5 个角色文件不硬编码 `model`，通过 `subagents.defaultModel`（`{{MODEL_EXEC}}`）和 `agentOverrides`（`analyze`/`review` 用 `{{MODEL_REVIEW}}`）集中分档；最强模型 `{{MODEL_PLAN}}` 不绑定常驻角色，按需在调用时传 `model:`；
+- **工具面最小权限**：仅 `implement` 与 `lead` 拥有写权限；`explore` 无 shell；`analyze` 与 `review` 仅只读 + `bash`（带 `rtk.ts` 压缩与 `toolBudget` 护栏）；
+- **界面精简**：`pi-compact-tools` 采用 `compact` + `normal` 模式，`edit` 默认展开便于人工审查 diff，其余工具折叠；`pi-subagents` 采用单行摘要 + FleetView 展示，关闭重复的 async widget；`pi-atelier` 保留自定义编辑器/侧栏/底栏。
 
-**原则**：外部网关只在能减少上下文开销或简化运维时接入。
+---
 
-- **接管范围**：联网搜索（针对反爬的第二跳兜底）、图像与视频生成模型、技能索引优化（迁移到网关统一索引，使 Pi 的直接技能提示词从 11,276 字符降至 6,545 字符，降幅 -42%）。
-- **不接管**：持久会话记忆、桌面/浏览器自动化。本地已有成熟实现，接入网关只会多一套状态。
+## 7. 其他基础护栏配置
 
-**集成注意**：
-1. **Hub 工具过滤**：网关处理带 `Sec-Fetch-Mode: cors` 或浏览器 UA 的请求时，默认只暴露基础搜索工具；Pi 的 Node fetch 自带此类请求头。因此生图能力要通过独立 stdio 进程启动（`magpie mcp image`），不要依赖 HTTP Hub。
-2. **斜杠命令技能独立注册**：像 `/skill:save-topic` 这种需要在终端输入斜杠命令的技能，并入网关后 Pi 无法注册同名命令。外部通用工具可以由网关精简，手动调用的技能保留直接注册。
-
-**必装而非可选**：Magpie 在这套配置里当必装件。模型路由、生图与视频、反爬时的抓取兜底、技能索引与 MCP 都经它，`rtk` 也是它装的；去掉它等于换一套配置，`APPEND_SYSTEM.md` 里那几条规则也没有对象，所以不提供「跳过 Magpie」的路径。Pi 裸件接任意 OpenAI 兼容服务的用法仍然成立，只是那已经不是这份配置。
-
-
-## 6. 分层记忆：RESIDENT 只留关键事实
-
-- **每轮固定注入**：只注入 `RESIDENT.md`（上限 6000 字符，通常几百到两千字符），记录长期稳定、可核验的个人偏好、环境特征与约束。
-- **动态检索**：用本地知识库（pi-knowledge）存项目历史、笔记和上下文，匹配时检出。
-- **自动归档**：长会话由 Magic Context 的 historian 按阶段压缩并生成摘要。
-
-**注入方式选择**：有些记忆插件通过替换整个 `systemPrompt` 注入，会破坏插件协作，互相覆盖。本配置通过修改 `event.systemPromptOptions.sections` 注入独立区域，兼容多插件，也不影响 KV Cache。
-
-**常驻记忆规范**：
-1. 超长截断严格落在行边界，避免残缺半句影响判断。
-2. 只有返回 `ENOENT` 视为空记忆；权限、编码或读取异常要显式报错，避免配置错误被静默忽略。
-3. 注入数据只作为参考，不授予执行权限，不能覆盖 `AGENTS.md` 安全规则或用户的明确指令。
-
-
-## 7. 界面精简：compact-tools
-
-通过插件折叠终端工具输出（`previewLines: 8`，`edit` 保持展开，其他工具折叠），保留思考过程。在 codemode 下，模型拿到的有效内容由脚本组织；在终端打印几千行 diff 或日志既影响审阅，又占屏幕（折叠只作用于显示层，不影响模型拿到的内容）。保持 `edit` 展开是为了方便人工审查代码改动。
-
-
-## 8. 子代理：角色按工具面分，档位在 settings 里
-
-- **角色不绑模型**：五个角色文件都不写 `model`，档位来自 `subagents.defaultModel` 与 `agentOverrides`。改模型不动角色，改角色不动模型。
-- **按工具面分工**：`explore` 只读侦察、`implement` 写、`lead` 能再派子代理、`analyze` 只读分析、`review` 只读验收。只有 `implement` 与 `lead` 有写工具。
-- **两档默认**：执行档给 explore / implement / lead，分析档给 analyze 与 review。最强模型不绑给角色，需要时在调用上写 `model:`。依据是作者两周内 221 次真实调用：复核与分析合计 65 次，绝大多数用较强的通用模型；最强模型是极少数情况。
-- **analyze 与 review 同模型不同提示**：工具面相同，差别在预置提示——analyze 出结论与取舍，review 只出 `VERDICT / EVIDENCE / UNCHECKED`。
-- **强模型也能带队**：需要强模型做执行或带队时，在调用上写 `model:`，不给每个组合单开角色。
-
-代价是档位与角色的对应关系不在角色文件里，要看 settings；换来的是主会话换模型时子代理不会跟着变贵，以及新增一个组合不需要新建文件。
-
-
-## 9. 辅助配置项
-
-- `defaultTools: ["+codemode","+grep","+find"]`：声明基础只读检索偏好；启用 `pi-compact-tools` 时，grep 和 find 也进入按需通道，当前版本顶层直接可见工具为上述 6 个。
-- `retry.provider.timeoutMs: 3600000`、`maxRetries: 0`：关闭底层自动重试，由上层控制重试，避免掩盖网络故障并在长任务中成倍累加等待时间。
-- `compaction` / `branchSummary` 显式声明 `reserveTokens`：锁定压缩保留量，避免不同版本默认值变动导致基线不一致。
-- `enableInstallTelemetry: false`：关闭安装遥测上报。
-- `showCacheMissNotices: true`：开启缓存未命中通知，便于观察费用波动。
-
-
-## 10. 平台取舍：WSL2 为 Windows 默认，QML 语法包改为可选
-
-**决策一**：Windows 用户默认推荐 **WSL2 的全套（core+magpie+memory）**，原生 Windows 作为可选路径并标「试验」。
-
-**依据**：本包的执行面几乎全是 POSIX 语义——部署脚本用 sh、补丁用 `git am` 串行应用、凭据示例用 Keychain、PDF 服务用 launchd/systemd。WSL2 里这些差异一次性消失，剩下的风险只集中在 Linux 侧本身；原生 Windows 则要同时处理 Git Bash 依赖、npm `.cmd` shim、Appx/winget 缺失、原生模块编译与浏览器 best-effort 五类问题。推荐成本更低的一侧，比把五类问题都写进首装路径更诚实。
-
-**代价**：WSL2 的 Linux 用户态不能操作 Windows 桌面（computer-use 在 WSL 里是 Linux 后端），也不能直接复用 Windows 上的登录态浏览器；需要这两类能力的人要选原生 Windows。WSL2 侧的源码、`node_modules`、数据库必须留在 `/home`，与 Windows 共用 `node_modules` 会装错平台包。
-
-**决策二**：`tree-sitter-qmljs` 由硬依赖改为 `optionalDependencies`，加载失败时跳过 QML 解析并一次性提示。
-
-**依据**：该包 0.3.1 的发布包没有 `prebuilds`，`npm ci` 需要 node-gyp 构建链（Python + MSVC 或 Linux 工具链）。在没装 VS Build Tools 的原生 Windows 上，这一个语法包的编译失败会让整个 memory 模块装不上，而 QML 在 Pi 的日常使用里是很小的一块。把它降级为可选后，缺包只是少一种语法解析。
-
-**代价与边界**：QML 文件退回文本分块，检索粒度变粗；其它语言（TypeScript、Python、Rust、Go 等）的 AST 解析与检索行为不变。补丁在加载失败时每个进程只提示一次，重新安装成功后需重启进程才重试。这是「不阻断安装」的取舍，不是「QML 支持已验收」：原生 Windows 上的完整安装与查询仍需实机记录。
-
-**决策三**：Node 钉 24.22.3，不再用 24.21.0。
-
-**依据**：Node 24.19.0–24.21.x 给 `node::ObjectWrap` 加了 cleanup hook，配套的注册表到 24.22.0 才有（上游 nodejs/node#65446）。pi-knowledge 用的 better-sqlite3 在垃圾回收时释放 Statement，会在没有活动上下文时调用 `RemoveEnvironmentCleanupHook`，Node 断言失败，进程以 SIGABRT 退出。WSL2 上 MC 与 pi-knowledge 同时加载时，24.21.0 跑 20 轮有 9 轮崩溃、交互会话 3 次崩 2 次；只换成 24.22.3 后 20 轮与 TUI 10 次全部正常。在 pi-knowledge 里持有 Statement 引用的补丁试过，无效（20 轮 14 轮失败）。崩溃轮次的数据库完整性检查都正常。
-
-**代价**：Node 版本不再与作者最初验证时一致，macOS 与两台 Windows 机器都按 24.22.3 重新验收了一遍。macOS 的 better-sqlite3 预编译件不导入这个函数，所以在 macOS 上不容易复现，但同样不要低于 24.22.0。
-
-**没有采纳的方案**：把 `macos` 模块改名为 `desktop` 并整包跨平台（会让旧状态误启用 darwin 专属扩展，改为拆出 pdf 模块）；用自建 GitHub 镜像替代 release 下载（增加一个需要维护的可信来源）；把 musl、Windows ARM64、Linux arm64 写进正式支持（均无任何实测依据）。
+- `retry.provider.timeoutMs: 3600000`、`maxRetries: 0`：避免客户端与 Magpie 网关双层重试叠加放大延迟；
+- `compaction` / `branchSummary` 显式声明 `reserveTokens`：防止上游默认值变动引发行为漂移；
+- `enableInstallTelemetry: false`、`showCacheMissNotices: true`：关闭遥测，保留缓存未命中提示便于观测成本。

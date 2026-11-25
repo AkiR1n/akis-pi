@@ -2,10 +2,13 @@
 
 - 直接声明给你的工具只有少数几个：下面列出的 4 个（codemode、ask_user、subagent、tool_search），加上 pi-subagents 注册的通信与等待工具（contact_supervisor、subagent_supervisor，以及异步等待用的 bg_wait，它们不写在这段文字里但 schema 会下发）。
 - 脚本里找工具用全局 `searchTools("动词 名词")` 和 `describeTool(name)`，它们不在 `tools` 上。`bash`/`read`/`edit`/`grep` 常被 3000 token 预算挤出描述，不确定返回结构时先 `describeTool` 看声明。
-- 返回值按声明取：`bash` → `{ output, exit_code }`（退出码非零不抛错，自己判断）；`read` → 字符串，读图是 image block；`web_search` → `{ queries: [{ results: [...] }] }`。不要对结果再 `JSON.parse`，除非你读的就是 JSON 文件。
+- 返回值按声明取：
+  - `bash` → 字符串（或带 `output` 字段的对象）；退出码非零会报错。
+  - `read` → 字符串，读图是 image block；`web_search` → `{ queries: [{ results: [...] }] }`；`searchTools()` 直接返回对象/数组。**绝不对 `searchTools()`或 `read` 图片结果调 `JSON.parse`**，除非你读的就是 JSON 文件文本。
 - 脚本里不能调 `subagent`；报错提示 `tools.subagent_launch` 时忽略它（那是审批钩子，什么都不启动），改在顶层调 `subagent`。
-- 含反引号、`${` 或反斜杠的文本（嵌 Python、Markdown、PowerShell）不要放进模板字符串或 `String.raw`，用数组 `.join("\n")` 拼。
+- 改已有文件直接用 `tools.edit`（不要在 `codemode` 里用 JS 数组或反引号嵌套拼 Python 补丁脚本）；必须写入含引号、反斜杠、反引号或 Shell `${VAR}` 的多行内容时，直接拆成 `tools.write` 并核对转义，绝不把 Shell `${VAR}` 放进未转义的反引号模板字符串。
 - 沙箱是 QuickJS：没有 `Buffer`、`require`、`fs`、`setTimeout`；上个脚本的变量到下个就没了，要跨脚本保留用 `store()`/`load()`。
+- 权限门禁：`bash` 已接入 `pi-permission-system`（安全命令 0ms 放行，危险命令走 AST 拦截并经 `pi-permission-auto-review` 自动审核）。
 - 读 `Script error` 首行：`is not defined` → 拼错、跨脚本变量或 Node API；`not a function` → 返回值形状看错或误写 `tools.`；`SyntaxError` → 模板字符串被引号截断。末尾列出的调用已经生效，重跑前先确认副作用。
 - 互不依赖的调用放进同一个脚本，用 `Promise.allSettled` 并行；大输出先在脚本里过滤再返回。
 - 图片与截图必须用 `image(await tools.read({ path }))` 显示：直接 `return` 或 `text()` 只会把 base64 当文本塞进上下文（不报错，但看不到图、还很占额度）。MCP 返回的 image block、`models.generateImages()` 的结果同样用 `image()` 包一层。

@@ -1,7 +1,7 @@
 {
   "name": "akis-pi",
   "schemaVersion": 2,
-  "generatedAt": "2026-11-22T16:33:45.533Z",
+  "generatedAt": "2026-11-25T04:29:54.076Z",
   "generatedFrom": "live Pi configuration, read-only (see NEVER_COPIED in export-akis-pi.mjs)",
   "verifiedOn": {
     "os": "macOS 27.2.1",
@@ -40,7 +40,7 @@
         "wsl"
       ],
       "lastVerified": "2026-11-12",
-      "note": "tested 1.5.2. The official installer installs the newest release; the npm command in DEPLOY.md reproduces 1.5.2 exactly.",
+      "note": "tested 1.6.0. The official installer installs the newest release; the npm command in DEPLOY.md reproduces 1.6.0 exactly.",
       "verified": []
     },
     {
@@ -82,8 +82,8 @@
     },
     {
       "id": "pi-magic-context",
-      "source": "npm:@cortexkit/pi-magic-context@0.49.56",
-      "version": "0.49.56",
+      "source": "npm:@cortexkit/pi-magic-context@0.49.76",
+      "version": "0.49.76",
       "level": "pinned-reason",
       "module": "memory",
       "platforms": [
@@ -92,7 +92,7 @@
         "win32",
         "wsl"
       ],
-      "lastVerified": "2026-11-12",
+      "lastVerified": "2026-11-25",
       "note": "read the release notes for database migrations before upgrading; MC owns the project-memory store.",
       "verified": []
     },
@@ -129,8 +129,8 @@
     },
     {
       "id": "pi-agent-browser-native",
-      "source": "npm:pi-agent-browser-native@0.9.41",
-      "version": "0.9.41",
+      "source": "npm:pi-agent-browser-native@0.9.42",
+      "version": "0.9.42",
       "level": "pinned",
       "module": "core",
       "platforms": [
@@ -139,13 +139,13 @@
         "win32",
         "wsl"
       ],
-      "lastVerified": "2026-11-12",
+      "lastVerified": "2026-11-25",
       "verified": []
     },
     {
       "id": "pi-atelier",
-      "source": "npm:pi-atelier@0.20.1",
-      "version": "0.20.1",
+      "source": "npm:pi-atelier@0.21.0",
+      "version": "0.21.0",
       "level": "pinned",
       "module": "core",
       "platforms": [
@@ -154,7 +154,7 @@
         "win32",
         "wsl"
       ],
-      "lastVerified": "2026-11-12",
+      "lastVerified": "2026-11-25",
       "resourceFilters": {
         "extensions": [
           "+extensions/index.ts"
@@ -200,8 +200,8 @@
     },
     {
       "id": "pi-subagents",
-      "source": "npm:pi-subagents@0.89.1",
-      "version": "0.89.1",
+      "source": "npm:pi-subagents@0.90.0",
+      "version": "0.90.0",
       "level": "pinned",
       "module": "core",
       "platforms": [
@@ -210,7 +210,7 @@
         "win32",
         "wsl"
       ],
-      "lastVerified": "2026-11-12",
+      "lastVerified": "2026-11-25",
       "verified": []
     },
     {
@@ -335,8 +335,8 @@
     },
     {
       "id": "pi-permission-system",
-      "source": "npm:@gotgenes/pi-permission-system@42.2.0",
-      "version": "42.2.0",
+      "source": "npm:@gotgenes/pi-permission-system@42.2.1",
+      "version": "42.2.1",
       "level": "pinned",
       "module": "core",
       "platforms": [
@@ -345,7 +345,7 @@
         "win32",
         "wsl"
       ],
-      "lastVerified": "2026-11-12",
+      "lastVerified": "2026-11-25",
       "verified": []
     },
     {
@@ -490,6 +490,10 @@
     {
       "id": "personal marketplace skill",
       "reason": "personal marketplace skill"
+    },
+    {
+      "id": "local PTY shell extension",
+      "reason": "local-only PTY shell extension kept outside the portable template"
     },
     {
       "id": "personal extensions",

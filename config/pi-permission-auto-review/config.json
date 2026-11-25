@@ -1,0 +1,16 @@
+{
+  "preset": "codex",
+  "provider": "{{PROVIDER}}",
+  "model": "{{MODEL_EXEC}}",
+  "autoMode": {
+    "environment": [
+      "$defaults",
+      "~/.pi/agent/sessions, ~/.pi/agent/memory hold irreplaceable personal data; /tmp, /private/tmp, build outputs and node_modules are disposable"
+    ],
+    "soft_deny": [
+      "$defaults",
+      "Recursive deletion of anything outside temp dirs, build outputs or node_modules unless the user named that path in this conversation",
+      "Force-pushing or rewriting history on a remote branch unless the user asked for a history rewrite in this session"
+    ]
+  }
+}

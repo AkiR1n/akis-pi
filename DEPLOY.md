@@ -154,13 +154,13 @@ pi --version
 B：复现测试版本（两个平台同一条命令）：
 
 ```sh
-npm install -g --ignore-scripts @earendil-works/pi-coding-agent@1.5.2
+npm install -g --ignore-scripts @earendil-works/pi-coding-agent@1.6.0
 pi --version
 ```
 
 原生 Windows 的 managed 安装器见上游 Windows 文档；本包尚未验收该路径，优先用 B 复现精确版本。
 
-**期望**：B 精确输出 1.5.2；A 为新版时 doctor 对普通偏差 WARN，对 major 变化 FAIL（需重评兼容性）。
+**期望**：B 精确输出 1.6.0；A 为新版时 doctor 对普通偏差 WARN，对 major 变化 FAIL（需重评兼容性）。
 **失败怎么办**：不要混装 managed 与 npm 全局。命令缺失时检查 PATH 里的 agent-dir/bin 或 npm prefix 的 bin；Windows 上 `pi` 是 `pi.cmd` shim，doctor 会把它解析成 `node.exe + CLI 脚本`，不需要你手工改指向。不要因新版 WARN 自动降级或替换 pinned 组件。
 
 ## 3. models.json 与无 key 检查
@@ -259,24 +259,28 @@ PowerShell 的单引号让 `$BRAVE_API_KEY` 保持引用文本，不会被当前
 ## 5. 安装插件（必须先渲染）
 
 ```sh
-pi install npm:pi-web-access@0.47.0
-pi install npm:pi-agent-browser-native@0.9.32
-pi install npm:pi-atelier@0.20.0
+pi install npm:pi-web-access@0.48.0
+pi install npm:pi-agent-browser-native@0.9.42
+pi install npm:pi-atelier@0.21.0
 pi install npm:pi-ask-user@0.17.2
 pi install npm:pi-powerpoint@1.0.0
-pi install npm:pi-subagents@0.88.1
+pi install npm:pi-subagents@0.90.0
 pi install npm:pi-compact-tools@0.18.0
 pi install npm:pi-mobile@0.4.0
 pi install npm:@injaneity/pi-computer-use@0.5.1
 pi install npm:pi-away@0.1.4
-pi install npm:pi-prompt-suggestion@0.1.3
+pi install npm:pi-mox@0.3.1
+pi install npm:pi-schedule@0.6.1
+pi install npm:@getpipher/vision@0.5.3
+pi install npm:@gotgenes/pi-permission-system@42.2.1
+pi install npm:@mzwing/pi-permission-auto-review@1.0.2
 ```
 
-pi install 在空 settings 只写字符串条目；资源过滤来自步骤 4 渲染，已有过滤对象才会被保留。pi-atelier 的 extensions 与 pi-compact-tools 的 extensions/themes: [] 不能丢。
+pi install 在空 settings 只写字符串条目；资源过滤来自步骤 4 渲染，已有过滤对象才会被保留。pi-atelier 的 `extensions`、pi-compact-tools 的 `extensions`/`themes: []` 与 pi-schedule 的 `skills: []` 不能丢。步骤 4 同时会渲染 `extensions/pi-permission-system/config.json` 与 `extensions/pi-permission-auto-review/config.json`。
 
 **检查**：core-only 且所有包在磁盘时运行 `pi list`。
-**期望**：11 项，路径在 `agent-dir/npm/node_modules`，pi-atelier 与 pi-compact-tools 显示 `(filtered)`。
-**失败怎么办**：选了 memory 时声明 13 项而磁盘仅 11 项，**暂不运行 `pi list`**（它会触发下包，本地 pi-knowledge 未构建）；等 9.3 完成再查 13 项。doctor 不调用 pi list。
+**期望**：15 项，路径在 `agent-dir/npm/node_modules`，pi-atelier、pi-compact-tools 与 pi-schedule 显示 `(filtered)`。
+**失败怎么办**：选了 memory 时声明 17 项而磁盘仅 15 项，**暂不运行 `pi list`**（它会触发下包，本地 pi-knowledge 未构建）；等 9.3 完成再查 17 项。doctor 不调用 pi list。
 
 npm 11 的 `allowScripts` 安装脚本审批可能跳过 postinstall；`ignoreScripts` 设置也会阻止脚本运行。npm 10 及以下可跳过本段审批流程（仍需确认没有开启 `ignore-scripts`）。在执行目录检查：
 
@@ -366,7 +370,7 @@ core-only 现在开新会话（不要用旧会话或 `/reload`）。选 memory �
 pi --print 'answer with the number of tools you can call directly, and nothing else'
 ```
 
-**期望**：Pi 1.5.2 + pi-subagents 0.88.1 下有 **6 个直接工具**：ask_user / codemode / contact_supervisor / subagent / subagent_supervisor / tool_search。模型自报工具数不准，以 stub 捕获并由 `deploy-check.mjs stub-requests` 校验的集合为准。
+**期望**：Pi 1.6.0 + pi-subagents 0.90.0 下有 **6 个直接工具**：ask_user / codemode / contact_supervisor / subagent / subagent_supervisor / tool_search。模型自报工具数不准，以 stub 捕获并由 `deploy-check.mjs stub-requests` 校验的集合为准。
 **失败怎么办**：出约 50 个工具核对 `codemode.mode = only`；为 0 回步骤 5 查插件与 Pi 版本。
 
 ## 9. memory 模块（必装）
@@ -374,11 +378,11 @@ pi --print 'answer with the number of tools you can call directly, and nothing e
 ### 9.1 Magic Context
 
 ```sh
-pi install npm:@cortexkit/pi-magic-context@0.49.56
+pi install npm:@cortexkit/pi-magic-context@0.49.76
 node "$REPO/scripts/deploy-check.mjs" mc-version
 ```
 
-**期望**：0.49.56；配置已在步骤 4 随 core,memory 渲染。此时磁盘 12 个 npm 包、settings 声明 13 项；本地 pi-knowledge 未装，**不运行 doctor 或 pi list，等 9.3 完成再查**。
+**期望**：0.49.76；配置已在步骤 4 随 core,memory 渲染。此时磁盘 16 个 npm 包、settings 声明 17 项；本地 pi-knowledge 未装，**不运行 doctor 或 pi list，等 9.3 完成再查**。
 
 三参数：`execute_threshold_tokens.default=400000`（小窗口钳至 90%）、`memory.injection_budget_tokens=3000`、`historian_timeout_ms=600000`。理由见 [decisions.md](docs/decisions.md)。MC 的 `pi.subagent_extensions: []` 保持 historian 子进程不载普通扩展。
 
@@ -464,7 +468,7 @@ pi list
 node "$Repo/scripts/doctor.mjs" --home $HOME --agent-dir $env:PI_CODING_AGENT_DIR --modules core,memory
 ```
 
-**期望**：`dist/index.js` 存在、版本 0.15.0、`pi list` **13 项**（11 core + MC + pi-knowledge），保留两个 filtered；此处仅查 core,memory，doctor 应 0 FAIL；MODULES 其余模块步骤 12 查。启动新 Pi 会话做步骤 7、8 验收（无 key 用 stub），静态检查不可替代。
+**期望**：`dist/index.js` 存在、版本 0.15.0、`pi list` **17 项**（15 core + MC + pi-knowledge），保留 filtered 条目；此处仅查 core,memory，doctor 应 0 FAIL；MODULES 其余模块步骤 12 查。启动新 Pi 会话做步骤 7、8 验收（无 key 用 stub），静态检查不可替代。
 **失败怎么办**：补丁含尾延迟优化、真实 source span 行号对齐、复核修复和 QML 可选依赖四份。`git am` 冲突停止查 base，不要手动绕过。原生 Windows 上 `npm ci` 若卡在原生依赖（better-sqlite3、tree-sitter），先装 Python 3 与 VS Build Tools 的 C++ 工作负载；`tree-sitter-qmljs` 已由第 4 份补丁降级为可选依赖，它的编译或加载失败只会让 QML 文件退回文本分块，不影响其它语言——不要把它当成整体安装失败，也不要为此回退补丁。仍装不上就改用 WSL2 的全套（core+magpie+memory）。npm 脚本警告按步骤 5 查。仅构建不证明检索可用：在小库实测检索行号；知识库目录不可指向 resident 目录。
 
 ## 10. macos 模块（darwin 必装）
@@ -498,13 +502,13 @@ herdr-agent-state.ts 由 herdr 管理，仅 HERDR_ENV、HERDR_SOCKET_PATH、HERD
 ## 10b. agent-browser（core 的通用前置依赖）
 
 ```sh
-npm install -g agent-browser@0.43.0
+npm install -g agent-browser@0.44.0
 agent-browser --version
 agent-browser install
 # Linux 系统库缺失时按上游说明选择 agent-browser install --with-deps
 ```
 
-**期望**：CLI 0.43.0 且位于扩展解析的同一 Node 树。安装 CLI 不等于已下载浏览器。
+**期望**：CLI 0.44.0（`pi-agent-browser-native@0.9.42` 要求 `≥0.44.0`）且位于扩展解析的同一 Node 树。安装 CLI 不等于已下载浏览器。
 **失败怎么办**：随后用 `tools.agent_browser({args:["doctor"]})` 验证 open/snapshot/close。mise 的 node/24 别名可能随新版本漂移。原生 Windows 的会话锁、恢复与 Electron 有上游限制（上游自述 best-effort），必须单独验收，并如实呈现 Electron unsupported 之类的结论，不能只以“能启动”当通过。
 
 ## 11. magpie 模块（必装）

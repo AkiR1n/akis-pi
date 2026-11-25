@@ -1,170 +1,65 @@
-# 升级与回滚
+# 升级、静默触点与回滚手册（Upgrade & Rollback）
 
-本仓库只负责初始配置；装好之后建议在自己的维护项目里跟踪升级，这份文档可以当作那个项目的操作手册。
+本仓库负责初始可复现配置；部署完成后建议在独立的本地维护项目中追踪日常升级与快照回滚。
 
-原则：**一次只升一个组件，升完立即验收，未通过立即回滚**。组件间存在依赖与协作（Pi ↔ 插件 ↔ Magic Context ↔ 知识库），若同时升多个，出异常难定根因。
-
-升级前先保存基线状态与配置文件（POSIX；Windows 把重定向换成 `Out-File`，`cp` 换成 `Copy-Item`，其余参数相同）：
+**核心原则：一次只升一个组件（或按低风险小批次），升前备份，升完立即验收，异常即止损回滚。**
 
 ```sh
-# 用本次部署实际选中的模块；macos 只在 darwin 上加
+# 升级前保存基线状态与配置副本
 node scripts/doctor.mjs --home "$HOME" --modules core,magpie,memory > "$TMPDIR/akis-pi-doctor-before.txt"
 cp -p "$HOME/.pi/agent/settings.json" "$HOME/.pi/agent/settings.json.bak-$(date +%Y%m%d)"
 ```
 
+---
 
-## 配置与渲染回滚
+## 1. 推荐升级顺序
 
-渲染不删除文件，改过的目标在写入前都备份到 `<agent-dir>/backups/akis-pi-<时间戳>/targets/`，路径映射与写入时一致。要退回去，把对应文件复制回原位。
+1. **Pi 本体**（`pi update` 或 `npm install -g --ignore-scripts @earendil-works/pi-coding-agent@<ver>`）
+2. **外部前置 CLI**（如 `agent-browser` CLI 须先升至扩展要求的下限，例如 `pi-agent-browser-native@0.9.42` 要求 `≥0.44.0`）
+3. **普通插件**（`pi install npm:<pkg>@<ver>`；注意保留 `pi-atelier` 与 `pi-compact-tools` 的对象式 `extensions`/`themes` 过滤字段）
+4. **Magic Context**（升级前必须读 release notes 的 database migration 说明，并先冷备或 SQLite online backup 整个 storage 目录再升级）
+5. **`pi-knowledge` 补丁**（大版本跨架构升级如 `0.15.x → 0.16.x` 引入 daemon 与 schema v8 迁移，务必先评估补丁冲突与备份 `knowledge.db` 再决定是否跟进）
+6. **外部模块**（Magpie、ego、pdf-parse）
 
-`<agent-dir>/.akis-pi-render.json` 记录已完成模块；需要重新渲染某个模块时才动它。升级模板不要靠删条目覆盖已部署配置——按 DEPLOY 规定的做法在独立目录生成、审阅合并。组件层面的回滚（退插件、退 Pi、退数据库）见下面各节。
+---
 
-## 推荐升级顺序
+## 2. 每次升级后必查的 5 个静默触点
 
-1. Pi 本体 → 2. 插件 → 3. Magic Context → 4. pi-knowledge 补丁 → 5. 外部模块（Magpie 必装；ego / pdf-parse 按需）
+常规 `doctor.mjs` 能查版本与文件存在性，但以下非公开契约失效时往往表现为**静默退化**，升级 Pi、插件或 Node 后建议逐项探针复核：
 
-建议从底层核心向上推进，避免底层不稳时排查上层问题。
+| # | 触点 | 失效后果 | 快速确认方式 |
+| --- | --- | --- | --- |
+| 1 | **`@gotgenes/pi-permission-system` AST 规则** | `web-tree-sitter` / `tree-sitter-bash` 异常导致危险命令静默放行 | 在新会话 `pi -p` 中尝试 `rm -r /path/to/nonexistent`，核对 `~/.pi/agent/extensions/pi-permission-system/logs/*.jsonl` 中有 `permission_request.waiting` 且 `matchedPattern` 非空 |
+| 2 | **`extensions/rtk.ts` 改写与权限协同** | 命令被改写为 `rtk <cmd>` 后不再命中 `bash` 规则 | 在本地临时仓库测试高危 git 命令，确认日志中 `command` 带 `rtk` 前缀且仍命中对应 `matchedPattern` |
+| 3 | **`pi-atelier` 编辑器与侧栏接管** | Pi 仅允许一个自定义编辑器；新版本可能改变底栏/侧栏布局 | 重启新 Pi 会话目视底栏/侧栏与 `Settings → Display` |
+| 4 | **`@getpipher/vision` 贴图钩子** | `pi.on("input")` 变更导致贴图退化为纯路径文本 | TUI 中粘贴一张图片回车，确认显示原子标签且模型能识别图内容 |
+| 5 | **`pi-knowledge` 补丁与 embedding 兼容** | 升上游丢补丁或 `dist/` 未重编，或破坏现有知识库索引 | `cd ~/.pi/vendor/pi-knowledge && npm test`，并在小库验证检索与行号准确 |
 
+---
 
-## 平台差异
+## 3. 各组件回滚方式
 
-同一套判据，四个平台的差异只在下面几处，其余命令两端一致：
+- **渲染配置回滚**：`render.mjs` 写入前均自动备份到 `<agent-dir>/backups/akis-pi-<时间戳>/targets/`，审阅 `diff` 后单文件 `cp` 还原（不要整目录盲盖）。
+- **扩展 / 插件回滚**：先在 `settings.json` 用 `-path` 禁用故障扩展，再用 `pi install npm:<pkg>@<旧版本>` 精确回退。
+- **Pi 本体回滚**：重装 `manifest.json` 基准版本（managed 安装通常保留旧 release 目录可切换）。
+- **Magic Context 回滚**：退出所有 Pi 进程 → 降级 npm 包 → 将升级前备份的 `storage/`（含 `context.db` 与 WAL）还原回原路径。
+- **`pi-knowledge` 回滚**：升级前记下打完 4 补丁后的 `git rev-parse HEAD`，回退时 `git checkout <sha> && npm ci && npm run build`。
+
+---
+
+## 4. 旧会话与新配置
+
+- `settings.json` 在 **Pi 进程启动时**读取，升级核心插件或 MC 后请**退出并重启 Pi 进程**，不要仅依赖 `/reload`。
+- `codemode.mode` 与工具面按当前设置动态重算；若旧会话历史中仍残留旧工具用法导致模型习惯性误调，直接新开会话或 `pi --fork` 即可。
+
+---
+
+## 5. 平台差异速查
 
 | 项 | macOS | Linux / WSL2 | 原生 Windows（试验） |
 | --- | --- | --- | --- |
-| 入口 | POSIX | POSIX（WSL 内） | PowerShell 5.1/7，不用 `&&` |
-| 凭据 | `$VAR` 或 Keychain `!command` | 只有 `$VAR` | `setx` 后写 `$VAR`；`!command` 由 Git Bash 执行 |
-| Pi 命令解析 | 直接执行 | 直接执行 | doctor 把 `pi.cmd` 解析为 `node.exe + CLI`，交互终端能跑不代表脚本能跑 |
-| 数据位置 | `~/…` | WSL 内必须留在 `/home`，不要 `/mnt/c` | `%USERPROFILE%\…`，MC 配置仍在 `.config`，不是 APPDATA |
-| memory native runtime | 包内预编译文件 | 安装前 `export ONNXRUNTIME_NODE_INSTALL=skip`（CPU，跳过默认 CUDA 下载） | 先装 VC++ 2015-2022 x64 可再发行组件（管理员） |
-| 备份映射 | POSIX 相对路径 | 同左 | `drive-C/`、`unc/server/share`，跨盘不碰撞 |
-| PDF 服务重启 | `launchctl kickstart -k gui/…` | `systemctl --user restart pi-pdf-parse.service` | 任务计划程序里重启当前用户任务 |
-| 文本编码 | UTF-8 | UTF-8 | 读配置兼容 BOM；脚本一律 ASCII（PS 5.1 按 ANSI 读无 BOM 的 .ps1） |
-
-memory 升级后先跑 `node scripts/deploy-check.mjs onnx`，再跑 doctor；两者都要求 native runtime 加载成功。Windows 包存在却报 Win32 126，先查 System32 的 `vcruntime140.dll`、`vcruntime140_1.dll`、`msvcp140.dll`，缺则按 [DEPLOY](../DEPLOY.md) 安装官方可再发行组件，approve/rebuild 不能替代它。Linux x64 缺包时，默认 CUDA 下载器可能因不跟随 302 失败并被 npm 丢弃；在 agent-dir/npm 运行 `ONNXRUNTIME_NODE_INSTALL=skip npm install --include=optional` 再检查，CPU 文件已在包中。GPU 路径未实测。
-
-未实测平台跑 doctor 会对每个组件多出 platform verification WARN，这是标签，不要解释成故障，也不要为了消掉 WARN 改 manifest。当前实测范围：macOS arm64 的全部模块（含 pdf、magpie），WSL2（Ubuntu 24.04 x64）的 core+memory。未实测：Linux 原生；WSL2 与原生 Windows 上的 pdf 与 magpie；原生 Windows 的长期运行、TUI 与桌面能力。子代理从 8 个角色改成 5 个角色后只在本机 macOS 上验证过，跨平台证据对应的是旧角色定义。
-
-
-## 1. Pi 本体
-
-**版本策略**：`pinned`（测试基线版本见 [manifest.json](../manifest.json)）。
-
-```sh
-pi --version
-npm view @earendil-works/pi-coding-agent version    # 查看最新发布版本
-# 官方安装器（更新到最新）
-curl -fsSL https://pi.dev/install.sh | sh
-# 或严格复现某个固定版本
-npm install -g --ignore-scripts @earendil-works/pi-coding-agent@<version>
-```
-
-**升级后检查**：
-
-```sh
-pi --version
-pi --print 'answer with the number of tools you can call directly, and nothing else'
-node scripts/doctor.mjs --home "$HOME" --modules core
-```
-
-- 直接可见工具应是恰好 6 个（`codemode`、`ask_user`、`subagent`、`tool_search`、`contact_supervisor`、`subagent_supervisor`）。不要用模型自报的数量当判据，跑 `node scripts/deploy-check.mjs stub-requests`，缺项或多项它都会失败。若骤增到 50 左右，说明 `codemode.mode` 解析可能有变，看对应版本的更新日志。
-- `doctor` 脚本若提示 `WARN pi version`（本地版本高于 manifest 记录），属于正常预期。
-
-**回滚方案**：重装 manifest 中记录的指定版本；可通过 `npm uninstall -g` 后重装。若用官方 managed 目录安装，通常保留了历史 release 目录，可直接切换引用。
-
-**注意事项**：运行 `pi list` 时若检测到配置声明了缺失插件，会自动触发安装。不要在未确认依赖的流水线中随意调用。
-
-
-## 2. 插件
-
-**版本策略**：多数标为 `pinned`。其中 `pi-atelier`、`pi-compact-tools` 在配置中包含 `extensions` / `themes` 过滤声明（例如 `themes: []` 用于禁用自带主题），升级后需确认配置中的过滤项未被重置覆盖。
-
-```sh
-pi install npm:pi-web-access@<new>
-pi list
-```
-
-**升级后检查**：
-
-- `pi list` 输出的安装版本需与 `settings.json` 保持一致；
-- 插件导出的**工具名称**未变（工具名称属于 `APPEND_SYSTEM.md` 和 `AGENTS.md` 的调用契约；改名会导致路由失效）；
-- 涉及 UI 渲染的插件（如 compact-tools）升级后需在终端看实际渲染效果，折叠规则可能随小版本变动。
-
-**回滚方案**：执行 `pi install npm:<包名>@<旧版本号>`。不要用全局批量更新命令，一次升全部包会导致故障难以归因。
-
-
-## 3. Magic Context
-
-**版本策略**：`pinned-reason`。
-
-升级前确认：仔细阅读新版本说明中关于 **database migration**（数据库结构迁移）的章节。Magic Context 拥有独立的持久化项目记忆数据库，一旦新版本有破坏性结构迁移，仅退回旧版 npm 包可能导致旧版无法解析新数据库。
-
-```sh
-cp -a "$HOME/.config/cortexkit/magic-context.jsonc" "$HOME/.config/cortexkit/magic-context.jsonc.bak"
-# 存储目录默认位于 ~/.local/share/cortexkit/magic-context；若自定义了路径可查看 MAGIC_CONTEXT_STORAGE_DIR
-cp -a <storage-dir> <storage-dir>.bak-$(date +%Y%m%d)
-pi install npm:@cortexkit/pi-magic-context@<new>
-```
-
-**升级后检查**：
-
-```sh
-node scripts/doctor.mjs --home "$HOME" --modules core,memory
-```
-
-确认三大核心阈值参数依然生效（400000 / 3000 / 600000）；若有多处配置入口，均需同步核验。
-
-**回滚方案**：降级装回原版本包，将备份的数据库目录还原回原路径。操作存储目录前先退出 Pi 进程，避免 SQLite WAL 模式并发写入冲突。
-
-
-## 4. pi-knowledge 补丁
-
-**版本策略**：`pinned`（固定上游 commit base + 4 份补丁：搜索与更新尾延迟优化、markdown chunk 真实 source span 行号对齐、边界复核修复、QML 可选依赖；提交身份已规范为通用格式）。
-
-跟进上游仓库变更时的操作：
-
-```sh
-cd "$HOME/.pi/vendor/pi-knowledge"
-git fetch origin && git log --oneline v0.15.0..origin/main
-# 逐个补丁进行 rebase 或重新 cherry-pick 生成，遇到冲突需审阅代码逻辑，不要仅为编译通过而忽略改动语义
-npm ci && npm run build
-```
-
-**验收判据**：在小代码仓库中实际跑一次全量索引与检索，验证耗时是否平稳、命中的代码行号是否准确。若因冲突手动调整了逻辑，需在变更记录中写明改动内容。
-
-**回滚方案**：升级前先记录打完四份补丁后的提交（`git rev-parse HEAD`），回滚就是切回它并重新构建：`git checkout <记录的提交> && npm ci && npm run build`。要回到纯上游基线，则 `git checkout v0.15.0` 后按模块 README 重新应用四份补丁——只 checkout v0.15.0 会丢掉补丁。本地知识库数据保存在源码仓库外，不受构建影响；但若新代码改了向量索引存储格式，可能需要重建索引。
-
-
-## 5. 外部模块
-
-- **Magpie 网关**：网关应用升级后需重启 Pi（MCP 工具元数据仅在 Pi 启动时加载缓存），运行 `pi mcp list` 核对工具面。注意：Hub 端点在 Node fetch 下仅列出搜索工具属于正常安全过滤，并非故障。
-- **ego lite 浏览器**：升级后跑一次跨平台搜索技能，确认任务结束后浏览器窗口能正常回收；`ego-gc` 检测 `ego lite` 进程，未启动时扩展会自动跳过。Windows 上没有 `ego-gc`，这一条只需确认浏览器本体能启动。
-- **pdf-parse 服务**：服务属于独立 pdf 模块。macOS 用 `launchctl kickstart -k gui/"$(id -u)"/com.example.pipdfparse`，Linux/WSL 用 `systemctl --user restart pi-pdf-parse.service`，Windows 在任务计划程序中重启当前用户任务；然后检查回环 /health。具体步骤与旧状态迁移见 [modules/pdf](../modules/pdf/README.md)。
-- **agent-browser**：若通过 mise 安装了新的 Node 24.x 版本，需重新核验全局 CLI 依然链接在当前 Node 解析树中（详见 DEPLOY.md 步骤 10b），避免路径偏移导致工具调用失败。
-
-
-## 6. 暂缓升级的情形
-
-遇到以下情况建议延后升级：
-- 当前正在跑长任务或跨模块工作流：建议等当前任务全部交付归档后再升。
-- Magic Context 发布了数据库底层迁移且尚未完成存储冷备份：先完成数据备份。
-- 系统中尚有未定位原因的异常报错（如某项工具偶尔超时）：先查明当前问题，避免版本升级引入更多不确定性。
-- 组件处于 `pinned-reason` 锁定状态，且对应的锁定理由依然有效（如特定原生依赖的版本兼容要求）。
-
-
-
-## 7. 旧会话与新配置
-
-改完配置（例如把工具通道切成 `codemode.mode: "only"`）后，之前开的会话不需要另起就能用上新设置，但有两个前提。
-
-**设置在进程启动时读取。** 必须在一个读取过新配置的 Pi 进程里继续会话；`/reload` 只重新加载扩展与角色目录，不重读 `settings.json`。如果一个进程是在改配置之前启动的、一直没退出，在里面打开旧会话拿到的仍是旧设置。
-
-**工具面每轮按当前设置重算，与会话创建时间无关。** `codemode.mode` 在每次请求时从设置里读，所以旧会话 resume 后声明给模型的工具就是当前这套；会话里记录的旧工具列表会被重算，已经不再存在的工具会被剔除。
-
-**残留的是会话历史本身。** 旧记录里是「直接调 `read`」「直接调 `bash`」这样的用法，模型有时会照着模仿，然后调一个没有声明的工具，得到 tool not found。这不是配置没生效，是历史带来的习惯。要避免，可以在新会话第一句说明当前工具面，或者用 `/new` 起新会话、把要交接的内容贴进去。
-
-`pi --fork` 会把会话复制成当前目录下的新会话（新 ID，历史保留，原会话不动），同样拿到新工具面。`store()` 写的值、压缩记录都跟着会话走，不会因为这个切换丢失。
-
-## Node 版本
-
-本包钉 Node 24.22.3。不要用 24.19.0–24.21.x：这几个版本里，pi-knowledge 的 better-sqlite3 在垃圾回收时释放 Statement 会触发 Node 内部断言，进程以 SIGABRT 退出（上游 nodejs/node#65446，24.22.0 已修复）。WSL2 上启用 memory 时，24.21.0 跑 20 轮有 9 轮崩溃，24.22.3 为 0；数据库完整性检查在崩溃轮次也正常。macOS 上的 better-sqlite3 预编译件不走这条路径，所以 macOS 上不容易看到这个问题，但仍按同一版本钉。升级 Node 时先查该版本是否包含上游修复，再在 Linux 或 WSL2 上跑 memory 组合的回归（`tests/wsl/exit-probe.py --rounds 20 --variants memory`，每轮三条 `pi --print`，全部退出码为 0 才算通过）。
+| 入口 | POSIX | POSIX（WSL `/home` 内） | PowerShell 5.1/7（不用 `&&`） |
+| 凭据 | `$VAR` 或 Keychain `!command` | `$VAR` | `setx` + `$VAR`；`!command` 走 Git Bash |
+| `memory` 原生依赖 | 开箱即用 | 安装前设 `ONNXRUNTIME_NODE_INSTALL=skip` 与 `ONNXRUNTIME_NODE_INSTALL_CUDA=skip` | 管理员安装 VC++ 2015–2022 x64 运行库 |
+| `onnx` 验收 | `node scripts/deploy-check.mjs onnx` | 同左 | 同左 |
+| PDF 服务重启 | `launchctl kickstart -k gui/…` | `systemctl --user restart pi-pdf-parse.service` | 任务计划程序重启 |

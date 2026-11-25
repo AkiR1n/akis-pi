@@ -1,0 +1,96 @@
+{
+  "permission": {
+    "*": "allow",
+    "external_directory_read": {
+      "*": "allow"
+    },
+    "external_directory_write": {
+      "*": "ask",
+      "~/.pi/*": "allow",
+      "~/.config/*": "allow",
+      "~/Library/LaunchAgents/*": "allow",
+      "/tmp/*": "allow",
+      "/private/tmp/*": "allow",
+      "/private/var/folders/*": "allow",
+      "~/.cache/*": "allow",
+      "~/.local/*": "allow"
+    },
+    "path_write": {
+      "~/.pi/agent/sessions/*": "ask",
+      "~/.pi/agent/memory/*": "ask"
+    },
+    "bash": {
+      "*": "allow",
+      "rm -r*": "ask",
+      "rm -R*": "ask",
+      "rm -fr*": "ask",
+      "rm -fR*": "ask",
+      "rm -r* /tmp/*": "allow",
+      "rm -r* /private/tmp/*": "allow",
+      "rm -r* /private/var/folders/*": "allow",
+      "rm -fr* /tmp/*": "allow",
+      "rm -fr* /private/tmp/*": "allow",
+      "git push *--force*": "ask",
+      "git push * -f*": "ask",
+      "git push * +*": "ask",
+      "rtk git push *--force*": "ask",
+      "rtk git push * -f*": "ask",
+      "rtk git push * +*": "ask",
+      "rtk git -C * push *--force*": "ask",
+      "git -C * push *--force*": "ask",
+      "git reset --hard*": "ask",
+      "rtk git reset --hard*": "ask",
+      "git clean *": "ask",
+      "rtk git clean *": "ask",
+      "git filter-branch *": "ask",
+      "git filter-repo *": "ask",
+      "sudo *": "ask",
+      "pi install *": "ask",
+      "pi remove *": "ask",
+      "npm publish *": "ask"
+    }
+  },
+  "commandEffects": {
+    "rtk": {
+      "unlessOption": [
+        "-exec",
+        "-execdir",
+        "-ok",
+        "-okdir",
+        "-delete",
+        "-fprint",
+        "-o",
+        "--output"
+      ],
+      "subcommands": {
+        "ls": "read",
+        "tree": "read",
+        "find": "read",
+        "read": "read",
+        "grep": "read",
+        "rg": "read",
+        "wc": "read",
+        "stat": "read",
+        "du": "read",
+        "json": "read",
+        "diff": "read",
+        "smart": "read",
+        "log": "read",
+        "git": {
+          "unlessOption": [
+            "--output"
+          ],
+          "subcommands": {
+            "status": "read",
+            "log": "read",
+            "show": "read",
+            "diff": "read"
+          }
+        }
+      }
+    }
+  },
+  "authorizerChain": [
+    "auto-review"
+  ]
+}

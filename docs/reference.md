@@ -1,102 +1,83 @@
-# 参考：版本、依赖与平台
+# 参考：版本、依赖与平台（Reference）
 
-[README](../README.md) 只留表格，这里放表格背后的事实：为什么钉这些版本、各平台还要补什么、支持级别怎么定。装的时候照 [DEPLOY.md](../DEPLOY.md) 走，取舍理由见 [decisions.md](decisions.md)。
+[README](../README.md) 仅保留总览表，本文说明每个版本锁定背后的工程原因、模型分档契约与跨平台依赖细节。部署步骤见 [DEPLOY.md](../DEPLOY.md)，设计权衡见 [decisions.md](decisions.md)。
 
-## 版本与依赖
+---
 
-### Node 24.22.3
+## 1. 核心版本与依赖依据
 
-**不要用 24.19.0–24.21.x。** 这几个版本给 `ObjectWrap` 补了 cleanup hook，却没带上配套的注册表（上游 nodejs/node#65446）。pi-knowledge 用的 better-sqlite3 在垃圾回收时释放 Statement，会在这个空档里断言失败，进程直接以 SIGABRT 退出。
+### Node.js `24.22.3`
+**不要使用 `24.19.0–24.21.x`。** 这几个版本在 `ObjectWrap` 清理钩子中存在上游缺陷（`nodejs/node#65446`），当 `pi-knowledge` 的 `better-sqlite3` 在 GC 阶段释放 `Statement` 时会触发 `SIGABRT` 崩溃。WSL2 实测 20 轮 memory 组合在 `24.21.0` 上崩溃 9 轮，切到 `24.22.3` 后为 0 崩溃。Pi 与全局 CLI（如 `agent-browser`）须共用同一 Node 树。
 
-实测：WSL2 上同时加载 Magic Context 与 pi-knowledge，24.21.0 跑 20 轮崩 9 轮、交互会话 3 次崩 2 次；只换成 24.22.3，20 轮与 TUI 10 次全部正常，崩溃轮次的数据库完整性检查也没坏。在 pi-knowledge 里持有 Statement 引用的补丁试过，无效，已丢弃。
+### Pi `1.6.0`
+当前全套扩展（`pi-subagents@0.90.0`、`pi-atelier@0.21.0`、`pi-agent-browser-native@0.9.42`、`@gotgenes/pi-permission-system@42.2.1`、`@cortexkit/pi-magic-context@0.49.76`）均在 Pi `1.6.0` 基准上完成验收。`codemode.mode: "only"` 在 `1.6.0` 下保持 6 个直出工具（`ask_user`、`codemode`、`contact_supervisor`、`subagent`、`subagent_supervisor`、`tool_search`）。
 
-macOS 的 better-sqlite3 预编译件不走这条路径，所以在 Mac 上不容易复现，但同样不要低于 24.22.0。Pi 与全局 CLI 用同一份 Node；`mise` 只是 render 的可选开关，不是要求。
+### Magic Context `0.49.76`
+相对 `0.49.56` 包含多项针对 Pi 的关键修复（无数据库 schema 迁移）：修复 `doctor --fix` 在 Pi 软链场景误删 cache 外文件、修复 Gemini 路由空 text block 导致的 prompt cache 丢失、修复长会话压缩后不再收缩及摘要携带全量项目记忆的 token 膨胀。
 
-### Pi 1.5.2
+### `agent-browser` CLI `>=0.44.0` 与 `rtk` `>=1.1.0`
+- `pi-agent-browser-native@0.9.42` 将运行时下限提升至 **`agent-browser >= 0.44.0`**，安装或升级扩展前必须先升级全局 `agent-browser` CLI；
+- `extensions/rtk.ts` 依赖 `rtk rewrite` 子命令（需 `>=0.23.0`，基准为 `1.1.0`），缺失时自动 fail-open 放行原始 `bash`。
 
-配的插件与扩展是按这一组版本测的。1.5.0 起工具参数校验换了实现（`@earendil-works/pi-schema`），1.5.1 改过 grep 扩展接口，1.5.2 修了会话 fork 与重复 import。跨版本混装时先读 [upgrade.md](upgrade.md)。
-
-### Git
-
-POSIX 系统自带。原生 Windows 必须装 Git for Windows：Pi 的 shell 与凭据的 `!command` 都走它的 bash，缺了这两块都不工作。部分镜像的默认执行策略是 Restricted，要按上游说明放开，不要用 Bypass 掩盖问题。
-
-### Python 3.9+
-
-只有 pdf 模块需要：它是本地 PDF→Markdown 端点，用 PyMuPDF 解析，无文本层的扫描件返回 422 让上游回退 OCR。不装 pdf 模块就不需要 Python。
+### 权限系统与自动评审
+- `@gotgenes/pi-permission-system@42.2.1`：依赖 `web-tree-sitter` + `tree-sitter-bash` 做命令 AST 拆解，并配合 `commandEffects.rtk` 识别只读 `rtk` 子命令；
+- `@mzwing/pi-permission-auto-review@1.0.2`：通过 `config/pi-permission-auto-review/config.json` 挂载到 `{{PROVIDER}}` / `{{MODEL_EXEC}}`（生产环境可替换为带多级回退的路由组），使用 `codex` preset，超时或异常时自动 `defer` 给人类。
 
 ### Magpie
+**必装组件**。负责统一模型目录与路由、请求脱敏、反爬 `web_fetch` 兜底、独立 stdio `magpie mcp image` 生图服务以及技能索引路由。
 
-**必装，不是可选。** 模型路由、生图与生视频、反爬时的抓取兜底（`web_fetch`）、技能索引与 MCP 路由都经它，`rtk` 也是它装的。少了它，`APPEND_SYSTEM.md` 里那几条规则没有对象，等于换了一套配置：Pi 裸件接任意 OpenAI 兼容服务仍然能用，但那已经不是这份配置。
+---
 
-### 模型分工与凭据
+## 2. 模型分档与角色契约
 
-模板中所有模型位置均为占位符，不绑定特定供应商或商业模型：
+所有模板均使用占位符，不绑定具体商业模型：
 
-| 占位符 | 角色定位 | 选取建议 |
+| 占位符 | 定位 | 选型建议 |
 | --- | --- | --- |
-| `{{MODEL}}` | 主会话默认模型 | 日常主力交互 |
-| `{{MODEL_EXEC}}` | 廉价执行：测试、脚手架、前端、批量改动 | 单价低、能稳定跑脚本的模型 |
-| `{{MODEL_REVIEW}}` | `analyze` 与 `review`：分析证据、比较方案，以及验收完成声明 | 比执行档更强的通用模型 |
-| `{{MODEL_PLAN}}` | 不分配给任何角色；用于临时覆盖（强模型做执行、带队或路线评审） | 最强的旗舰模型 |
-| `{{MODEL_HISTORIAN}}` | 会话压缩归档 | 窗口大、价格低，不要求强推理 |
+| `{{MODEL}}` | 主会话默认模型 | 高性价比、工具脚本稳定的日常主力 |
+| `{{MODEL_EXEC}}` | 廉价执行 & 默认自动评审 | 响应快、单价低，适合批量执行、测试与权限初审 |
+| `{{MODEL_REVIEW}}` | `analyze` 与 `review` 角色 | 更强的异构通用模型，用于方案分析与独立验收 |
+| `{{MODEL_PLAN}}` | 临时覆盖（不绑常驻角色） | 最强旗舰模型，在 `subagent({ model: ... })` 按需调用 |
+| `{{MODEL_HISTORIAN}}` | Magic Context 归档压缩 | 大窗口、低成本 |
 
-分工原则：日常干活用执行档，分析与验收用较强的通用模型；最强模型不绑给角色，需要时在调用上写 `model:`。
+5 个子代理角色的工具权限矩阵：
 
-**角色与模型解耦**：五个角色文件都不写 `model` 字段，档位只在 settings 里定义：
-
-| 角色 | 工具面 | 默认档 |
+| 角色 | 工具权限 | 默认模型档位 |
 | --- | --- | --- |
-| `explore` | 读 + 联网，无 bash | `{{MODEL_EXEC}}` |
-| `implement` | 读 + 联网 + bash + 写 + codemode | `{{MODEL_EXEC}}` |
-| `lead` | implement 的全部 + subagent | `{{MODEL_EXEC}}` |
-| `analyze` | 读 + 联网 + bash，无写 | `{{MODEL_REVIEW}}` |
-| `review` | 同 analyze | `{{MODEL_REVIEW}}` |
+| `explore` | 读 + 联网（无 `bash`） | `{{MODEL_EXEC}}` |
+| `implement` | 读 + 联网 + `bash`（`rtk`）+ 写 + `codemode` | `{{MODEL_EXEC}}` |
+| `lead` | `implement` 全部 + `subagent` | `{{MODEL_EXEC}}` |
+| `analyze` | 读 + 联网 + `bash`（`rtk`，带 `toolBudget` 护栏，无写） | `{{MODEL_REVIEW}}` |
+| `review` | 同 `analyze`（只读验收，输出 `VERDICT`） | `{{MODEL_REVIEW}}` |
 
-`subagents.defaultModel` 填 `{{MODEL_EXEC}}`，`agentOverrides` 只覆盖 analyze 与 review。这样主会话换成强模型时，`implement` / `explore` 仍走执行档，不会跟着变贵；主会话是执行档时，`analyze` / `review` 自动升档。
+凭据只接受环境变量引用（`$VAR` / `${VAR}`）或 `!command`，明文密钥会被 `render.mjs` 直接拒绝。
 
-**需要最强模型就在调用上写**：`subagent({agent: "implement", model: "{{MODEL_PLAN}}", task})` 是"强模型做执行"；`lead` 加同一句是"强模型带队"；`analyze` 加同一句是路线评审。`{{MODEL_REVIEW}}` 允许等于 `{{MODEL_EXEC}}`，那时 `analyze` / `review` 不再强于执行模型，交叉检查只能靠换族而不是换档。
+---
 
-凭据只接受环境变量引用（`$VAR` / `${VAR}`）或 `!command`，明文会被 render 直接拒绝。macOS 可以走系统钥匙串，其它平台用环境变量。
+## 3. 平台支持与专属依赖
 
-## 平台支持
+- **macOS arm64（基准平台）**：全部模块、5 角色子代理、双层权限门禁与 LaunchAgent 均已实测；无需额外系统运行库。
+- **WSL2（Windows 默认推荐）**：
+  - 源码、`node_modules`、知识库与 MC 存储必须放在 `/home/<user>`，不要放 `/mnt/c`；
+  - 安装 `memory` 模块前必须设置：
+    ```sh
+    export ONNXRUNTIME_NODE_INSTALL=skip
+    export ONNXRUNTIME_NODE_INSTALL_CUDA=skip
+    ```
+    （CPU 预编译绑定已在包内，跳过默认的 CUDA 下载避免 302 丢包）。
+- **原生 Windows x64（试验）**：
+  - 必装 Git for Windows（`!command` 凭据与 shell 依赖 Git Bash）；
+  - 启用 `memory` 需提前安装 Microsoft Visual C++ 2015–2022 x64 运行库（缺少 `vcruntime140.dll` 会导致 `onnxruntime-node` 报 Win32 126）；
+  - `pi-knowledge` 第 4 份补丁已将无预编译产物的 `tree-sitter-qmljs` 降级为可选依赖，缺失仅影响 `.qml` 文件分块，不阻断安装。
+- **Linux x64 glibc（试验）**：同 WSL2 设置两个 `ONNXRUNTIME_NODE_INSTALL*` 变量。
 
-macOS arm64 与 WSL2（Ubuntu 24.04 x64）的 core+memory 完成过实机验收，其余平台与模块按 README 表格里的级别使用。**那几轮验收跑在旧的角色定义上**（8 个角色、角色自带模型）；现在的 5 个角色与档位映射只在本机 macOS 上验证过，没在 WSL2 或 Windows 上重跑。
+---
 
-上游支持不等于本包已验证：manifest 的 `platforms` 表示适用平台，`verified` 单独记录实测平台，doctor 在未实测平台会对每个组件报 `WARN`。`pi-prompt-suggestion` 钉在 0.1.3（与 `config/settings.json`、`manifest.json` 一致），`verified` 为空表示还没有在任何平台专项实测——不是遗漏，是没验过。
-
-**Windows 默认选 WSL2 的 core+magpie+memory**：源码、`node_modules`、Magic Context 数据库与知识库都放在 WSL 的 `/home` 下，不要放 `/mnt/c`（跨文件系统访问慢一个数量级，权限与大小写语义也不同）。只有需要操作 Windows 桌面、或复用 Windows 登录态浏览器时才选原生 Windows。
-
-**原生 Windows 是试验路径**：安装、doctor 与探针都过了，长时间运行、TUI 与桌面能力没验。launchd、钥匙串、herdr 与 tmux 面板在 Windows 上没有等价实现：服务改用计划任务，凭据改用环境变量。`ego-browser` 本体上游有 Windows 安装器，但本包没在 Windows 上实测；`ego-gc` 依赖 POSIX 路径，不提供。
-
-**Linux 原生没有实机记录**，等级由 WSL2 的结果推断。
-
-## 平台专属依赖
-
-### 原生 Windows
-
-- **Git for Windows**：见上，Pi 的 shell 与凭据命令都依赖它。
-- **Microsoft Visual C++ 2015-2022 x64 可再发行组件**：onnxruntime-node 的原生绑定需要它。缺 `vcruntime140.dll`、`vcruntime140_1.dll`、`msvcp140.dll` 时报 Win32 126，这种情况 npm 的 approve / rebuild 修不好。
-- **npm 11 的安装脚本审批**：npm 11 默认跳过未审批的安装脚本，onnxruntime-node 的 postinstall 属于这一类。用 `npm install-scripts` 查看与审批，再 rebuild。
-- **`tree-sitter-qmljs` 没有预编译产物**：memory 的第 4 份补丁把它降级为可选依赖，装不上只影响 `.qml` 文件的解析粒度，其它语言不受影响。
-- **浏览器控制**：`agent-browser` 按其上游自述属于 best-effort，会话锁、恢复与退出清理都要单独验收。
-
-### WSL2 与 Linux
-
-- **`ONNXRUNTIME_NODE_INSTALL=skip`**：onnxruntime-node 1.30.0 在 Linux x64 默认下载 CUDA 执行提供程序，下载器不跟随重定向，遇 302 会失败并可能让整个可选包被丢弃；CPU 绑定与运行库本来就在 npm 包里。
-- **`ONNXRUNTIME_NODE_INSTALL_CUDA=skip`**：pi-knowledge 依赖链上的 1.21.0 用另一个变量名，`npm ci` 前两个都要设。
-- **源码与 `node_modules` 放 `/home`**：跨 `/mnt/c` 访问慢一个数量级，权限与大小写语义也不同。
-
-### macOS
-
-不需要额外依赖，LaunchAgent 与系统钥匙串用它自带机制。
-
-## 自查
-
-装之前没法一条命令验完，装完可以：
+## 4. 装后自检命令
 
 ```sh
-node scripts/doctor.mjs --home "$HOME" --modules core,magpie
-node scripts/deploy-check.mjs onnx   # 选 memory 时，确认 onnxruntime-node 能加载
+node scripts/doctor.mjs --home "$HOME" --modules core,magpie,memory
+node scripts/deploy-check.mjs onnx   # 启用 memory 模块时核验 native runtime
 ```
 
-doctor 的 0 FAIL 是装对了的判据；平台相关的 WARN 属正常，见 [upgrade.md](upgrade.md)。
+`doctor.mjs` 返回 **0 FAIL** 即为安装合格；未实测平台的 `platform verification WARN` 属于如实标注而非故障。

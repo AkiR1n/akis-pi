@@ -5,7 +5,7 @@
 // as providers magpie-systemone and magpie-images. Take Pi off magpie in
 // magpie to have this file gone; with this first line changed, magpie
 // leaves the file to you.
-const MAGPIE = {"apiKey":"magpie","baseUrl":"http://127.0.0.1:3425/v1","classifiers":[{"id":"our-free-model/jev-1.13-free","name":"Jev 1.13 · Our Free Model"}],"images":[{"id":"codex/gpt-image-2","name":"GPT Image · Codex","input":["text"]},{"id":"workbuddy-ai/hy-image-3.5","name":"HY-Image-3.5 · WorkBuddy AI","input":["text","image"]},{"id":"workbuddy/hunyuan-image-alpha","name":"Hunyuan Image Alpha · WorkBuddy","input":["text","image"]},{"id":"huanling/gemini-3.1-flash-image","name":"gemini-3.1-flash-image · 幻灵","input":["text"]}]};
+const MAGPIE = {"apiKey":"magpie","baseUrl":"http://127.0.0.1:3425/v1","classifiers":[{"id":"our-free-model/jev-1.13-free","name":"Jev 1.13 · Our Free Model","input":["text"]}],"images":[{"id":"codex/gpt-image-2","name":"GPT Image · Codex","input":["text"]},{"id":"workbuddy-ai/hy-image-3.5","name":"HY-Image-3.5 · WorkBuddy AI","input":["text","image"]},{"id":"workbuddy/hunyuan-image-alpha","name":"Hunyuan Image Alpha · WorkBuddy","input":["text","image"]},{"id":"huanling/gemini-3.1-flash-image","name":"gemini-3.1-flash-image · 幻灵","input":["text"]}]};
 
 export default async function (pi) {
 	// a Pi older than its classifier models (1.x) has no such module, or a
@@ -25,8 +25,13 @@ export default async function (pi) {
 			baseUrl: MAGPIE.baseUrl,
 			apiKey: MAGPIE.apiKey,
 			// magpie's /v1/systemone takes TypeSafe's System One protocol for
-			// every decision model, Cloudflare's and OpenRouter's too
-			models: MAGPIE.classifiers.map((m) => ({ type: "classifier", api: "typesafe-system-one", id: m.id, name: m.name, input: ["text"], cost, contextWindow: 64000 })),
+			// every decision model, Cloudflare's and OpenRouter's too, and a
+			// request's images as "images", data: URLs (a Clef's field, which
+			// it carries to Google's too), not TypeSafe's assets
+			models: MAGPIE.classifiers.map((m) => ({
+				type: "classifier", api: "typesafe-system-one", id: m.id, name: m.name, input: m.input ?? ["text"], cost, contextWindow: 64000,
+				compat: { imageInput: "images", sendImageOptInHeader: false },
+			})),
 			classifiers: {
 				"typesafe-system-one": { classify: (model, context, options) => typesafe.classify(model, context, options) },
 			},
