@@ -26,7 +26,7 @@
 
 ## 2. 双层权限门禁：`pi-permission-system` + `pi-permission-auto-review`
 
-**决策**：在 `core` 模块中启用 `@gotgenes/pi-permission-system`（`43.0.0`）与 `@mzwing/pi-permission-auto-review`（`1.0.2`，`preset: "codex"`），同时提供脱敏基线配置 `config/pi-permission-system/config.json` 与 `config/pi-permission-auto-review/config.json`。
+**决策**：在 `core` 模块中启用 `@gotgenes/pi-permission-system`（`44.0.0`）与 `@mzwing/pi-permission-auto-review`（`1.0.2`，`preset: "codex"`），同时提供脱敏基线配置 `config/pi-permission-system/config.json` 与 `config/pi-permission-auto-review/config.json`。
 
 - **零开销快路径**：常规 `bash` 与只读 `rtk` 子命令（通过 `commandEffects.rtk` 声明为 `read`）直接 0 ms 放行；
 - **AST 级高危拦截**：基于 `web-tree-sitter` + `tree-sitter-bash` 拆解复合命令，拦截 `rm -r*`（放行临时目录）、`git push --force`、`git reset --hard`、`git clean`、`sudo`、`npm publish`、`pi install/remove` 等，且同时覆盖 `rtk` 重写前后的命令形态；

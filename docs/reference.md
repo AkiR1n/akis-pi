@@ -10,7 +10,7 @@
 **不要使用 `24.19.0–24.21.x`。** 这几个版本在 `ObjectWrap` 清理钩子中存在上游缺陷（`nodejs/node#65446`），当 `pi-knowledge` 的 `better-sqlite3` 在 GC 阶段释放 `Statement` 时会触发 `SIGABRT` 崩溃。WSL2 实测 20 轮 memory 组合在 `24.21.0` 上崩溃 9 轮，切到 `24.22.3` 后为 0 崩溃。Pi 与全局 CLI（如 `agent-browser`）须共用同一 Node 树。
 
 ### Pi `1.6.1`
-Pi `1.6.1` 上已验证 `pi-maintenance` 单测 46/46、`verify.mjs` 12 PASS + 1 SKIP、`pi-codex-exec` 单测 22/22、配置快照 36/36，以及权限 AST、rtk 改写与 reviewer 路由。Atelier composer 与 vision 贴图两项待 Aki 在 TUI 目视确认。`codemode.mode: "only"` 在 `1.6.1` 下保持 6 个直出工具（`ask_user`、`codemode`、`contact_supervisor`、`subagent`、`subagent_supervisor`、`tool_search`）。
+Pi `1.6.1` 上已验证 `pi-maintenance` 单测 47/47、`verify.mjs` 12 PASS + 1 SKIP、`pi-codex-exec` 单测 23/23、配置快照 36/36，以及权限 AST、rtk 改写与 reviewer 路由。Atelier composer 与 vision 贴图两项待 Aki 在 TUI 目视确认。`codemode.mode: "only"` 在 `1.6.1` 下保持 6 个直出工具（`ask_user`、`codemode`、`contact_supervisor`、`subagent`、`subagent_supervisor`、`tool_search`）。
 
 `1.6.1` 的破坏性变更只有一处：`showCacheMissNotices` 被拆成 `notices.cacheMisses / cacheWarming / compactionCosts / reasoningDrops`，旧值会在读取时自动迁移到四个新键（不落盘），`SettingsManager.getShowCacheMissNotices()` / `setShowCacheMissNotices()` 已删除。本项目配置已改用 `notices` 对象；导出器按 Pi 的解析顺序合成这四项，先以 `false` 为默认值，再展开旧键，最后用显式 `notices` 逐项覆盖。
 
@@ -22,7 +22,7 @@ Pi `1.6.1` 上已验证 `pi-maintenance` 单测 46/46、`verify.mjs` 12 PASS + 1
 - `extensions/rtk.ts` 依赖 `rtk rewrite` 子命令（需 `>=0.23.0`，基准为 `1.1.0`），缺失时自动 fail-open 放行原始 `bash`。
 
 ### 权限系统与自动评审
-- `@gotgenes/pi-permission-system@43.0.0`：依赖 `web-tree-sitter` + `tree-sitter-bash` 做命令 AST 拆解，并配合 `commandEffects.rtk` 识别只读 `rtk` 子命令；
+- `@gotgenes/pi-permission-system@44.0.0`：依赖 `web-tree-sitter` + `tree-sitter-bash` 做命令 AST 拆解，并配合 `commandEffects.rtk` 识别只读 `rtk` 子命令；
 - `@mzwing/pi-permission-auto-review@1.0.2`：通过 `config/pi-permission-auto-review/config.json` 挂载到 `{{PROVIDER}}` / `{{MODEL_EXEC}}`（生产环境可替换为带多级回退的路由组），使用 `codex` preset，超时或异常时自动 `defer` 给人类。
 
 ### Magpie

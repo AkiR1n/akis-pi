@@ -899,7 +899,7 @@ const CONTENT = {
             lead: "Layer 1 parses compound shell commands via tree-sitter-bash against deterministic allow/ask/deny rules. Layer 2 delegates ambiguous approvals to an automated reviewer (codex preset), failing closed to human approval on network errors or sensitive writes.",
             analogy: "Adding native shellTools parity reduced approval latency by 94.6% (684.8s → 37.0s) in head-to-head benchmarks while keeping external_directory and path_write strictly human-gated.",
             bullets: [
-              "pi-permission-system 43.0.0 inspects compound pipelines, rtk-rewritten commands, and codemode nested calls without bypass gaps.",
+              "pi-permission-system 44.0.0 inspects compound pipelines, rtk-rewritten commands, and codemode nested calls without bypass gaps.",
               "pi-permission-auto-review 1.0.2 routes through an ordered 9-tier gateway failover group to eliminate single-upstream stalls.",
               "Depersonalised templates for both extensions ship in akis-pi core and render via scripts/render.mjs."
             ],
@@ -958,9 +958,9 @@ const CONTENT = {
             links: []
           },
           {
-            id: "core-exec", name: "Unified PTY Execution (Optional Add-on)", tag: "pi-codex-exec v1.2",
-            short: "Single-track exec_command + write_stdin, 0600 disk log mirroring, opt-in macOS Seatbelt.",
-            lead: "The portable akis-pi bundle defaults to built-in bash + rtk.ts. Adding the standalone MIT-licensed pi-codex-exec extension replaces bash with a unified PTY model for interactive debuggers, REPLs, and SSH.",
+            id: "core-exec", name: "Unified PTY Execution (Optional Add-on)", tag: "pi-codex-exec v1.3",
+            short: "Single-track exec_command + pty_session + write_stdin, 0600 disk log mirroring, opt-in macOS Seatbelt.",
+            lead: "The portable akis-pi bundle defaults to built-in bash + rtk.ts. Adding the standalone MIT-licensed pi-codex-exec extension replaces bash with a unified PTY model—splitting read-only polling/termination into pty_session (0 ms static allow) while keeping write_stdin gated at ask.",
             analogy: "Avoids maintaining separate bash and interactive-shell code paths: short commands complete inline, long processes yield a session_id with an unbroken full_output_path log.",
             bullets: [
               "Real-time 0600 log mirroring with 24h stale-log pruning and setsid process-group teardown across TUI and headless runs.",
@@ -1133,10 +1133,10 @@ const CONTENT = {
     ],
     directory: [
       { name: "akis-pi", ver: "Pi 1.6.1", domain: "infra", child: "in-akis", desc: "Privacy-gated Pi workbench configuration bundle with deployment scripts and tests", url: REPO_URL },
-      { name: "pi-codex-exec", ver: "v1.2.0 · MIT", domain: "core", child: "core-exec", desc: "Optional single-track PTY execution (exec_command + write_stdin) + macOS Seatbelt", url: CODEX_EXEC_URL },
+      { name: "pi-codex-exec", ver: "v1.3.0 · MIT", domain: "core", child: "core-exec", desc: "Optional single-track PTY execution (exec_command + pty_session + write_stdin) + macOS Seatbelt", url: CODEX_EXEC_URL },
       { name: "Magpie Gateway", ver: "Required", domain: "infra", child: "in-magpie", desc: "Local model routing, outbound PII/secret redaction, media MCP, and skill router", url: "https://github.com/yetone/magpie" },
       { name: "pi-subagents", ver: "v0.90.0", domain: "orchestration", child: "sub-exec", desc: "5-role subagent orchestration with FleetView and toolBudget guards", url: "https://github.com/nicobailon/pi-subagents" },
-      { name: "pi-permission-system", ver: "v43.0.0", domain: "interface", child: "if-perm", desc: "tree-sitter-bash AST shell & path permission gate with shellTools mapping", url: "https://github.com/gotgenes/pi-packages/tree/main/packages/pi-permission-system" },
+      { name: "pi-permission-system", ver: "v44.0.0", domain: "interface", child: "if-perm", desc: "tree-sitter-bash AST shell & path permission gate with shellTools mapping", url: "https://github.com/gotgenes/pi-packages/tree/main/packages/pi-permission-system" },
       { name: "pi-permission-auto-review", ver: "v1.0.2", domain: "interface", child: "if-perm", desc: "Automated permission reviewer plugin with fail-closed defer", url: "https://github.com/mzwing/pi-packages/tree/main/packages/pi-permission-auto-review" },
       { name: "@cortexkit/pi-magic-context", ver: "v0.49.76", domain: "memory", child: "mem-mc", desc: "Asynchronous long-session compaction and verbatim project memory retrieval", url: "https://www.npmjs.com/package/@cortexkit/pi-magic-context" },
       { name: "pi-knowledge (+4 patches)", ver: "v0.15.0", domain: "memory", child: "mem-personal", desc: "Offline semantic/hybrid search over personal notes and session archives", url: "https://github.com/nczz/pi-knowledge" },
@@ -1229,7 +1229,7 @@ const CONTENT = {
             lead: "第一层通过 tree-sitter-bash 解析复合命令并匹配确定性 allow/ask/deny 规则；第二层将待定请求交由自动审批模型（codex preset）评估，网络异常或敏感路径写入一律 fail-closed 回落人工确认。",
             analogy: "引入原生 shellTools 映射后，对比基准测试中审批总耗时下降 94.6%（684.8s → 37.0s），同时保持 external_directory 与 path_write 严格人工把关。",
             bullets: [
-              "pi-permission-system 43.0.0 完整解析复合管道、rtk 改写命令与 codemode 嵌套调用，避免规则绕过。",
+              "pi-permission-system 44.0.0 完整解析复合管道、rtk 改写命令与 codemode 嵌套调用，避免规则绕过。",
               "pi-permission-auto-review 1.0.2 对接网关 9 级有序回退路由组，消除单一上游抖动导致的审批阻塞。",
               "两份脱敏权限模板已纳入 akis-pi core 模块，通过 scripts/render.mjs 一致渲染。"
             ],
@@ -1288,9 +1288,9 @@ const CONTENT = {
             links: []
           },
           {
-            id: "core-exec", name: "统一 PTY 执行层（可选扩展）", tag: "pi-codex-exec v1.2",
-            short: "exec_command + write_stdin 单轨模型、0600 实时磁盘日志与可选 macOS Seatbelt。",
-            lead: "akis-pi 便携基线默认使用内置 bash + rtk.ts；按需加装独立 MIT 开源扩展 pi-codex-exec 后，可统一承载短命令与调试器/REPL/SSH 等长交互 PTY 会话。",
+            id: "core-exec", name: "统一 PTY 执行层（可选扩展）", tag: "pi-codex-exec v1.3",
+            short: "exec_command + pty_session + write_stdin 单轨模型、0600 实时磁盘日志与可选 macOS Seatbelt。",
+            lead: "akis-pi 便携基线默认使用内置 bash + rtk.ts；按需加装独立 MIT 开源扩展 pi-codex-exec 后，可将后台只读轮询/终止拆至 pty_session（静态 allow 0 ms 放行门禁），同时保持 write_stdin 处于 ask 审批边界。",
             analogy: "消除 bash 与交互终端双轨维护成本：短命令内联返回，长进程返回 session_id 并持续镜像完整磁盘日志（full_output_path）。",
             bullets: [
               "支持 0600 实时日志镜像、24 小时过期清理，以及 TUI 与无头模式一致的 setsid 进程组回收。",
@@ -1463,10 +1463,10 @@ const CONTENT = {
     ],
     directory: [
       { name: "akis-pi", ver: "Pi 1.6.1", domain: "infra", child: "in-akis", desc: "经隐私门禁导出的 Pi 工作台配置包，含部署脚本与自动化测试", url: REPO_URL },
-      { name: "pi-codex-exec", ver: "v1.2.0 · MIT", domain: "core", child: "core-exec", desc: "可选单轨 PTY 执行扩展（exec_command + write_stdin）+ macOS Seatbelt", url: CODEX_EXEC_URL },
+      { name: "pi-codex-exec", ver: "v1.3.0 · MIT", domain: "core", child: "core-exec", desc: "可选单轨 PTY 执行扩展（exec_command + pty_session + write_stdin）+ macOS Seatbelt", url: CODEX_EXEC_URL },
       { name: "Magpie Gateway", ver: "必装", domain: "infra", child: "in-magpie", desc: "本地模型路由、出站 PII/密钥脱敏、媒体 MCP 与技能索引路由", url: "https://github.com/yetone/magpie" },
       { name: "pi-subagents", ver: "v0.90.0", domain: "orchestration", child: "sub-exec", desc: "5 角色子代理编排，支持 FleetView 与 toolBudget 预算护栏", url: "https://github.com/nicobailon/pi-subagents" },
-      { name: "pi-permission-system", ver: "v43.0.0", domain: "interface", child: "if-perm", desc: "基于 tree-sitter-bash 的 AST 命令与路径权限门，支持 shellTools 映射", url: "https://github.com/gotgenes/pi-packages/tree/main/packages/pi-permission-system" },
+      { name: "pi-permission-system", ver: "v44.0.0", domain: "interface", child: "if-perm", desc: "基于 tree-sitter-bash 的 AST 命令与路径权限门，支持 shellTools 映射", url: "https://github.com/gotgenes/pi-packages/tree/main/packages/pi-permission-system" },
       { name: "pi-permission-auto-review", ver: "v1.0.2", domain: "interface", child: "if-perm", desc: "自动审批模型插件，异常时 fail-closed 回落人工", url: "https://github.com/mzwing/pi-packages/tree/main/packages/pi-permission-auto-review" },
       { name: "@cortexkit/pi-magic-context", ver: "v0.49.76", domain: "memory", child: "mem-mc", desc: "长会话异步归档压缩与项目记忆原文检索", url: "https://www.npmjs.com/package/@cortexkit/pi-magic-context" },
       { name: "pi-knowledge (+4 补丁)", ver: "v0.15.0", domain: "memory", child: "mem-personal", desc: "离线语义/混合检索个人笔记与历史会话归档", url: "https://github.com/nczz/pi-knowledge" },
