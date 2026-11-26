@@ -22,7 +22,7 @@ Pi `1.6.1` 上已验证 `pi-maintenance` 单测 46/46、`verify.mjs` 12 PASS + 1
 - `extensions/rtk.ts` 依赖 `rtk rewrite` 子命令（需 `>=0.23.0`，基准为 `1.1.0`），缺失时自动 fail-open 放行原始 `bash`。
 
 ### 权限系统与自动评审
-- `@gotgenes/pi-permission-system@42.2.1`：依赖 `web-tree-sitter` + `tree-sitter-bash` 做命令 AST 拆解，并配合 `commandEffects.rtk` 识别只读 `rtk` 子命令；
+- `@gotgenes/pi-permission-system@43.0.0`：依赖 `web-tree-sitter` + `tree-sitter-bash` 做命令 AST 拆解，并配合 `commandEffects.rtk` 识别只读 `rtk` 子命令；
 - `@mzwing/pi-permission-auto-review@1.0.2`：通过 `config/pi-permission-auto-review/config.json` 挂载到 `{{PROVIDER}}` / `{{MODEL_EXEC}}`（生产环境可替换为带多级回退的路由组），使用 `codex` preset，超时或异常时自动 `defer` 给人类。
 
 ### Magpie
