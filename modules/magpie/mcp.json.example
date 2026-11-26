@@ -9,7 +9,7 @@
     },
     "magpie": {
       "url": "http://127.0.0.1:3425/mcp/magpie/hub/pi",
-      "description": "Tools of magpie-artifacts (Pages your agents make for you (reports, charts, diagrams, prototypes, small apps)), magpie-web-search (Search the web with the search set in Magpie (Settings › Models › Web search))."
+      "description": "Tools of magpie-web-search (Search the web with the search set in Magpie (Settings › Models › Web search))."
     }
   }
 }

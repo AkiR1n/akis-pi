@@ -154,13 +154,13 @@ pi --version
 B：复现测试版本（两个平台同一条命令）：
 
 ```sh
-npm install -g --ignore-scripts @earendil-works/pi-coding-agent@1.6.0
+npm install -g --ignore-scripts @earendil-works/pi-coding-agent@1.6.1
 pi --version
 ```
 
 原生 Windows 的 managed 安装器见上游 Windows 文档；本包尚未验收该路径，优先用 B 复现精确版本。
 
-**期望**：B 精确输出 1.6.0；A 为新版时 doctor 对普通偏差 WARN，对 major 变化 FAIL（需重评兼容性）。
+**期望**：B 精确输出 1.6.1；A 为新版时 doctor 对普通偏差 WARN，对 major 变化 FAIL（需重评兼容性）。
 **失败怎么办**：不要混装 managed 与 npm 全局。命令缺失时检查 PATH 里的 agent-dir/bin 或 npm prefix 的 bin；Windows 上 `pi` 是 `pi.cmd` shim，doctor 会把它解析成 `node.exe + CLI 脚本`，不需要你手工改指向。不要因新版 WARN 自动降级或替换 pinned 组件。
 
 ## 3. models.json 与无 key 检查
@@ -370,7 +370,7 @@ core-only 现在开新会话（不要用旧会话或 `/reload`）。选 memory �
 pi --print 'answer with the number of tools you can call directly, and nothing else'
 ```
 
-**期望**：Pi 1.6.0 + pi-subagents 0.90.0 下有 **6 个直接工具**：ask_user / codemode / contact_supervisor / subagent / subagent_supervisor / tool_search。模型自报工具数不准，以 stub 捕获并由 `deploy-check.mjs stub-requests` 校验的集合为准。
+**期望**：Pi 1.6.1 + pi-subagents 0.90.0 下有 **6 个直接工具**：ask_user / codemode / contact_supervisor / subagent / subagent_supervisor / tool_search。模型自报工具数不准，以 stub 捕获并由 `deploy-check.mjs stub-requests` 校验的集合为准。
 **失败怎么办**：出约 50 个工具核对 `codemode.mode = only`；为 0 回步骤 5 查插件与 Pi 版本。
 
 ## 9. memory 模块（必装）

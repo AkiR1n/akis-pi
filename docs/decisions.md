@@ -73,4 +73,4 @@
 
 - `retry.provider.timeoutMs: 3600000`、`maxRetries: 0`：避免客户端与 Magpie 网关双层重试叠加放大延迟；
 - `compaction` / `branchSummary` 显式声明 `reserveTokens`：防止上游默认值变动引发行为漂移；
-- `enableInstallTelemetry: false`、`showCacheMissNotices: true`：关闭遥测，保留缓存未命中提示便于观测成本。
+- `enableInstallTelemetry: false`、`notices.cacheMisses / cacheWarming / compactionCosts / reasoningDrops: true`：关闭遥测，保留缓存未命中提示便于观测成本（Pi 1.6.1 起 `showCacheMissNotices` 已拆成这四项）。

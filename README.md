@@ -16,7 +16,7 @@ A shareable, evidence-backed configuration bundle for the [Pi coding agent](http
 
 ```mermaid
 flowchart TD
-    U[Terminal / TUI / Headless pi -p] --> PI[Pi 1.6.0 + Node 24.22.3]
+    U[Terminal / TUI / Headless pi -p] --> PI[Pi 1.6.1 + Node 24.22.3]
     PI --> UI[Display: pi-atelier 0.21.0 + pi-compact-tools 0.18.0 + vision 0.5.3]
     PI --> CM[Tool Surface: codemode.mode = only / 6 direct tools]
     CM --> SUB[Subagents: pi-subagents 0.90.0<br/>explore / implement / lead / analyze / review]
@@ -33,7 +33,7 @@ flowchart TD
 | Requirement | Pinned / Tested Baseline | Notes |
 | --- | --- | --- |
 | Node.js | `24.22.3` | Avoid `24.19.0–24.21.x` (`better-sqlite3` GC `SIGABRT`, `nodejs/node#65446`). |
-| Pi | `1.6.0` | Official managed installer or exact npm pin. |
+| Pi | `1.6.1` | Official managed installer or exact npm pin. |
 | Git | Any modern version | Native Windows requires Git for Windows (Git Bash). |
 | Magpie | Running locally | Required module for routing, media, fallback fetch, and `rtk`. |
 | Python | `3.9+` | Only needed for the optional `pdf` module. |
