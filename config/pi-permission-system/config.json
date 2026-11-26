@@ -51,42 +51,47 @@
     }
   },
   "commandEffects": {
+    "df": {
+      "effects": "read"
+    },
+    "du": {
+      "effects": "read"
+    },
+    "readlink": {
+      "effects": "read"
+    },
     "rtk": {
-      "unlessOption": [
-        "-exec",
-        "-execdir",
-        "-ok",
-        "-okdir",
-        "-delete",
-        "-fprint",
-        "-o",
-        "--output"
-      ],
       "subcommands": {
         "ls": "read",
-        "tree": "read",
-        "find": "read",
+        "tree": {
+          "effects": "read",
+          "unlessOption": [
+            "-o",
+            "--output"
+          ]
+        },
+        "find": {
+          "effects": "read",
+          "unlessOption": [
+            "-exec",
+            "-execdir",
+            "-ok",
+            "-okdir",
+            "-delete",
+            "-fprint",
+            "-fprint0",
+            "-fprintf",
+            "-fls"
+          ]
+        },
         "read": "read",
         "grep": "read",
-        "rg": "read",
         "wc": "read",
         "stat": "read",
         "du": "read",
         "json": "read",
         "diff": "read",
-        "smart": "read",
-        "log": "read",
-        "git": {
-          "unlessOption": [
-            "--output"
-          ],
-          "subcommands": {
-            "status": "read",
-            "log": "read",
-            "show": "read",
-            "diff": "read"
-          }
-        }
+        "smart": "read"
       }
     }
   },

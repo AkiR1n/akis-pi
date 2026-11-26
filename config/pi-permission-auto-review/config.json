@@ -11,6 +11,13 @@
       "$defaults",
       "Recursive deletion of anything outside temp dirs, build outputs or node_modules unless the user named that path in this conversation",
       "Force-pushing or rewriting history on a remote branch unless the user asked for a history rewrite in this session"
+    ],
+    "allow": [
+      "$defaults",
+      "Allow task-authorized local cleanup only when the exact command, effective working directory and every deletion operand are established by the available evidence. Require literal individually named paths whose resolved locations are within the approved task workspace or operator-approved scratch root. If a target or an ancestor cannot be verified, is a symlink, or crosses a mount boundary, this exception does not apply. Do not apply it to globs, variable expansion, computed targets, mixed qualifying and non-qualifying operands, or other unauthorized side effects. An explicit user restriction on writes or deletion always excludes the action.",
+      "Subject to those conditions, allow recursive deletion of one disposable scratch directory only if a successful creation call and its result establish that this session created that exact fresh directory for the current task. An assistant claim or a basename alone is insufficient.",
+      "Subject to those conditions, allow recursive deletion of one dedicated rebuildable output directory. For Pagefind, require project build configuration or observed build evidence that the exact pagefind directory under the current site root contains only generated index output and can be regenerated from retained input files. A directory called pagefind, build, or dist is insufficient by name alone.",
+      "Subject to those conditions, allow deletion of explicitly named existing regular files whose exact basename is .DS_Store. This applies to a file inside a directory, such as ./subdir/.DS_Store. Do not cover any directory operand, symlink, or traversal to discover files."
     ]
   }
 }
