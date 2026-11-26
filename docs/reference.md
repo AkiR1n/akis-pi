@@ -10,9 +10,9 @@
 **不要使用 `24.19.0–24.21.x`。** 这几个版本在 `ObjectWrap` 清理钩子中存在上游缺陷（`nodejs/node#65446`），当 `pi-knowledge` 的 `better-sqlite3` 在 GC 阶段释放 `Statement` 时会触发 `SIGABRT` 崩溃。WSL2 实测 20 轮 memory 组合在 `24.21.0` 上崩溃 9 轮，切到 `24.22.3` 后为 0 崩溃。Pi 与全局 CLI（如 `agent-browser`）须共用同一 Node 树。
 
 ### Pi `1.6.1`
-当前全套扩展（`pi-subagents@0.90.0`、`pi-atelier@0.21.0`、`pi-agent-browser-native@0.9.42`、`@gotgenes/pi-permission-system@42.2.1`、`@cortexkit/pi-magic-context@0.49.76`）均在 Pi `1.6.1` 基准上完成验收。`codemode.mode: "only"` 在 `1.6.1` 下保持 6 个直出工具（`ask_user`、`codemode`、`contact_supervisor`、`subagent`、`subagent_supervisor`、`tool_search`）。
+Pi `1.6.1` 上已验证 `pi-maintenance` 单测 46/46、`verify.mjs` 12 PASS + 1 SKIP、`pi-codex-exec` 单测 22/22、配置快照 36/36，以及权限 AST、rtk 改写与 reviewer 路由。Atelier composer 与 vision 贴图两项待 Aki 在 TUI 目视确认。`codemode.mode: "only"` 在 `1.6.1` 下保持 6 个直出工具（`ask_user`、`codemode`、`contact_supervisor`、`subagent`、`subagent_supervisor`、`tool_search`）。
 
-`1.6.1` 的破坏性变更只有一处：`showCacheMissNotices` 被拆成 `notices.cacheMisses / cacheWarming / compactionCosts / reasoningDrops`，旧值会在读取时自动迁移到四个新键（不落盘），`SettingsManager.getShowCacheMissNotices()` / `setShowCacheMissNotices()` 已删除。本项目配置已改用 `notices` 对象；导出器在源配置只有旧键时仍按旧值生成四个新键。
+`1.6.1` 的破坏性变更只有一处：`showCacheMissNotices` 被拆成 `notices.cacheMisses / cacheWarming / compactionCosts / reasoningDrops`，旧值会在读取时自动迁移到四个新键（不落盘），`SettingsManager.getShowCacheMissNotices()` / `setShowCacheMissNotices()` 已删除。本项目配置已改用 `notices` 对象；导出器按 Pi 的解析顺序合成这四项，先以 `false` 为默认值，再展开旧键，最后用显式 `notices` 逐项覆盖。
 
 ### Magic Context `0.49.76`
 相对 `0.49.56` 包含多项针对 Pi 的关键修复（无数据库 schema 迁移）：修复 `doctor --fix` 在 Pi 软链场景误删 cache 外文件、修复 Gemini 路由空 text block 导致的 prompt cache 丢失、修复长会话压缩后不再收缩及摘要携带全量项目记忆的 token 膨胀。

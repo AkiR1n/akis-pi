@@ -16,7 +16,7 @@ AkiyamaRin 的自用 [Pi coding agent](https://pi.dev) 配置分享包：既能�
 
 ```mermaid
 flowchart TD
-    U[终端 / TUI / 无头 pi -p] --> PI[Pi 1.6.0 + Node 24.22.3]
+    U[终端 / TUI / 无头 pi -p] --> PI[Pi 1.6.1 + Node 24.22.3]
     PI --> UI[显示层: pi-atelier 0.21.0 + pi-compact-tools 0.18.0 + vision 0.5.3]
     PI --> CM[模型工具面: codemode.mode = only / 6 个直出工具]
     CM --> SUB[子代理: pi-subagents 0.90.0<br/>explore / implement / lead / analyze / review]
@@ -33,7 +33,7 @@ flowchart TD
 | 项 | 基准版本 | 说明 |
 | --- | --- | --- |
 | Node.js | `24.22.3` | 避开 `24.19.0–24.21.x`（`better-sqlite3` GC `SIGABRT`，`nodejs/node#65446`）。 |
-| Pi | `1.6.0` | 官方 managed 安装器或按 npm 精确复现。 |
+| Pi | `1.6.1` | 官方 managed 安装器或按 npm 精确复现。 |
 | Git | 现代版本 | 原生 Windows 必须装 Git for Windows（Git Bash）。 |
 | Magpie | 本地运行 | 必装：负责模型路由、脱敏、媒体生成、抓取兜底与 `rtk`。 |
 | Python | `3.9+` | 仅可选 `pdf` 模块需要。 |

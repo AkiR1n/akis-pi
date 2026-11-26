@@ -1,7 +1,7 @@
 {
   "name": "akis-pi",
   "schemaVersion": 2,
-  "generatedAt": "2026-11-26T03:21:47.261Z",
+  "generatedAt": "2026-11-26T03:54:11.206Z",
   "generatedFrom": "live Pi configuration, read-only (see NEVER_COPIED in export-akis-pi.mjs)",
   "verifiedOn": {
     "os": "macOS 27.2.1",
@@ -40,7 +40,7 @@
         "wsl"
       ],
       "lastVerified": "2026-11-25",
-      "note": "tested 1.6.0. The official installer installs the newest release; the npm command in DEPLOY.md reproduces 1.6.0 exactly.",
+      "note": "Tested with Pi 1.6.1. The official installer installs the newest release. The npm command in DEPLOY.md pins the tested release.",
       "verified": []
     },
     {
