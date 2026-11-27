@@ -17,7 +17,15 @@
     },
     "path_write": {
       "~/.pi/agent/sessions/*": "ask",
-      "~/.pi/agent/memory/*": "ask"
+      "~/.pi/agent/memory/*": "ask",
+      "~/.pi/agent/extensions": "ask",
+      "~/.pi/agent/extensions/*": "ask",
+      "~/.pi/agent/settings.json": "ask",
+      "~/.pi/agent/auth.json": "ask",
+      "~/.config/magpie": "ask",
+      "~/.config/magpie/*": "ask",
+      "~/Library/LaunchAgents": "ask",
+      "~/Library/LaunchAgents/*": "ask"
     },
     "bash": {
       "*": "allow",

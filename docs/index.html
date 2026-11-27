@@ -836,7 +836,7 @@ const CONTENT = {
     pills: [
       { val: "$0.2–0.7/day", lbl: "~98% prompt cache hit", color: "var(--sage)" },
       { val: "5 Roles", lbl: "Tool-isolated delegation", color: "" },
-      { val: "24/24 Guards", lbl: "37-file SHA-256 snapshot", color: "var(--terra)" }
+      { val: "24/24 Guards", lbl: "38-file SHA-256 snapshot", color: "var(--terra)" }
     ],
     stories: {
       overview: { label: "Topology", active: null, fault: false, text: "<strong>Data &amp; control flow:</strong> 01 Interface &amp; Permissions → 02 Main Loop (<code>codemode: only</code>) → 03 Specialist Subagents / 04 Dual-Track Memory → 05 Gateway, Fallback &amp; Governance." },
@@ -958,13 +958,13 @@ const CONTENT = {
             links: []
           },
           {
-            id: "core-exec", name: "Unified PTY Execution (Optional Add-on)", tag: "pi-codex-exec v1.3",
-            short: "Single-track exec_command + pty_session + write_stdin, 0600 disk log mirroring, opt-in macOS Seatbelt.",
+            id: "core-exec", name: "Unified PTY Execution (Optional Add-on)", tag: "pi-codex-exec v1.4",
+            short: "Single-track exec_command + pty_session + write_stdin, 0600 disk log mirroring, macOS-only Seatbelt + /sandbox toggle.",
             lead: "The portable akis-pi bundle defaults to built-in bash + rtk.ts. Adding the standalone MIT-licensed pi-codex-exec extension replaces bash with a unified PTY model—splitting read-only polling/termination into pty_session (0 ms static allow) while keeping write_stdin gated at ask.",
             analogy: "Avoids maintaining separate bash and interactive-shell code paths: short commands complete inline, long processes yield a session_id with an unbroken full_output_path log.",
             bullets: [
               "Real-time 0600 log mirroring with 24h stale-log pruning and setsid process-group teardown across TUI and headless runs.",
-              "Opt-in macOS sandbox-exec mode (PI_CODEX_EXEC_SANDBOX=protect-sensitive) blocks writes to ~/.ssh, sessions, and permission configs at the kernel boundary."
+              "macOS-only Seatbelt write protection (protect-sensitive, via ~/.pi/agent/extensions/pi-codex-exec.json) with live /sandbox [status|on|off] toggling blocks writes to ~/.ssh, sessions, settings, extensions, and LaunchAgents at the kernel boundary (Linux/Windows stay off)."
             ],
             paths: ["~/.pi/vendor/pi-codex-exec/index.ts", "~/.pi/agent/extensions/rtk.ts"],
             links: CODEX_EXEC_URL ? [{ name: "pi-codex-exec (MIT)", url: CODEX_EXEC_URL }] : []
@@ -1104,7 +1104,7 @@ const CONTENT = {
           {
             id: "in-gov", name: "Automated Guards & Config Snapshots", tag: "24/24 PASS",
             short: "Single-command verification of config drift, tool-surface budgets, redaction, and regression suites.",
-            lead: "Validates directSchemaChars budget, redaction flags, model-role alignment, permission probes, and declarative 37-file SHA-256 config snapshots on every change.",
+            lead: "Validates directSchemaChars budget, redaction flags, model-role alignment, permission probes, and declarative 38-file SHA-256 config snapshots on every change.",
             analogy: "Converts silent plugin-upgrade breakage into deterministic CI-style checks before touching active working sessions.",
             bullets: [
               "Covers 5 upgrade regression probes: AST permission parsing, rtk rewrite, atelier UI hooks, vision paste, and pi-knowledge compatibility.",
@@ -1133,7 +1133,7 @@ const CONTENT = {
     ],
     directory: [
       { name: "akis-pi", ver: "Pi 1.6.1", domain: "infra", child: "in-akis", desc: "Privacy-gated Pi workbench configuration bundle with deployment scripts and tests", url: REPO_URL },
-      { name: "pi-codex-exec", ver: "v1.3.0 · MIT", domain: "core", child: "core-exec", desc: "Optional single-track PTY execution (exec_command + pty_session + write_stdin) + macOS Seatbelt", url: CODEX_EXEC_URL },
+      { name: "pi-codex-exec", ver: "v1.4.0 · MIT", domain: "core", child: "core-exec", desc: "Optional single-track PTY execution (exec_command + pty_session + write_stdin) + macOS-only Seatbelt & /sandbox toggle", url: CODEX_EXEC_URL },
       { name: "Magpie Gateway", ver: "Required", domain: "infra", child: "in-magpie", desc: "Local model routing, outbound PII/secret redaction, media MCP, and skill router", url: "https://github.com/yetone/magpie" },
       { name: "pi-subagents", ver: "v0.90.0", domain: "orchestration", child: "sub-exec", desc: "5-role subagent orchestration with FleetView and toolBudget guards", url: "https://github.com/nicobailon/pi-subagents" },
       { name: "pi-permission-system", ver: "v44.0.0", domain: "interface", child: "if-perm", desc: "tree-sitter-bash AST shell & path permission gate with shellTools mapping", url: "https://github.com/gotgenes/pi-packages/tree/main/packages/pi-permission-system" },
@@ -1166,7 +1166,7 @@ const CONTENT = {
     pills: [
       { val: "$0.2–0.7/天", lbl: "~98% Prompt Cache 命中", color: "var(--sage)" },
       { val: "5 个角色", lbl: "工具面隔离 · 读写分离", color: "" },
-      { val: "24/24 守卫", lbl: "37 文件 SHA-256 快照", color: "var(--terra)" }
+      { val: "24/24 守卫", lbl: "38 文件 SHA-256 快照", color: "var(--terra)" }
     ],
     stories: {
       overview: { label: "全景拓扑", active: null, fault: false, text: "<strong>控制流与数据流：</strong>01 终端入口与权限门禁 → 02 主循环（<code>codemode: only</code>）→ 03 五角色子代理 / 04 双轨记忆 → 05 本地网关、降级路径与自动化治理。" },
@@ -1288,13 +1288,13 @@ const CONTENT = {
             links: []
           },
           {
-            id: "core-exec", name: "统一 PTY 执行层（可选扩展）", tag: "pi-codex-exec v1.3",
-            short: "exec_command + pty_session + write_stdin 单轨模型、0600 实时磁盘日志与可选 macOS Seatbelt。",
+            id: "core-exec", name: "统一 PTY 执行层（可选扩展）", tag: "pi-codex-exec v1.4",
+            short: "exec_command + pty_session + write_stdin 单轨模型、0600 实时磁盘日志与 macOS 专用 Seatbelt + /sandbox 热切换。",
             lead: "akis-pi 便携基线默认使用内置 bash + rtk.ts；按需加装独立 MIT 开源扩展 pi-codex-exec 后，可将后台只读轮询/终止拆至 pty_session（静态 allow 0 ms 放行门禁），同时保持 write_stdin 处于 ask 审批边界。",
             analogy: "消除 bash 与交互终端双轨维护成本：短命令内联返回，长进程返回 session_id 并持续镜像完整磁盘日志（full_output_path）。",
             bullets: [
               "支持 0600 实时日志镜像、24 小时过期清理，以及 TUI 与无头模式一致的 setsid 进程组回收。",
-              "提供可选 macOS sandbox-exec 开关（PI_CODEX_EXEC_SANDBOX=protect-sensitive），在内核层拦截对 ~/.ssh、sessions 与权限配置的写入。"
+              "提供暂仅支持 macOS 的 Seatbelt 写保护（protect-sensitive，可经 ~/.pi/agent/extensions/pi-codex-exec.json 默认开启）与交互式 /sandbox [status|on|off] 热切换，在内核层拦截对 ~/.ssh、sessions、settings、extensions 与 LaunchAgents 的写入（Linux/Windows 保持 off）。"
             ],
             paths: ["~/.pi/vendor/pi-codex-exec/index.ts", "~/.pi/agent/extensions/rtk.ts"],
             links: CODEX_EXEC_URL ? [{ name: "pi-codex-exec (MIT)", url: CODEX_EXEC_URL }] : []
@@ -1434,7 +1434,7 @@ const CONTENT = {
           {
             id: "in-gov", name: "自动化守卫与配置快照", tag: "24/24 PASS",
             short: "单命令核验配置漂移、工具面字节预算、脱敏开关与回归测试。",
-            lead: "在每次升级或改动后校验 directSchemaChars 预算、脱敏标志、模型角色对齐、权限探针以及 37 文件声明式 SHA-256 快照。",
+            lead: "在每次升级或改动后校验 directSchemaChars 预算、脱敏标志、模型角色对齐、权限探针以及 38 文件声明式 SHA-256 快照。",
             analogy: "把插件升级引发的静默破坏前置为确定性红绿灯检查，避免带病进入日常工作会话。",
             bullets: [
               "内置 5 项升级回归探针：AST 权限解析、rtk 改写、atelier 渲染、vision 粘贴与 pi-knowledge 兼容性。",
@@ -1463,7 +1463,7 @@ const CONTENT = {
     ],
     directory: [
       { name: "akis-pi", ver: "Pi 1.6.1", domain: "infra", child: "in-akis", desc: "经隐私门禁导出的 Pi 工作台配置包，含部署脚本与自动化测试", url: REPO_URL },
-      { name: "pi-codex-exec", ver: "v1.3.0 · MIT", domain: "core", child: "core-exec", desc: "可选单轨 PTY 执行扩展（exec_command + pty_session + write_stdin）+ macOS Seatbelt", url: CODEX_EXEC_URL },
+      { name: "pi-codex-exec", ver: "v1.4.0 · MIT", domain: "core", child: "core-exec", desc: "可选单轨 PTY 执行扩展（exec_command + pty_session + write_stdin）+ macOS 专用 Seatbelt 与 /sandbox 热切换", url: CODEX_EXEC_URL },
       { name: "Magpie Gateway", ver: "必装", domain: "infra", child: "in-magpie", desc: "本地模型路由、出站 PII/密钥脱敏、媒体 MCP 与技能索引路由", url: "https://github.com/yetone/magpie" },
       { name: "pi-subagents", ver: "v0.90.0", domain: "orchestration", child: "sub-exec", desc: "5 角色子代理编排，支持 FleetView 与 toolBudget 预算护栏", url: "https://github.com/nicobailon/pi-subagents" },
       { name: "pi-permission-system", ver: "v44.0.0", domain: "interface", child: "if-perm", desc: "基于 tree-sitter-bash 的 AST 命令与路径权限门，支持 shellTools 映射", url: "https://github.com/gotgenes/pi-packages/tree/main/packages/pi-permission-system" },

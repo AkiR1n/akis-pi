@@ -30,7 +30,8 @@
 
 - **零开销快路径**：常规 `bash` 与只读 `rtk` 子命令（通过 `commandEffects.rtk` 声明为 `read`）直接 0 ms 放行；
 - **AST 级高危拦截**：基于 `web-tree-sitter` + `tree-sitter-bash` 拆解复合命令，拦截 `rm -r*`（放行临时目录）、`git push --force`、`git reset --hard`、`git clean`、`sudo`、`npm publish`、`pi install/remove` 等，且同时覆盖 `rtk` 重写前后的命令形态；
-- **有界委派与 Fail-Closed**：自动评审模型超时、不可达或遇到 `external_directory` / `path_write`（如 `~/.pi/agent/sessions/*`、`~/.pi/agent/memory/*`）时一律 `defer` 交由人类确认；无头 `pi -p` 模式下自动拒绝（`confirmation_unavailable`），绝不静默放行。
+- **有界委派与 Fail-Closed**：自动评审模型超时、不可达或遇到 `external_directory` / `path_write`（含 `~/.pi/agent/sessions/*`、`~/.pi/agent/memory/*` 及 `extensions`、`settings.json`、`auth.json`、`~/.config/magpie`、`~/Library/LaunchAgents` 等控制面路径）时一律 `defer` 交由人类确认；无头 `pi -p` 模式下自动拒绝（`confirmation_unavailable`），绝不静默放行。
+- **可选内核写保护兜底（暂仅支持 macOS）**：日常环境不采用白名单型 OS 沙箱（跨目录与 `write`/`edit` 摩擦过大），而是在加装 `pi-codex-exec`（`v1.4.0`）时通过 macOS `/usr/bin/sandbox-exec`（Seatbelt）`protect-sensitive` 实行黑名单写保护，并提供交互式 `/sandbox [status|on|off]` 运行中热切换；Linux / Windows 暂不支持此内核沙箱层，仅依赖上述双层应用权限门禁。
 
 ---
 
