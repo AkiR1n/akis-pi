@@ -21,7 +21,7 @@ flowchart TD
     PI --> CM[Tool Surface: codemode.mode = only / 6 direct tools]
     CM --> SUB[Subagents: pi-subagents 0.90.0<br/>explore / implement / lead / analyze / review]
     CM --> SHELL[Shell: bash + rtk.ts rewrite]
-    SHELL & SUB --> PERM[Permission Gate: pi-permission-system 44.0.0<br/>AST rules + external_directory/path_write guards]
+    SHELL & SUB --> PERM[Permission Gate: pi-permission-system 44.0.2<br/>AST rules + external_directory/path_write guards]
     PERM --> REV[Auto-Review: pi-permission-auto-review 1.0.2]
     PI --> MEM1[Project Memory & Compaction: Magic Context 0.49.76]
     PI --> MEM2[Personal Knowledge: resident-memory + pi-knowledge 0.15.0 + 4 patches]

@@ -272,7 +272,7 @@ pi install npm:pi-away@0.1.4
 pi install npm:pi-mox@0.3.1
 pi install npm:pi-schedule@0.6.1
 pi install npm:@getpipher/vision@0.5.3
-pi install npm:@gotgenes/pi-permission-system@44.0.0
+pi install npm:@gotgenes/pi-permission-system@44.0.2
 pi install npm:@mzwing/pi-permission-auto-review@1.0.2
 ```
 

@@ -21,7 +21,7 @@ flowchart TD
     PI --> CM[模型工具面: codemode.mode = only / 6 个直出工具]
     CM --> SUB[子代理: pi-subagents 0.90.0<br/>explore / implement / lead / analyze / review]
     CM --> SHELL[命令通道: bash + rtk.ts 重写]
-    SHELL & SUB --> PERM[权限门禁: pi-permission-system 44.0.0<br/>AST 规则 + external_directory/path_write 守护]
+    SHELL & SUB --> PERM[权限门禁: pi-permission-system 44.0.2<br/>AST 规则 + external_directory/path_write 守护]
     PERM --> REV[自动评审: pi-permission-auto-review 1.0.2]
     PI --> MEM1[项目记忆与压缩: Magic Context 0.49.76]
     PI --> MEM2[个人知识库: resident-memory + pi-knowledge 0.15.0 + 4 补丁]

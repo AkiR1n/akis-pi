@@ -22,7 +22,7 @@ Pi `1.6.1` 上已验证 `pi-maintenance` 单测 47/47、`verify.mjs` 12 PASS + 1
 - `extensions/rtk.ts` 依赖 `rtk rewrite` 子命令（需 `>=0.23.0`，基准为 `1.1.0`），缺失时自动 fail-open 放行原始 `bash`。
 
 ### 权限系统与自动评审
-- `@gotgenes/pi-permission-system@44.0.0`：依赖 `web-tree-sitter` + `tree-sitter-bash` 做命令 AST 拆解，并配合 `commandEffects.rtk` 识别只读 `rtk` 子命令；`path_write` 除保护 `~/.pi/agent/sessions/*`、`~/.pi/agent/memory/*` 外，亦将 `~/.pi/agent/extensions`、`~/.pi/agent/settings.json`、`~/.pi/agent/auth.json`、`~/.config/magpie`、`~/Library/LaunchAgents` 等控制面路径纳入强制人工确认；
+- `@gotgenes/pi-permission-system@44.0.2`：依赖 `web-tree-sitter` + `tree-sitter-bash` 做命令 AST 拆解，并配合 `commandEffects.rtk` 识别只读 `rtk` 子命令；`path_write` 除保护 `~/.pi/agent/sessions/*`、`~/.pi/agent/memory/*` 外，亦将 `~/.pi/agent/extensions`、`~/.pi/agent/settings.json`、`~/.pi/agent/auth.json`、`~/.config/magpie`、`~/Library/LaunchAgents` 等控制面路径纳入强制人工确认；
 - `@mzwing/pi-permission-auto-review@1.0.2`：通过 `config/pi-permission-auto-review/config.json` 挂载到 `{{PROVIDER}}` / `{{MODEL_EXEC}}`（生产环境可替换为带多级回退的路由组），使用 `codex` preset，超时或异常时自动 `defer` 给人类；
 - **可选内核沙箱（暂仅支持 macOS）**：若加装独立扩展 `pi-codex-exec`（`v1.4.0`），可通过 `~/.pi/agent/extensions/pi-codex-exec.json` 默认启用 macOS Seatbelt（`/usr/bin/sandbox-exec`）`protect-sensitive` 敏感路径写保护，并在运行中用 `/sandbox [status|on|off]` 热切换（Linux / Windows 暂不支持，保持 `off`）。
 
