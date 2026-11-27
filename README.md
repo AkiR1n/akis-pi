@@ -7,6 +7,7 @@ A shareable, evidence-backed configuration bundle for the [Pi coding agent](http
 ## Highlights
 
 - **Minimal Tool Surface (`codemode: only`)**: Exposes only 6 direct tools to the model; the remaining 50+ tools stay inside Pi's QuickJS sandbox and are discovered on demand via `searchTools()` / `describeTool()`. Cut first-turn prompt overhead by ~45% and verified across 13 days of real production sessions (2,842 scripts, 3.48% failure rate, zero regression).
+- **Layered Prompt Split (`AGENTS.md` + `APPEND_SYSTEM.md`)**: Keeps `AGENTS.md` to 1.2 KB of pure-English universal guardrails (−83%) shared across all roles while moving main-session routing, delegation, and memory rules into `APPEND_SYSTEM.md` (skipped by `fresh` subagents, reducing subagent input tokens by 22%–60% in measured runs).
 - **Two-Layer Permission Gate + Auto-Review**: Ships `@gotgenes/pi-permission-system` (bash AST decomposition, fine-grained command globs, `rtk` command-effect awareness, external-directory & sensitive-path guards) chained with `@mzwing/pi-permission-auto-review` (`codex` preset) so routine commands pass at 0 ms while risky actions are reviewed or escalated.
 - **Role-Based Subagent Delegation**: 5 specialized roles (`explore`, `implement`, `lead`, `analyze`, `review`) decoupled from concrete model IDs—cheap execution model for bulk work, stronger heterogeneous model for analysis/review, and flagship model reserved for explicit `model:` overrides.
 - **Layered, Isolated Memory**: Lightweight `RESIDENT.md` facts injected every turn, on-demand personal/note retrieval via patched `pi-knowledge`, and long-session compaction + project memory via Magic Context.
@@ -35,7 +36,7 @@ flowchart TD
 | Node.js | `24.22.3` | Avoid `24.19.0–24.21.x` (`better-sqlite3` GC `SIGABRT`, `nodejs/node#65446`). |
 | Pi | `1.7.0` | Official managed installer or exact npm pin. |
 | Git | Any modern version | Native Windows requires Git for Windows (Git Bash). |
-| Magpie | Running locally | Required module for routing, media, fallback fetch, and `rtk`. |
+| Magpie | Running locally | Required for the full stack (`magpie` module: model routing, redaction, media, anti-scrape fetch fallback, and skill routing). |
 | Python | `3.9+` | Only needed for the optional `pdf` module. |
 | Models | Any OpenAI-compatible provider | At least one main/execution model and one stronger review model. |
 
@@ -65,6 +66,10 @@ flowchart TD
 | **magpie** | Magpie gateway extension, `mcp.json.example`, routing & redaction guide | Required | [modules/magpie](modules/magpie/README.md) |
 | **macos** | `herdr-agent-state.ts`, `herdr-question-blocked.ts`, `ego-gc.ts` (darwin only) | Required on macOS | [modules/macos](modules/macos/README.md) |
 | **pdf** | Local PyMuPDF PDF → Markdown endpoint + launchd / systemd / Windows task adapters | Optional | [modules/pdf](modules/pdf/README.md) |
+
+> **Fastest way to try (`core`-only)**: Want to evaluate `codemode: only`, 5-role subagents, and the two-layer permission gate in ~10 minutes before setting up Magpie or `pi-knowledge`? Render `--modules core` directly against any OpenAI/Anthropic-compatible provider, verify with `doctor.mjs --modules core`, then add `magpie` and `memory` when ready for the full stack.
+>
+> **Optional companion extension (`pi-codex-exec`, MIT)**: This portable bundle defaults to built-in `bash` + `rtk.ts`. If you want single-track PTY execution (`exec_command` + `pty_session` + `write_stdin`) and macOS Seatbelt write protection with live `/sandbox` toggling, see the standalone [`pi-codex-exec`](https://github.com/akir1n/pi-codex-exec) repository (`v1.4.0`).
 
 ## Boundaries & Honest Limits
 

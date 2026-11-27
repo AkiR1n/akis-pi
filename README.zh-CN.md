@@ -7,6 +7,7 @@ AkiyamaRin 的自用 [Pi coding agent](https://pi.dev) 配置分享包：既能�
 ## 核心特色
 
 - **极简模型工具面（`codemode: only`）**：模型顶层仅直接可见 6 个工具，其余 50+ 工具收进 Pi 的 QuickJS 沙箱按需发现（`searchTools` / `describeTool`）。首轮固定提示词压缩约 45%，并经 13 天生产真实会话复查（2,842 次脚本，失败率 3.48%，无退步信号）。
+- **提示词物理分层（`AGENTS.md` + `APPEND_SYSTEM.md`）**：`AGENTS.md` 精简为 1.2 KB 纯英文全角色通用底线（−83%），主会话路由、委派五要素、两轮熔断与记忆规范收敛到 `APPEND_SYSTEM.md`（`fresh` 子代理自动跳过，实测子代理输入 token 降 22%–60%）。
 - **双层权限门禁 + 自动审批**：内置 `@gotgenes/pi-permission-system`（bash AST 解析、精细命令白名单/黑名单、`rtk` 只读命令识别、外部目录与敏感路径守护）联动 `@mzwing/pi-permission-auto-review`（`codex` preset），安全命令 0 ms 放行，高危操作自动审核或交由人工确认。
 - **5 角色子代理分工**：`explore` / `implement` / `lead` / `analyze` / `review` 与具体模型解耦——执行用高性价比模型，分析与验收用更强的异构模型，最强模型保留给显式 `model:` 覆盖。
 - **分层隔离记忆**：每轮仅注入精简的 `RESIDENT.md` 常驻事实；个人与笔记通过带 4 个补丁的 `pi-knowledge` 按需检索；长会话压缩与项目记忆交给 Magic Context。
@@ -35,7 +36,7 @@ flowchart TD
 | Node.js | `24.22.3` | 避开 `24.19.0–24.21.x`（`better-sqlite3` GC `SIGABRT`，`nodejs/node#65446`）。 |
 | Pi | `1.7.0` | 官方 managed 安装器或按 npm 精确复现。 |
 | Git | 现代版本 | 原生 Windows 必须装 Git for Windows（Git Bash）。 |
-| Magpie | 本地运行 | 必装：负责模型路由、脱敏、媒体生成、抓取兜底与 `rtk`。 |
+| Magpie | 本地运行 | 完整栈必装（`magpie` 模块：负责模型路由、脱敏、媒体生成、反爬抓取兜底与技能路由）。 |
 | Python | `3.9+` | 仅可选 `pdf` 模块需要。 |
 | 模型 | 任意 OpenAI 兼容供应商 | 至少准备主力/执行模型与更强的复核模型。 |
 
@@ -65,6 +66,10 @@ flowchart TD
 | **magpie** | Magpie 网关扩展、`mcp.json.example`、路由与脱敏说明 | 必装 | [modules/magpie](modules/magpie/README.md) |
 | **macos** | `herdr-agent-state.ts`、`herdr-question-blocked.ts`、`ego-gc.ts`（仅 darwin） | macOS 必装 | [modules/macos](modules/macos/README.md) |
 | **pdf** | 本地 PyMuPDF PDF → Markdown 端点及各平台后台服务适配 | 可选 | [modules/pdf](modules/pdf/README.md) |
+
+> **10 分钟最小体验路径（仅 `core`）**：如果想先体验 `codemode: only`、5 角色子代理与双层权限门禁，暂不部署 Magpie 网关与 `pi-knowledge`，可先用 `--modules core` 直连任意 OpenAI/Anthropic 兼容模型源并通过 `doctor.mjs --modules core` 自检，满意后再增量叠加 `magpie` 与 `memory` 完整栈。
+>
+> **可选配套扩展（`pi-codex-exec`，MIT）**：本便携包默认使用内置 `bash` + `rtk.ts`；若希望升级为单轨 PTY 执行（`exec_command` + `pty_session` + `write_stdin`）与 macOS Seatbelt 敏感路径写保护（含 `/sandbox` 热切换），可按需加装独立仓库 [`pi-codex-exec`](https://github.com/akir1n/pi-codex-exec)（`v1.4.0`）。
 
 ## 边界与限制
 

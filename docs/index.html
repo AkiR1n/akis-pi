@@ -970,15 +970,15 @@ const CONTENT = {
             links: CODEX_EXEC_URL ? [{ name: "pi-codex-exec (MIT)", url: CODEX_EXEC_URL }] : []
           },
           {
-            id: "core-rules", name: "Enforceable Session Invariants", tag: "AGENTS.md",
-            short: "Script-computed metrics before review and a 2-failure circuit breaker.",
-            lead: "Encodes two verifiable operational invariants in AGENTS.md instead of broad stylistic guidance.",
-            analogy: "Targets the two highest-frequency failure modes in autonomous loops: arithmetic drift on raw logs and unbounded self-correction retries.",
+            id: "core-rules", name: "Layered Prompts & Session Invariants", tag: "AGENTS + APPEND",
+            short: "1.2 KB shared English guardrails in AGENTS.md (−83%) + main-only APPEND_SYSTEM.md skipped by fresh subagents.",
+            lead: "Splits universal engineering guardrails (AGENTS.md) from main-session routing, memory boundaries, and the 2-FAIL circuit breaker (APPEND_SYSTEM.md), cutting fresh subagent input tokens by 22%–60%.",
+            analogy: "Fresh subagents no longer pay for main-session routing/delegation prose on every turn, while forked children preserve parent prompt prefixes for KV-cache reuse.",
             bullets: [
-              "Sums, durations, and log aggregates in reports must be computed programmatically from source files.",
-              "Two consecutive review FAIL verdicts on the same scope halt main-loop edits and escalate directly to the strongest model tier."
+              "AGENTS.md (1,230 B, pure English): script-verified math, read-before-edit dirty-tree discipline, and evidence-backed claims across all roles.",
+              "APPEND_SYSTEM.md (main session only): tool routing, 5-element delegation contract, and the 2-FAIL circuit breaker escalating to the strongest model tier."
             ],
-            paths: ["~/.pi/agent/AGENTS.md"],
+            paths: ["~/.pi/agent/AGENTS.md", "~/.pi/agent/APPEND_SYSTEM.md"],
             links: []
           }
         ]
@@ -1008,7 +1008,7 @@ const CONTENT = {
             analogy: "Eliminates self-grading bias: writers cannot approve their own patches, and reviewers cannot silently mutate code during inspection.",
             bullets: [
               "Reports all confirmed findings in a single pass: BLOCKER (defects, bad math, failed gates) fails the verdict; NIT never blocks.",
-              "Paired with the 2-FAIL circuit breaker in AGENTS.md to cap fix-review ping-pong."
+              "Paired with the 2-FAIL circuit breaker in APPEND_SYSTEM.md to cap fix-review ping-pong."
             ],
             paths: ["~/.pi/agent/agents/review.md"],
             links: [{ name: "Role templates (akis-pi)", url: REPO_URL }]
@@ -1300,15 +1300,15 @@ const CONTENT = {
             links: CODEX_EXEC_URL ? [{ name: "pi-codex-exec (MIT)", url: CODEX_EXEC_URL }] : []
           },
           {
-            id: "core-rules", name: "可验证会话不变量", tag: "AGENTS.md",
-            short: "送审前脚本核算数据与连续 2 次 FAIL 熔断规则。",
-            lead: "在 AGENTS.md 中以两条可审计的操作不变量替代泛泛的提示词约束。",
-            analogy: "聚焦高频自治失效点：消除日志统计的心算漂移，以及无上限的自我修复死循环。",
+            id: "core-rules", name: "分层提示词与会话不变量", tag: "AGENTS + APPEND",
+            short: "1.2 KB 纯英共享底线（AGENTS.md，−83%）+ 主会话专属 APPEND_SYSTEM.md（fresh 子代理自动跳过）。",
+            lead: "将全角色共享的通用工程纪律（AGENTS.md）与主会话专属的路由、记忆边界和 2-FAIL 熔断规则（APPEND_SYSTEM.md）物理分层，实测 fresh 子代理输入 token 降低 22%–60%。",
+            analogy: "fresh 子代理不再每轮重复吞下主会话路由与委派规则；context: fork 子代理仍沿用父前缀以命中 KV Cache，同时受益于总长度 −37% 的瘦身。",
             bullets: [
-              "报告中的求和、耗时区间与日志聚合统计必须由脚本从源文件直接计算得出。",
-              "同一验收范围连续出现 2 次 review FAIL 时立即中止主循环修改，升级至最强模型处理。"
+              "AGENTS.md（1,230 B 纯英）：送审前脚本核算数据、不碰无关脏/未跟踪文件、仅陈述实测验证结果。",
+              "APPEND_SYSTEM.md（仅主会话）：工具与联网路由、委派五要素，以及连续 2 次 review FAIL 升级至最强模型的两轮熔断规则。"
             ],
-            paths: ["~/.pi/agent/AGENTS.md"],
+            paths: ["~/.pi/agent/AGENTS.md", "~/.pi/agent/APPEND_SYSTEM.md"],
             links: []
           }
         ]
@@ -1338,7 +1338,7 @@ const CONTENT = {
             analogy: "强制读写权限分离：实现方无法自签通过，评审方也无法在检查过程中静默改动源码。",
             bullets: [
               "单轮列齐全部已证实问题：代码缺陷、数据错误或门禁失败判为 BLOCKER；格式建议归为 NIT 不阻塞结论。",
-              "与 AGENTS.md 中的 2-FAIL 熔断规则联动，收敛修改-复审来回次数。"
+              "与 APPEND_SYSTEM.md 中的 2-FAIL 熔断规则联动，收敛修改-复审来回次数。"
             ],
             paths: ["~/.pi/agent/agents/review.md"],
             links: [{ name: "角色模板 (akis-pi)", url: REPO_URL }]

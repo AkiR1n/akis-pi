@@ -75,3 +75,14 @@
 - `retry.provider.timeoutMs: 3600000`、`maxRetries: 0`：避免客户端与 Magpie 网关双层重试叠加放大延迟；
 - `compaction` / `branchSummary` 显式声明 `reserveTokens`：防止上游默认值变动引发行为漂移；
 - `notices.cacheMisses / cacheWarming / compactionCosts / reasoningDrops: true`：保留缓存未命中与压缩成本提示便于观测（Pi `1.6.1` 起 `showCacheMissNotices` 已拆成这四项；Pi `1.7.0` 已彻底移除安装遥测与 `enableInstallTelemetry` 设置）。
+
+---
+
+## 8. 提示词分层：`AGENTS.md`（共享底线）与 `APPEND_SYSTEM.md`（主会话专属）
+
+**问题背景**：Pi `1.7.0` 的 `DefaultResourceLoader` 会将 `AGENTS.md` 注入主会话及所有子代理，而 `pi-subagents` 在启动 `fresh` 子代理时会显式传入角色 `appendSystemPrompt`，因此 **`fresh` 子代理会自动跳过磁盘上的 `APPEND_SYSTEM.md`**（仅 `context: "fork"` 子代理会通过 `projectForkRequest` 保留父会话 `addendum` 以命中 KV Cache 前缀）。拆分前把委派规则、联网路由、个人记忆和命令细则全写在 `AGENTS.md`（7,226 B），导致每个只读/执行子代理都在重复加载大量主会话专属规则。
+
+**决策与实测依据**：
+- **分层瘦身**：将 `AGENTS.md` 压缩为纯英文 8 条通用工程底线（`7,226 B → 1,230 B`，**−83.0%**），将主会话专属的路由、委派五要素、两轮熔断、联网回退与记忆边界集中到精简版纯简体中文 `APPEND_SYSTEM.md`（主会话两文件合计由 `12,727 B` 降至 `8,021 B`，**−37.0%**）。
+- **语言选型 A/B/C 实测**：在隔离的真实会话 `--fork` 基准上对比了「基线 / 纯英 `AGENTS` + 精简中文 `APPEND` / 全英方案」三臂：全英 `APPEND_SYSTEM.md` 仅比中文精简版少 105 token（`<0.8%`），但引入 2 次主会话脚本报错且中文路由响应更慢；因此确定「英文共享底线 + 精简中文主会话规则」。
+- **长会话与子代理实测收益**：在两条 137k–177k 活跃上下文的超长压缩会话 `--fork` 中，首轮输入稳定减少约 1,331 token 且路由与规范零退步；3 组单样本可比 `fresh` 子代理实测输入 token 分别下降 **30.8%**（`explore`）、**22.0%**（`implement`）与 **59.8%**（异构强模型 `review`），费用分别下降 **40.0%**、**7.0%** 与 **32.1%**。

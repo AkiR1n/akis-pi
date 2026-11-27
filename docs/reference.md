@@ -10,7 +10,7 @@
 **不要使用 `24.19.0–24.21.x`。** 这几个版本在 `ObjectWrap` 清理钩子中存在上游缺陷（`nodejs/node#65446`），当 `pi-knowledge` 的 `better-sqlite3` 在 GC 阶段释放 `Statement` 时会触发 `SIGABRT` 崩溃。WSL2 实测 20 轮 memory 组合在 `24.21.0` 上崩溃 9 轮，切到 `24.22.3` 后为 0 崩溃。Pi 与全局 CLI（如 `agent-browser`）须共用同一 Node 树。
 
 ### Pi `1.7.0`
-Pi `1.7.0` 上已验证 `pi-maintenance` 单测 47/47、`verify.mjs` 12 PASS + 1 SKIP、`pi-codex-exec` 单测 30/30、`pi-knowledge` 单测 293/293、配置快照 38/38，以及权限 AST、rtk 改写与 reviewer 路由。`codemode.mode: "only"` 在 `1.7.0` 下保持 6 个直出工具（`ask_user_question`、`codemode`、`contact_supervisor`、`subagent`、`subagent_supervisor`、`tool_search`）。`pi-native-questions@0.2.0` 的 `ask_user_question` 返回结构与 `@mzwing/pi-permission-auto-review` 的可信 `user_interaction` 白名单原生对齐。
+Pi `1.7.0` 上已验证 `pi-maintenance` 单测 49/49、`verify.mjs` 12 PASS + 1 SKIP、`pi-codex-exec` 单测 30/30、`pi-knowledge` 单测 293/293、配置快照 38/38，以及权限 AST、rtk 改写与 reviewer 路由。`codemode.mode: "only"` 在 `1.7.0` 下保持 6 个直出工具（`ask_user_question`、`codemode`、`contact_supervisor`、`subagent`、`subagent_supervisor`、`tool_search`）。`pi-native-questions@0.2.0` 的 `ask_user_question` 返回结构与 `@mzwing/pi-permission-auto-review` 的可信 `user_interaction` 白名单原生对齐。提示词采用双层结构：`AGENTS.md` 承载共享给主会话与全部子代理的纯英通用底线，`APPEND_SYSTEM.md` 承载主会话专属路由/委派/记忆规范（`fresh` 子代理跳过，详见 [decisions.md](decisions.md) 第 8 节）。
 
 `1.7.0` 的破坏性变更：移除了安装/更新遥测与 `enableInstallTelemetry` 设置项（及 `PI_TELEMETRY`），本项目配置与导出器已同步移除该键；此前 `1.6.1` 将 `showCacheMissNotices` 拆为 `notices.cacheMisses / cacheWarming / compactionCosts / reasoningDrops`，导出器继续按 Pi 的解析顺序合成这四项。
 

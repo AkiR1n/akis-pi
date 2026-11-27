@@ -41,7 +41,9 @@
       ],
       "lastVerified": "2026-11-28",
       "note": "Tested with Pi 1.7.0. The official installer installs the newest release. The npm command in DEPLOY.md pins the tested release.",
-      "verified": []
+      "verified": [
+        "darwin-arm64"
+      ]
     },
     {
       "id": "node",
@@ -94,7 +96,9 @@
       ],
       "lastVerified": "2026-11-28",
       "note": "read the release notes for database migrations before upgrading; MC owns the project-memory store.",
-      "verified": []
+      "verified": [
+        "darwin-arm64"
+      ]
     },
     {
       "id": "pi-knowledge",
@@ -108,9 +112,11 @@
         "win32",
         "wsl"
       ],
-      "lastVerified": "2026-11-12",
+      "lastVerified": "2026-11-28",
       "note": "4 patches on v0.15.0; QML grammar is optional. Apply with git am, then npm ci and npm run build.",
-      "verified": []
+      "verified": [
+        "darwin-arm64"
+      ]
     },
     {
       "id": "pi-web-access",
@@ -124,8 +130,10 @@
         "win32",
         "wsl"
       ],
-      "lastVerified": "2026-11-12",
-      "verified": []
+      "lastVerified": "2026-11-28",
+      "verified": [
+        "darwin-arm64"
+      ]
     },
     {
       "id": "pi-agent-browser-native",
@@ -140,7 +148,9 @@
         "wsl"
       ],
       "lastVerified": "2026-11-28",
-      "verified": []
+      "verified": [
+        "darwin-arm64"
+      ]
     },
     {
       "id": "pi-atelier",
@@ -160,7 +170,9 @@
           "+extensions/index.ts"
         ]
       },
-      "verified": []
+      "verified": [
+        "darwin-arm64"
+      ]
     },
     {
       "id": "pi-native-questions",
@@ -174,8 +186,10 @@
         "win32",
         "wsl"
       ],
-      "lastVerified": "2026-11-25",
-      "verified": []
+      "lastVerified": "2026-11-28",
+      "verified": [
+        "darwin-arm64"
+      ]
     },
     {
       "id": "pi-powerpoint",
@@ -207,8 +221,10 @@
         "win32",
         "wsl"
       ],
-      "lastVerified": "2026-11-25",
-      "verified": []
+      "lastVerified": "2026-11-28",
+      "verified": [
+        "darwin-arm64"
+      ]
     },
     {
       "id": "pi-compact-tools",
@@ -222,14 +238,16 @@
         "win32",
         "wsl"
       ],
-      "lastVerified": "2026-11-12",
+      "lastVerified": "2026-11-28",
       "resourceFilters": {
         "extensions": [
           "+extensions/compact-tools.ts"
         ],
         "themes": []
       },
-      "verified": []
+      "verified": [
+        "darwin-arm64"
+      ]
     },
     {
       "id": "pi-mobile",
@@ -298,7 +316,9 @@
         "wsl"
       ],
       "lastVerified": "2026-11-28",
-      "verified": []
+      "verified": [
+        "darwin-arm64"
+      ]
     },
     {
       "id": "pi-schedule",
@@ -312,8 +332,10 @@
         "win32",
         "wsl"
       ],
-      "lastVerified": "2026-11-12",
-      "verified": []
+      "lastVerified": "2026-11-28",
+      "verified": [
+        "darwin-arm64"
+      ]
     },
     {
       "id": "vision",
@@ -327,8 +349,10 @@
         "win32",
         "wsl"
       ],
-      "lastVerified": "2026-11-12",
-      "verified": []
+      "lastVerified": "2026-11-28",
+      "verified": [
+        "darwin-arm64"
+      ]
     },
     {
       "id": "pi-permission-system",
@@ -343,7 +367,9 @@
         "wsl"
       ],
       "lastVerified": "2026-11-28",
-      "verified": []
+      "verified": [
+        "darwin-arm64"
+      ]
     },
     {
       "id": "pi-permission-auto-review",
@@ -357,8 +383,10 @@
         "win32",
         "wsl"
       ],
-      "lastVerified": "2026-11-12",
-      "verified": []
+      "lastVerified": "2026-11-28",
+      "verified": [
+        "darwin-arm64"
+      ]
     },
     {
       "id": "herdr",
@@ -404,7 +432,9 @@
       ],
       "lastVerified": "2026-11-28",
       "note": "pi-agent-browser-native >=0.9.46 requires agent-browser >=0.45.0; must live in the node tree the extension resolves, as the mise node/24 alias can drift away from it.",
-      "verified": []
+      "verified": [
+        "darwin-arm64"
+      ]
     },
     {
       "id": "magpie",
