@@ -154,13 +154,13 @@ pi --version
 B：复现测试版本（两个平台同一条命令）：
 
 ```sh
-npm install -g --ignore-scripts @earendil-works/pi-coding-agent@1.6.1
+npm install -g --ignore-scripts @earendil-works/pi-coding-agent@1.7.0
 pi --version
 ```
 
 原生 Windows 的 managed 安装器见上游 Windows 文档；本包尚未验收该路径，优先用 B 复现精确版本。
 
-**期望**：B 精确输出 1.6.1；A 为新版时 doctor 对普通偏差 WARN，对 major 变化 FAIL（需重评兼容性）。
+**期望**：B 精确输出 1.7.0；A 为新版时 doctor 对普通偏差 WARN，对 major 变化 FAIL（需重评兼容性）。
 **失败怎么办**：不要混装 managed 与 npm 全局。命令缺失时检查 PATH 里的 agent-dir/bin 或 npm prefix 的 bin；Windows 上 `pi` 是 `pi.cmd` shim，doctor 会把它解析成 `node.exe + CLI 脚本`，不需要你手工改指向。不要因新版 WARN 自动降级或替换 pinned 组件。
 
 ## 3. models.json 与无 key 检查
@@ -260,8 +260,8 @@ PowerShell 的单引号让 `$BRAVE_API_KEY` 保持引用文本，不会被当前
 
 ```sh
 pi install npm:pi-web-access@0.48.0
-pi install npm:pi-agent-browser-native@0.9.42
-pi install npm:pi-atelier@0.21.0
+pi install npm:pi-agent-browser-native@0.9.46
+pi install npm:pi-atelier@0.22.0
 pi install npm:pi-native-questions@0.2.0
 pi install npm:pi-powerpoint@1.0.0
 pi install npm:pi-subagents@0.90.0
@@ -269,10 +269,10 @@ pi install npm:pi-compact-tools@0.18.0
 pi install npm:pi-mobile@0.4.0
 pi install npm:@injaneity/pi-computer-use@0.5.1
 pi install npm:pi-away@0.1.4
-pi install npm:pi-mox@0.3.1
+pi install npm:pi-mox@0.5.0
 pi install npm:pi-schedule@0.6.1
 pi install npm:@getpipher/vision@0.5.3
-pi install npm:@gotgenes/pi-permission-system@44.0.2
+pi install npm:@gotgenes/pi-permission-system@45.0.0
 pi install npm:@mzwing/pi-permission-auto-review@1.0.2
 ```
 
@@ -370,7 +370,7 @@ core-only 现在开新会话（不要用旧会话或 `/reload`）。选 memory �
 pi --print 'answer with the number of tools you can call directly, and nothing else'
 ```
 
-**期望**：Pi 1.6.1 + pi-subagents 0.90.0 下有 **6 个直接工具**：ask_user_question / codemode / contact_supervisor / subagent / subagent_supervisor / tool_search。模型自报工具数不准，以 stub 捕获并由 `deploy-check.mjs stub-requests` 校验的集合为准。
+**期望**：Pi 1.7.0 + pi-subagents 0.90.0 下有 **6 个直接工具**：ask_user_question / codemode / contact_supervisor / subagent / subagent_supervisor / tool_search。模型自报工具数不准，以 stub 捕获并由 `deploy-check.mjs stub-requests` 校验的集合为准。
 **失败怎么办**：出约 50 个工具核对 `codemode.mode = only`；为 0 回步骤 5 查插件与 Pi 版本。
 
 ## 9. memory 模块（必装）
@@ -378,11 +378,11 @@ pi --print 'answer with the number of tools you can call directly, and nothing e
 ### 9.1 Magic Context
 
 ```sh
-pi install npm:@cortexkit/pi-magic-context@0.49.76
+pi install npm:@cortexkit/pi-magic-context@0.49.87
 node "$REPO/scripts/deploy-check.mjs" mc-version
 ```
 
-**期望**：0.49.76；配置已在步骤 4 随 core,memory 渲染。此时磁盘 16 个 npm 包、settings 声明 17 项；本地 pi-knowledge 未装，**不运行 doctor 或 pi list，等 9.3 完成再查**。
+**期望**：0.49.87；配置已在步骤 4 随 core,memory 渲染。此时磁盘 16 个 npm 包、settings 声明 17 项；本地 pi-knowledge 未装，**不运行 doctor 或 pi list，等 9.3 完成再查**。
 
 三参数：`execute_threshold_tokens.default=400000`（小窗口钳至 90%）、`memory.injection_budget_tokens=3000`、`historian_timeout_ms=600000`。理由见 [decisions.md](docs/decisions.md)。MC 的 `pi.subagent_extensions: []` 保持 historian 子进程不载普通扩展。
 
@@ -502,13 +502,13 @@ herdr-agent-state.ts 由 herdr 管理，仅 HERDR_ENV、HERDR_SOCKET_PATH、HERD
 ## 10b. agent-browser（core 的通用前置依赖）
 
 ```sh
-npm install -g agent-browser@0.44.0
+npm install -g agent-browser@0.45.0
 agent-browser --version
 agent-browser install
 # Linux 系统库缺失时按上游说明选择 agent-browser install --with-deps
 ```
 
-**期望**：CLI 0.44.0（`pi-agent-browser-native@0.9.42` 要求 `≥0.44.0`）且位于扩展解析的同一 Node 树。安装 CLI 不等于已下载浏览器。
+**期望**：CLI 0.45.0（`pi-agent-browser-native@0.9.46` 要求 `≥0.45.0`）且位于扩展解析的同一 Node 树。安装 CLI 不等于已下载浏览器。
 **失败怎么办**：随后用 `tools.agent_browser({args:["doctor"]})` 验证 open/snapshot/close。mise 的 node/24 别名可能随新版本漂移。原生 Windows 的会话锁、恢复与 Electron 有上游限制（上游自述 best-effort），必须单独验收，并如实呈现 Electron unsupported 之类的结论，不能只以“能启动”当通过。
 
 ## 11. magpie 模块（必装）
@@ -536,7 +536,7 @@ PowerShell 的收尾命令：
 node "$Repo/scripts/doctor.mjs" --home $HOME --agent-dir $env:PI_CODING_AGENT_DIR --modules $Modules
 ```
 
-**期望**：0 FAIL，WARN 逐条解释。doctor 只读 settings/node_modules，**不调用 pi list、不安装包**。对照 manifest：版本同 PASS；普通偏差 WARN；Pi/MC 的 major 偏差 FAIL；缺声明包 FAIL。RTK 缺失或无 rewrite 为 WARN。未实测平台会对每个组件额外报 platform verification WARN，这是标签而非故障（实测范围见 README 的平台表）。core 11 包、core+magpie+memory 13 包，macos 不增包。
+**期望**：0 FAIL，WARN 逐条解释。doctor 只读 settings/node_modules，**不调用 pi list、不安装包**。对照 manifest：版本同 PASS；普通偏差 WARN；Pi/MC 的 major 偏差 FAIL；缺声明包 FAIL。RTK 缺失或无 rewrite 为 WARN。未实测平台会对每个组件额外报 platform verification WARN，这是标签而非故障（实测范围见 README 的平台表）。core 15 包、core+magpie+memory 17 项（16 个 npm 包 + 1 个本地 pi-knowledge），macos 不增包。
 
 **失败怎么办**：FAIL packages resolve on disk 回步骤 5（memory 查 9）；placeholders 回步骤 4；MC parameters 查 9.1。确保 0 FAIL 方可交付。
 

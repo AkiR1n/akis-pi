@@ -9,20 +9,20 @@
 ### Node.js `24.22.3`
 **不要使用 `24.19.0–24.21.x`。** 这几个版本在 `ObjectWrap` 清理钩子中存在上游缺陷（`nodejs/node#65446`），当 `pi-knowledge` 的 `better-sqlite3` 在 GC 阶段释放 `Statement` 时会触发 `SIGABRT` 崩溃。WSL2 实测 20 轮 memory 组合在 `24.21.0` 上崩溃 9 轮，切到 `24.22.3` 后为 0 崩溃。Pi 与全局 CLI（如 `agent-browser`）须共用同一 Node 树。
 
-### Pi `1.6.1`
-Pi `1.6.1` 上已验证 `pi-maintenance` 单测 47/47、`verify.mjs` 12 PASS + 1 SKIP、`pi-codex-exec` 单测 30/30、配置快照 38/38，以及权限 AST、rtk 改写与 reviewer 路由。`codemode.mode: "only"` 在 `1.6.1` 下保持 6 个直出工具（`ask_user_question`、`codemode`、`contact_supervisor`、`subagent`、`subagent_supervisor`、`tool_search`）。`pi-native-questions@0.2.0` 的 `ask_user_question` 返回结构与 `@mzwing/pi-permission-auto-review` 的可信 `user_interaction` 白名单原生对齐。
+### Pi `1.7.0`
+Pi `1.7.0` 上已验证 `pi-maintenance` 单测 47/47、`verify.mjs` 12 PASS + 1 SKIP、`pi-codex-exec` 单测 30/30、`pi-knowledge` 单测 293/293、配置快照 38/38，以及权限 AST、rtk 改写与 reviewer 路由。`codemode.mode: "only"` 在 `1.7.0` 下保持 6 个直出工具（`ask_user_question`、`codemode`、`contact_supervisor`、`subagent`、`subagent_supervisor`、`tool_search`）。`pi-native-questions@0.2.0` 的 `ask_user_question` 返回结构与 `@mzwing/pi-permission-auto-review` 的可信 `user_interaction` 白名单原生对齐。
 
-`1.6.1` 的破坏性变更只有一处：`showCacheMissNotices` 被拆成 `notices.cacheMisses / cacheWarming / compactionCosts / reasoningDrops`，旧值会在读取时自动迁移到四个新键（不落盘），`SettingsManager.getShowCacheMissNotices()` / `setShowCacheMissNotices()` 已删除。本项目配置已改用 `notices` 对象；导出器按 Pi 的解析顺序合成这四项，先以 `false` 为默认值，再展开旧键，最后用显式 `notices` 逐项覆盖。
+`1.7.0` 的破坏性变更：移除了安装/更新遥测与 `enableInstallTelemetry` 设置项（及 `PI_TELEMETRY`），本项目配置与导出器已同步移除该键；此前 `1.6.1` 将 `showCacheMissNotices` 拆为 `notices.cacheMisses / cacheWarming / compactionCosts / reasoningDrops`，导出器继续按 Pi 的解析顺序合成这四项。
 
-### Magic Context `0.49.76`
-相对 `0.49.56` 包含多项针对 Pi 的关键修复（无数据库 schema 迁移）：修复 `doctor --fix` 在 Pi 软链场景误删 cache 外文件、修复 Gemini 路由空 text block 导致的 prompt cache 丢失、修复长会话压缩后不再收缩及摘要携带全量项目记忆的 token 膨胀。
+### Magic Context `0.49.87`
+相对 `0.49.76` 包含 11 个 patch（均标注无数据库 schema 迁移），重点修复 Pi 退出时本地 embedding 计算偶发崩溃（`v0.49.85`）以及 Pi/OpenCode 端到端稳定性问题（`v0.49.87`），并延续此前无迁移升级与摘要防膨胀修复。
 
-### `agent-browser` CLI `>=0.44.0` 与 `rtk` `>=1.1.0`
-- `pi-agent-browser-native@0.9.42` 将运行时下限提升至 **`agent-browser >= 0.44.0`**，安装或升级扩展前必须先升级全局 `agent-browser` CLI；
+### `agent-browser` CLI `>=0.45.0` 与 `rtk` `>=1.1.0`
+- `pi-agent-browser-native@0.9.46` 将运行时下限提升至 **`agent-browser >= 0.45.0`**，安装或升级扩展前必须先升级全局 `agent-browser` CLI；
 - `extensions/rtk.ts` 依赖 `rtk rewrite` 子命令（需 `>=0.23.0`，基准为 `1.1.0`），缺失时自动 fail-open 放行原始 `bash`。
 
 ### 权限系统与自动评审
-- `@gotgenes/pi-permission-system@44.0.2`：依赖 `web-tree-sitter` + `tree-sitter-bash` 做命令 AST 拆解，并配合 `commandEffects.rtk` 识别只读 `rtk` 子命令；`path_write` 除保护 `~/.pi/agent/sessions/*`、`~/.pi/agent/memory/*` 外，亦将 `~/.pi/agent/extensions`、`~/.pi/agent/settings.json`、`~/.pi/agent/auth.json`、`~/.config/magpie`、`~/Library/LaunchAgents` 等控制面路径纳入强制人工确认；
+- `@gotgenes/pi-permission-system@45.0.0`：依赖 `web-tree-sitter` + `tree-sitter-bash` 做命令 AST 拆解（`45.0.0` 以 `--auto-approve` / `/permission-system:auto-approve` 取代旧 `yolo` 模式），并配合 `commandEffects.rtk` 识别只读 `rtk` 子命令；`path_write` 除保护 `~/.pi/agent/sessions/*`、`~/.pi/agent/memory/*` 外，亦将 `~/.pi/agent/extensions`、`~/.pi/agent/settings.json`、`~/.pi/agent/auth.json`、`~/.config/magpie`、`~/Library/LaunchAgents` 等控制面路径纳入强制人工确认；
 - `@mzwing/pi-permission-auto-review@1.0.2`：通过 `config/pi-permission-auto-review/config.json` 挂载到 `{{PROVIDER}}` / `{{MODEL_EXEC}}`（生产环境可替换为带多级回退的路由组），使用 `codex` preset，超时或异常时自动 `defer` 给人类；
 - **可选内核沙箱（暂仅支持 macOS）**：若加装独立扩展 `pi-codex-exec`（`v1.4.0`），可通过 `~/.pi/agent/extensions/pi-codex-exec.json` 默认启用 macOS Seatbelt（`/usr/bin/sandbox-exec`）`protect-sensitive` 敏感路径写保护，并在运行中用 `/sandbox [status|on|off]` 热切换（Linux / Windows 暂不支持，保持 `off`）。
 

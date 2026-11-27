@@ -16,14 +16,14 @@ A shareable, evidence-backed configuration bundle for the [Pi coding agent](http
 
 ```mermaid
 flowchart TD
-    U[Terminal / TUI / Headless pi -p] --> PI[Pi 1.6.1 + Node 24.22.3]
-    PI --> UI[Display: pi-atelier 0.21.0 + pi-compact-tools 0.18.0 + vision 0.5.3]
+    U[Terminal / TUI / Headless pi -p] --> PI[Pi 1.7.0 + Node 24.22.3]
+    PI --> UI[Display: pi-atelier 0.22.0 + pi-compact-tools 0.18.0 + vision 0.5.3]
     PI --> CM[Tool Surface: codemode.mode = only / 6 direct tools]
     CM --> SUB[Subagents: pi-subagents 0.90.0<br/>explore / implement / lead / analyze / review]
     CM --> SHELL[Shell: bash + rtk.ts rewrite]
-    SHELL & SUB --> PERM[Permission Gate: pi-permission-system 44.0.2<br/>AST rules + external_directory/path_write guards]
+    SHELL & SUB --> PERM[Permission Gate: pi-permission-system 45.0.0<br/>AST rules + external_directory/path_write guards]
     PERM --> REV[Auto-Review: pi-permission-auto-review 1.0.2]
-    PI --> MEM1[Project Memory & Compaction: Magic Context 0.49.76]
+    PI --> MEM1[Project Memory & Compaction: Magic Context 0.49.87]
     PI --> MEM2[Personal Knowledge: resident-memory + pi-knowledge 0.15.0 + 4 patches]
     PI --> MG[Magpie Gateway: model routing, redaction, media & skill router]
 ```
@@ -33,7 +33,7 @@ flowchart TD
 | Requirement | Pinned / Tested Baseline | Notes |
 | --- | --- | --- |
 | Node.js | `24.22.3` | Avoid `24.19.0–24.21.x` (`better-sqlite3` GC `SIGABRT`, `nodejs/node#65446`). |
-| Pi | `1.6.1` | Official managed installer or exact npm pin. |
+| Pi | `1.7.0` | Official managed installer or exact npm pin. |
 | Git | Any modern version | Native Windows requires Git for Windows (Git Bash). |
 | Magpie | Running locally | Required module for routing, media, fallback fetch, and `rtk`. |
 | Python | `3.9+` | Only needed for the optional `pdf` module. |
@@ -61,7 +61,7 @@ flowchart TD
 | Module | Contents | Recommendation | Docs |
 | --- | --- | --- | --- |
 | **core** | `settings.json`, `AGENTS.md`, `APPEND_SYSTEM.md`, 5 subagent roles, `compact-tools.json`, `pi-permission-system` + `pi-permission-auto-review` configs, `web-search.json`, `rtk.ts` | Required | [DEPLOY.md](DEPLOY.md) |
-| **memory** | Magic Context `0.49.76`, `resident-memory.ts`, `RESIDENT.template.md`, `pi-knowledge` `0.15.0` + 4 patches (optional QML grammar) | Required | [modules/memory](modules/memory/README.md) |
+| **memory** | Magic Context `0.49.87`, `resident-memory.ts`, `RESIDENT.template.md`, `pi-knowledge` `0.15.0` + 4 patches (optional QML grammar) | Required | [modules/memory](modules/memory/README.md) |
 | **magpie** | Magpie gateway extension, `mcp.json.example`, routing & redaction guide | Required | [modules/magpie](modules/magpie/README.md) |
 | **macos** | `herdr-agent-state.ts`, `herdr-question-blocked.ts`, `ego-gc.ts` (darwin only) | Required on macOS | [modules/macos](modules/macos/README.md) |
 | **pdf** | Local PyMuPDF PDF → Markdown endpoint + launchd / systemd / Windows task adapters | Optional | [modules/pdf](modules/pdf/README.md) |
@@ -70,7 +70,7 @@ flowchart TD
 
 - **Primary maintenance target**: Guaranteed and actively tested on **macOS arm64**; WSL2 / Windows / Linux follow the support table above.
 - **Permission gate defaults**: `settings.json` sets `defaultProjectTrust: "always"` and relies on `pi-permission-system` + `pi-permission-auto-review` for command/path gating. Review `config/pi-permission-system/config.json` and `config/pi-permission-auto-review/config.json` to match your own sensitive paths before enabling auto-review.
-- **External CLIs**: `agent-browser` CLI (`>=0.44.0` for `pi-agent-browser-native@0.9.42`) and `rtk` (`>=1.1.0`) are installed separately.
+- **External CLIs**: `agent-browser` CLI (`>=0.45.0` for `pi-agent-browser-native@0.9.46`) and `rtk` (`>=1.1.0`) are installed separately.
 - **Scope**: This repository delivers a clean, repeatable initial setup. Track ongoing upgrades and rollback snapshots in your own local maintenance repo using [docs/upgrade.md](docs/upgrade.md).
 
 ## Repository Layout

@@ -1,12 +1,12 @@
 {
   "name": "akis-pi",
   "schemaVersion": 2,
-  "generatedAt": "2026-11-27T13:48:46.670Z",
+  "generatedAt": "2026-11-27T18:26:56.153Z",
   "generatedFrom": "live Pi configuration, read-only (see NEVER_COPIED in export-akis-pi.mjs)",
   "verifiedOn": {
     "os": "macOS 27.2.1",
     "arch": "arm64",
-    "pi": "1.6.1",
+    "pi": "1.7.0",
     "node": "v24.22.3"
   },
   "levels": {
@@ -29,8 +29,8 @@
   "components": [
     {
       "id": "pi",
-      "source": "npm:@earendil-works/pi-coding-agent@1.6.1",
-      "version": "1.6.1",
+      "source": "npm:@earendil-works/pi-coding-agent@1.7.0",
+      "version": "1.7.0",
       "level": "pinned",
       "module": "core",
       "platforms": [
@@ -39,8 +39,8 @@
         "win32",
         "wsl"
       ],
-      "lastVerified": "2026-11-25",
-      "note": "Tested with Pi 1.6.1. The official installer installs the newest release. The npm command in DEPLOY.md pins the tested release.",
+      "lastVerified": "2026-11-28",
+      "note": "Tested with Pi 1.7.0. The official installer installs the newest release. The npm command in DEPLOY.md pins the tested release.",
       "verified": []
     },
     {
@@ -82,8 +82,8 @@
     },
     {
       "id": "pi-magic-context",
-      "source": "npm:@cortexkit/pi-magic-context@0.49.76",
-      "version": "0.49.76",
+      "source": "npm:@cortexkit/pi-magic-context@0.49.87",
+      "version": "0.49.87",
       "level": "pinned-reason",
       "module": "memory",
       "platforms": [
@@ -92,7 +92,7 @@
         "win32",
         "wsl"
       ],
-      "lastVerified": "2026-11-25",
+      "lastVerified": "2026-11-28",
       "note": "read the release notes for database migrations before upgrading; MC owns the project-memory store.",
       "verified": []
     },
@@ -129,8 +129,8 @@
     },
     {
       "id": "pi-agent-browser-native",
-      "source": "npm:pi-agent-browser-native@0.9.42",
-      "version": "0.9.42",
+      "source": "npm:pi-agent-browser-native@0.9.46",
+      "version": "0.9.46",
       "level": "pinned",
       "module": "core",
       "platforms": [
@@ -139,13 +139,13 @@
         "win32",
         "wsl"
       ],
-      "lastVerified": "2026-11-25",
+      "lastVerified": "2026-11-28",
       "verified": []
     },
     {
       "id": "pi-atelier",
-      "source": "npm:pi-atelier@0.21.0",
-      "version": "0.21.0",
+      "source": "npm:pi-atelier@0.22.0",
+      "version": "0.22.0",
       "level": "pinned",
       "module": "core",
       "platforms": [
@@ -154,7 +154,7 @@
         "win32",
         "wsl"
       ],
-      "lastVerified": "2026-11-25",
+      "lastVerified": "2026-11-28",
       "resourceFilters": {
         "extensions": [
           "+extensions/index.ts"
@@ -287,8 +287,8 @@
     },
     {
       "id": "pi-mox",
-      "source": "npm:pi-mox@0.3.1",
-      "version": "0.3.1",
+      "source": "npm:pi-mox@0.5.0",
+      "version": "0.5.0",
       "level": "pinned",
       "module": "core",
       "platforms": [
@@ -297,7 +297,7 @@
         "win32",
         "wsl"
       ],
-      "lastVerified": "2026-11-12",
+      "lastVerified": "2026-11-28",
       "verified": []
     },
     {
@@ -332,8 +332,8 @@
     },
     {
       "id": "pi-permission-system",
-      "source": "npm:@gotgenes/pi-permission-system@44.0.2",
-      "version": "44.0.2",
+      "source": "npm:@gotgenes/pi-permission-system@45.0.0",
+      "version": "45.0.0",
       "level": "pinned",
       "module": "core",
       "platforms": [
@@ -342,7 +342,7 @@
         "win32",
         "wsl"
       ],
-      "lastVerified": "2026-11-25",
+      "lastVerified": "2026-11-28",
       "verified": []
     },
     {
@@ -393,7 +393,7 @@
     {
       "id": "agent-browser",
       "source": "npm -g agent-browser",
-      "version": "0.44.0",
+      "version": "0.45.0",
       "level": "float-ok",
       "module": "core",
       "platforms": [
@@ -402,8 +402,8 @@
         "win32",
         "wsl"
       ],
-      "lastVerified": "2026-11-25",
-      "note": "pi-agent-browser-native >=0.9.42 requires agent-browser >=0.44.0; must live in the node tree the extension resolves, as the mise node/24 alias can drift away from it.",
+      "lastVerified": "2026-11-28",
+      "note": "pi-agent-browser-native >=0.9.46 requires agent-browser >=0.45.0; must live in the node tree the extension resolves, as the mise node/24 alias can drift away from it.",
       "verified": []
     },
     {

@@ -8,7 +8,7 @@
 
 ## 1. `codemode.mode: "only"`：压缩常驻开销，且经 13 天生产复查无退步
 
-**决策**：在 `settings.json` 中固定 `{"codemode":{"mode":"only"}}`。在 Pi `1.6.1` + `pi-subagents 0.90.0` 下，模型顶层仅直接可见 **6 个工具**（`ask_user_question`、`codemode`、`contact_supervisor`、`subagent`、`subagent_supervisor`、`tool_search`），其余 50+ 工具收进 QuickJS 沙箱按需发现。
+**决策**：在 `settings.json` 中固定 `{"codemode":{"mode":"only"}}`。在 Pi `1.7.0` + `pi-subagents 0.90.0` 下，模型顶层仅直接可见 **6 个工具**（`ask_user_question`、`codemode`、`contact_supervisor`、`subagent`、`subagent_supervisor`、`tool_search`），其余 50+ 工具收进 QuickJS 沙箱按需发现。
 
 **静态与生产实测数据**：
 
@@ -26,7 +26,7 @@
 
 ## 2. 双层权限门禁：`pi-permission-system` + `pi-permission-auto-review`
 
-**决策**：在 `core` 模块中启用 `@gotgenes/pi-permission-system`（`44.0.2`）与 `@mzwing/pi-permission-auto-review`（`1.0.2`，`preset: "codex"`），同时提供脱敏基线配置 `config/pi-permission-system/config.json` 与 `config/pi-permission-auto-review/config.json`。
+**决策**：在 `core` 模块中启用 `@gotgenes/pi-permission-system`（`45.0.0`）与 `@mzwing/pi-permission-auto-review`（`1.0.2`，`preset: "codex"`），同时提供脱敏基线配置 `config/pi-permission-system/config.json` 与 `config/pi-permission-auto-review/config.json`。
 
 - **零开销快路径**：常规 `bash` 与只读 `rtk` 子命令（通过 `commandEffects.rtk` 声明为 `read`）直接 0 ms 放行；
 - **AST 级高危拦截**：基于 `web-tree-sitter` + `tree-sitter-bash` 拆解复合命令，拦截 `rm -r*`（放行临时目录）、`git push --force`、`git reset --hard`、`git clean`、`sudo`、`npm publish`、`pi install/remove` 等，且同时覆盖 `rtk` 重写前后的命令形态；
@@ -74,4 +74,4 @@
 
 - `retry.provider.timeoutMs: 3600000`、`maxRetries: 0`：避免客户端与 Magpie 网关双层重试叠加放大延迟；
 - `compaction` / `branchSummary` 显式声明 `reserveTokens`：防止上游默认值变动引发行为漂移；
-- `enableInstallTelemetry: false`、`notices.cacheMisses / cacheWarming / compactionCosts / reasoningDrops: true`：关闭遥测，保留缓存未命中提示便于观测成本（Pi 1.6.1 起 `showCacheMissNotices` 已拆成这四项）。
+- `notices.cacheMisses / cacheWarming / compactionCosts / reasoningDrops: true`：保留缓存未命中与压缩成本提示便于观测（Pi `1.6.1` 起 `showCacheMissNotices` 已拆成这四项；Pi `1.7.0` 已彻底移除安装遥测与 `enableInstallTelemetry` 设置）。

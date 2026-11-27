@@ -15,7 +15,7 @@ cp -p "$HOME/.pi/agent/settings.json" "$HOME/.pi/agent/settings.json.bak-$(date 
 ## 1. 推荐升级顺序
 
 1. **Pi 本体**（`pi update` 或 `npm install -g --ignore-scripts @earendil-works/pi-coding-agent@<ver>`）
-2. **外部前置 CLI**（如 `agent-browser` CLI 须先升至扩展要求的下限，例如 `pi-agent-browser-native@0.9.42` 要求 `≥0.44.0`）
+2. **外部前置 CLI**（如 `agent-browser` CLI 须先升至扩展要求的下限，例如 `pi-agent-browser-native@0.9.46` 要求 `≥0.45.0`）
 3. **普通插件**（`pi install npm:<pkg>@<ver>`；注意保留 `pi-atelier` 与 `pi-compact-tools` 的对象式 `extensions`/`themes` 过滤字段）
 4. **Magic Context**（升级前必须读 release notes 的 database migration 说明，并先冷备或 SQLite online backup 整个 storage 目录再升级）
 5. **`pi-knowledge` 补丁**（大版本跨架构升级如 `0.15.x → 0.16.x` 引入 daemon 与 schema v8 迁移，务必先评估补丁冲突与备份 `knowledge.db` 再决定是否跟进）

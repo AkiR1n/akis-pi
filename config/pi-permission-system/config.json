@@ -60,6 +60,9 @@
     "du": {
       "effects": "read"
     },
+    "jq": {
+      "effects": "read"
+    },
     "readlink": {
       "effects": "read"
     },

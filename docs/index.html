@@ -730,7 +730,7 @@
   <div class="nav-inner">
     <a class="brand" href="#">
       <img id="brandLogo" class="brand-logo" src="assets/logo.svg" alt="akis-pi" width="30" height="30" />
-      <span class="brand-name"><span id="brandTitle">akis-pi</span> <span id="brandSub" class="brand-sub">· Pi 1.6.1</span></span>
+      <span class="brand-name"><span id="brandTitle">akis-pi</span> <span id="brandSub" class="brand-sub">· Pi 1.7.0</span></span>
     </a>
     <div class="nav-actions">
       <a id="navDeploy" class="pill-btn subtle hide-mobile" href="#" target="_blank" rel="noopener">DEPLOY.md ↗</a>
@@ -828,7 +828,7 @@ const CONTENT = {
     htmlLang: "en",
     pageTitle: "akis-pi · Pi Coding Agent Architecture",
     brandTitle: "akis-pi",
-    brandSub: "· Pi 1.6.1",
+    brandSub: "· Pi 1.7.0",
     themeLabel: "◐ Theme",
     heroTitle: "akis-pi: Modular Pi Coding Agent Architecture",
     heroSub: "Cached low-cost main loop, role-isolated 5-subagent delegation, AST permission gating, dual-track memory, and automated config governance.",
@@ -842,7 +842,7 @@ const CONTENT = {
       overview: { label: "Topology", active: null, fault: false, text: "<strong>Data &amp; control flow:</strong> 01 Interface &amp; Permissions → 02 Main Loop (<code>codemode: only</code>) → 03 Specialist Subagents / 04 Dual-Track Memory → 05 Gateway, Fallback &amp; Governance." },
       daily: { label: "Cost & Cache", active: ["interface","core","memory","infra"], fault: false, text: "<strong>Cost &amp; cache model:</strong> Long-lived sessions run on a fast, low-cost main model (~98% cache hit, $0.2–0.7/day). High-cost reasoning models are isolated to short-lived subagent calls." },
       review: { label: "Review Gate", active: ["core","orchestration","infra"], fault: false, text: "<strong>Verification &amp; circuit breaker:</strong> Script-verified numbers precede review; a read-only heterogeneous reviewer emits one structured verdict; two consecutive FAILs escalate out of the main loop." },
-      memory: { label: "Dual Memory", active: ["core","memory"], fault: false, text: "<strong>Memory separation:</strong> Magic Context 0.49.76 compacts project threads on demand with verbatim retrieval; personal notes and archives live in an isolated <code>pi-knowledge</code> + <code>RESIDENT.md</code> store." },
+      memory: { label: "Dual Memory", active: ["core","memory"], fault: false, text: "<strong>Memory separation:</strong> Magic Context 0.49.87 compacts project threads on demand with verbatim retrieval; personal notes and archives live in an isolated <code>pi-knowledge</code> + <code>RESIDENT.md</code> store." },
       fallback: { label: "Failover Path", active: ["interface","core","infra"], fault: true, text: "<strong>Gateway outage path:</strong> Start a clean session and switch explicitly via <code>/model</code> to a direct provider endpoint. Automatic failover is intentionally disabled to prevent silent redaction bypass." }
     },
     ui: {
@@ -865,7 +865,7 @@ const CONTENT = {
       dirPlaceholder: "Filter: permission, PTY, memory, vision, browser...",
       openNote: "Architecture note ↑",
       localOnly: "Bundled / Local",
-      footLeft: `Pi 1.6.1 · Magic Context 0.49.76 · Source: <a href="${REPO_URL}" target="_blank" rel="noopener">akis-pi</a>`,
+      footLeft: `Pi 1.7.0 · Magic Context 0.49.87 · Source: <a href="${REPO_URL}" target="_blank" rel="noopener">akis-pi</a>`,
       footRight: "Verified baseline 2026-11-27"
     },
     domains: [
@@ -881,7 +881,7 @@ const CONTENT = {
             lead: "Runs inside Ghostty + Herdr persistent panes with live token/cache/cost instrumentation, Ctrl+V image blocks, selective diff folding, and end-to-end encrypted mobile continuation.",
             analogy: "Keeps the terminal session inspectable under long runs without bloating the model prompt—UI state stays strictly client-side.",
             bullets: [
-              "pi-atelier 0.21.0 sidebar/footer + pi-compact-tools 0.18.0 (edit diffs expanded by default; verbose tool stdout folded).",
+              "pi-atelier 0.22.0 sidebar/footer + pi-compact-tools 0.18.0 (edit diffs expanded by default; verbose tool stdout folded).",
               "pi-native-questions 0.2.0 native TUI questions (trusted by auto-review, bridged to Herdr blocked), @getpipher/vision 0.5.3 [Image-#N] paste, pi-mobile 0.4.0, and pi-away 0.1.4."
             ],
             paths: ["~/.pi/agent/pi-atelier.json", "~/.pi/agent/compact-tools.json", "~/.pi/agent/extensions/herdr-question-blocked.ts"],
@@ -899,7 +899,7 @@ const CONTENT = {
             lead: "Layer 1 parses compound shell commands via tree-sitter-bash against deterministic allow/ask/deny rules. Layer 2 delegates ambiguous approvals to an automated reviewer (codex preset), failing closed to human approval on network errors or sensitive writes.",
             analogy: "Adding native shellTools parity reduced approval latency by 94.6% (684.8s → 37.0s) in head-to-head benchmarks while keeping external_directory and path_write strictly human-gated.",
             bullets: [
-              "pi-permission-system 44.0.2 inspects compound pipelines, rtk-rewritten commands, and codemode nested calls without bypass gaps.",
+              "pi-permission-system 45.0.0 inspects compound pipelines, rtk-rewritten commands, and codemode nested calls without bypass gaps.",
               "pi-permission-auto-review 1.0.2 routes through an ordered 9-tier gateway failover group to eliminate single-upstream stalls.",
               "Depersonalised templates for both extensions ship in akis-pi core and render via scripts/render.mjs."
             ],
@@ -911,12 +911,12 @@ const CONTENT = {
           },
           {
             id: "if-cap", name: "Web, Browser & Desktop Capabilities", tag: "Tiered I/O",
-            short: "Multi-provider web/PDF fetch, automated browser CLI 0.44.0, headless macOS Accessibility.",
+            short: "Multi-provider web/PDF fetch, automated browser CLI 0.45.0, headless macOS Accessibility.",
             lead: "Separates unauthenticated web/PDF retrieval from stateful browser automation and macOS Accessibility desktop control to avoid spinning up heavy runtimes unnecessarily.",
             analogy: "Routes each I/O class to the narrowest capable transport: HTTP + PyMuPDF for static content, browser CLI for JS-rendered apps, and Accessibility API for native macOS UI.",
             bullets: [
               "pi-web-access 0.48.0 with multi-provider search fallback (Exa/Brave/Bocha/Gemini) and optional local PyMuPDF PDF server.",
-              "pi-agent-browser-native 0.9.42 paired with agent-browser CLI 0.44.0, @injaneity/pi-computer-use 0.5.1, and pi-powerpoint 1.0.0."
+              "pi-agent-browser-native 0.9.46 paired with agent-browser CLI 0.45.0, @injaneity/pi-computer-use 0.5.1, and pi-powerpoint 1.0.0."
             ],
             paths: ["~/.pi/agent/web-search.json", "~/.pi/agent/extensions/pi-computer-use.json"],
             links: [
@@ -1030,17 +1030,17 @@ const CONTENT = {
       {
         id: "memory", step: "04", pos: "pos-s4", color: "var(--sage)",
         tag: "04 · Memory", title: "Dual-Track Memory",
-        sub: "Project compaction (MC 0.49.76) · Isolated knowledge · Data ≠ Instructions",
+        sub: "Project compaction (MC 0.49.87) · Isolated knowledge · Data ≠ Instructions",
         intro: "Physically separates project session compaction from personal knowledge indexes, treating all retrieved memory strictly as untrusted data.",
         children: [
           {
-            id: "mem-mc", name: "Project Compaction (Magic Context 0.49.76)", tag: "400k threshold",
+            id: "mem-mc", name: "Project Compaction (Magic Context 0.49.87)", tag: "400k threshold",
             short: "Background archival for multi-week sessions with verbatim ctx_expand retrieval.",
             lead: "Compacts older conversation spans asynchronously without interrupting active work while retaining searchable project summaries and verbatim recall via ctx_search / ctx_expand.",
             analogy: "Preserves lossless rollback to original turns while capping active prompt context size across multi-week threads.",
             bullets: [
               "Production parameters: 400k compaction threshold, 3,000-token injection budget, 600s historian timeout.",
-              "v0.49.76 resolves Gemini cache-invalidation edge cases, summary bloat on large stores, and symlink safety with zero SQLite migration."
+              "v0.49.87 fixes Pi exit crashes during local embedding computation and end-to-end reliability issues with zero SQLite migration."
             ],
             paths: ["~/.config/cortexkit/magic-context.jsonc"],
             links: [{ name: "@cortexkit/pi-magic-context", url: "https://www.npmjs.com/package/@cortexkit/pi-magic-context" }]
@@ -1108,7 +1108,7 @@ const CONTENT = {
             analogy: "Converts silent plugin-upgrade breakage into deterministic CI-style checks before touching active working sessions.",
             bullets: [
               "Covers 5 upgrade regression probes: AST permission parsing, rtk rewrite, atelier UI hooks, vision paste, and pi-knowledge compatibility.",
-              "pi-mox 0.3.1 and pi-schedule 0.6.1 support in-session timers and periodic read-only maintenance runs."
+              "pi-mox 0.5.0 and pi-schedule 0.6.1 support in-session timers and periodic read-only maintenance runs."
             ],
             paths: ["scripts/doctor.mjs", "scripts/deploy-check.mjs"],
             links: [
@@ -1132,25 +1132,25 @@ const CONTENT = {
       }
     ],
     directory: [
-      { name: "akis-pi", ver: "Pi 1.6.1", domain: "infra", child: "in-akis", desc: "Privacy-gated Pi workbench configuration bundle with deployment scripts and tests", url: REPO_URL },
+      { name: "akis-pi", ver: "Pi 1.7.0", domain: "infra", child: "in-akis", desc: "Privacy-gated Pi workbench configuration bundle with deployment scripts and tests", url: REPO_URL },
       { name: "pi-codex-exec", ver: "v1.4.0 · MIT", domain: "core", child: "core-exec", desc: "Optional single-track PTY execution (exec_command + pty_session + write_stdin) + macOS-only Seatbelt & /sandbox toggle", url: CODEX_EXEC_URL },
       { name: "Magpie Gateway", ver: "Required", domain: "infra", child: "in-magpie", desc: "Local model routing, outbound PII/secret redaction, media MCP, and skill router", url: "https://github.com/yetone/magpie" },
       { name: "pi-subagents", ver: "v0.90.0", domain: "orchestration", child: "sub-exec", desc: "5-role subagent orchestration with FleetView and toolBudget guards", url: "https://github.com/nicobailon/pi-subagents" },
-      { name: "pi-permission-system", ver: "v44.0.2", domain: "interface", child: "if-perm", desc: "tree-sitter-bash AST shell & path permission gate with shellTools mapping", url: "https://github.com/gotgenes/pi-packages/tree/main/packages/pi-permission-system" },
+      { name: "pi-permission-system", ver: "v45.0.0", domain: "interface", child: "if-perm", desc: "tree-sitter-bash AST shell & path permission gate with shellTools mapping", url: "https://github.com/gotgenes/pi-packages/tree/main/packages/pi-permission-system" },
       { name: "pi-permission-auto-review", ver: "v1.0.2", domain: "interface", child: "if-perm", desc: "Automated permission reviewer plugin with fail-closed defer", url: "https://github.com/mzwing/pi-packages/tree/main/packages/pi-permission-auto-review" },
-      { name: "@cortexkit/pi-magic-context", ver: "v0.49.76", domain: "memory", child: "mem-mc", desc: "Asynchronous long-session compaction and verbatim project memory retrieval", url: "https://www.npmjs.com/package/@cortexkit/pi-magic-context" },
+      { name: "@cortexkit/pi-magic-context", ver: "v0.49.87", domain: "memory", child: "mem-mc", desc: "Asynchronous long-session compaction and verbatim project memory retrieval", url: "https://www.npmjs.com/package/@cortexkit/pi-magic-context" },
       { name: "pi-knowledge (+4 patches)", ver: "v0.15.0", domain: "memory", child: "mem-personal", desc: "Offline semantic/hybrid search over personal notes and session archives", url: "https://github.com/nczz/pi-knowledge" },
-      { name: "pi-atelier", ver: "v0.21.0", domain: "interface", child: "if-host", desc: "TUI sidebar and footer telemetry (context, cache hit, cost, subagents)", url: "https://github.com/michaelmjhhhh/pi-atelier" },
+      { name: "pi-atelier", ver: "v0.22.0", domain: "interface", child: "if-host", desc: "TUI sidebar and footer telemetry (context, cache hit, cost, subagents)", url: "https://github.com/michaelmjhhhh/pi-atelier" },
       { name: "pi-compact-tools", ver: "v0.18.0", domain: "interface", child: "if-host", desc: "Folds verbose tool output while keeping edit diffs expanded by default", url: "https://github.com/nedleeds/pi-compact-tools" },
       { name: "pi-native-questions", ver: "v0.2.0", domain: "interface", child: "if-host", desc: "Pi-native structured questions (ask_user_question) trusted by permission auto-review", url: "https://www.npmjs.com/package/pi-native-questions" },
       { name: "@getpipher/vision", ver: "v0.5.3", domain: "interface", child: "if-host", desc: "Pastes clipboard images directly into Pi prompts as image blocks", url: "https://github.com/getpipher/vision" },
       { name: "pi-mobile", ver: "v0.4.0", domain: "interface", child: "if-host", desc: "End-to-end encrypted mobile handoff for active desktop sessions", url: "https://github.com/jkeskikangas/pi-mobile" },
       { name: "pi-away", ver: "v0.1.4", domain: "interface", child: "if-host", desc: "Concise catch-up summary on returning to an idle session", url: "https://github.com/pringled/pi-extensions/tree/main/packages/pi-away" },
       { name: "pi-web-access", ver: "v0.48.0", domain: "interface", child: "if-cap", desc: "Multi-provider web search, content extraction, and local PDF endpoint integration", url: "https://github.com/nicobailon/pi-web-access" },
-      { name: "pi-agent-browser-native", ver: "v0.9.42", domain: "interface", child: "if-cap", desc: "Browser automation adapter (paired with agent-browser CLI 0.44.0)", url: "https://github.com/fitchmultz/pi-agent-browser-native" },
+      { name: "pi-agent-browser-native", ver: "v0.9.46", domain: "interface", child: "if-cap", desc: "Browser automation adapter (paired with agent-browser CLI 0.45.0)", url: "https://github.com/fitchmultz/pi-agent-browser-native" },
       { name: "pi-computer-use", ver: "v0.5.1", domain: "interface", child: "if-cap", desc: "Headless macOS Accessibility UI observation and interaction", url: "https://github.com/injaneity/pi-computer-use" },
       { name: "pi-powerpoint", ver: "v1.0.0", domain: "interface", child: "if-cap", desc: "CLI slide deck generation and editing", url: "https://github.com/tmustier/powerpoint-cli" },
-      { name: "pi-mox", ver: "v0.3.1", domain: "infra", child: "in-gov", desc: "In-session timers and delayed reminders", url: "https://github.com/jals1212/pi-mox" },
+      { name: "pi-mox", ver: "v0.5.0", domain: "infra", child: "in-gov", desc: "In-session timers and delayed reminders", url: "https://github.com/jals1212/pi-mox" },
       { name: "pi-schedule", ver: "v0.6.1", domain: "infra", child: "in-gov", desc: "Scheduled read-only maintenance checks and agent triggers", url: "https://github.com/pungggi/pi-schedule" }
     ]
   },
@@ -1158,7 +1158,7 @@ const CONTENT = {
     htmlLang: "zh-CN",
     pageTitle: "akis-pi · Pi 编码工作台架构",
     brandTitle: "akis-pi",
-    brandSub: "· Pi 1.6.1",
+    brandSub: "· Pi 1.7.0",
     themeLabel: "◐ 主题",
     heroTitle: "akis-pi：模块化 Pi 编码工作台架构",
     heroSub: "高缓存低成本主循环、五角色权限隔离编排、AST 双层审批、双轨隔离记忆与自动化配置治理。",
@@ -1172,7 +1172,7 @@ const CONTENT = {
       overview: { label: "全景拓扑", active: null, fault: false, text: "<strong>控制流与数据流：</strong>01 终端入口与权限门禁 → 02 主循环（<code>codemode: only</code>）→ 03 五角色子代理 / 04 双轨记忆 → 05 本地网关、降级路径与自动化治理。" },
       daily: { label: "成本与缓存", active: ["interface","core","memory","infra"], fault: false, text: "<strong>成本与缓存模型：</strong>长生命周期主会话绑定低价高缓存模型（~98% 命中率，$0.2–0.7/天）；高价强推理模型仅在短命子代理中按次触发。" },
       review: { label: "评审与熔断", active: ["core","orchestration","infra"], fault: false, text: "<strong>校验与熔断机制：</strong>送审前通过脚本核验关键数值；只读异构模型单轮输出结构化裁决；同范围连续 2 次 FAIL 触发熔断并升级处理。" },
-      memory: { label: "双轨记忆", active: ["core","memory"], fault: false, text: "<strong>记忆物理隔离：</strong>项目长会话由 Magic Context 0.49.76 静默归档并支持原件展开；个人笔记与旧会话独立存储于补丁版 <code>pi-knowledge</code> 与 <code>RESIDENT.md</code>。" },
+      memory: { label: "双轨记忆", active: ["core","memory"], fault: false, text: "<strong>记忆物理隔离：</strong>项目长会话由 Magic Context 0.49.87 静默归档并支持原件展开；个人笔记与旧会话独立存储于补丁版 <code>pi-knowledge</code> 与 <code>RESIDENT.md</code>。" },
       fallback: { label: "网关降级", active: ["interface","core","infra"], fault: true, text: "<strong>网关不可用路径：</strong>新建干净会话后通过 <code>/model</code> 显式切换至官方直连端点；刻意禁用静默自动切换，防止绕过出站脱敏与击穿长会话缓存。" }
     },
     ui: {
@@ -1195,7 +1195,7 @@ const CONTENT = {
       dirPlaceholder: "筛选：permission、PTY、memory、vision、browser...",
       openNote: "架构说明 ↑",
       localOnly: "内置 / 本地",
-      footLeft: `Pi 1.6.1 · Magic Context 0.49.76 · 仓库：<a href="${REPO_URL}" target="_blank" rel="noopener">akis-pi</a>`,
+      footLeft: `Pi 1.7.0 · Magic Context 0.49.87 · 仓库：<a href="${REPO_URL}" target="_blank" rel="noopener">akis-pi</a>`,
       footRight: "实测验证基线 2026-11-27"
     },
     domains: [
@@ -1211,7 +1211,7 @@ const CONTENT = {
             lead: "运行于 Ghostty + Herdr 持久窗格之上，提供上下文/缓存/费用实时面板、Ctrl+V 图像块粘贴、选择性 diff 折叠与端到端加密移动端续接。",
             analogy: "所有状态展示与交互控件完全停留在客户端渲染层，不向模型系统提示注入额外 UI 噪音。",
             bullets: [
-              "pi-atelier 0.21.0 侧栏/底栏状态面板 + pi-compact-tools 0.18.0（edit diff 默认展开，冗长命令输出自动折叠）。",
+              "pi-atelier 0.22.0 侧栏/底栏状态面板 + pi-compact-tools 0.18.0（edit diff 默认展开，冗长命令输出自动折叠）。",
               "pi-native-questions 0.2.0 原生结构化提问（受 auto-review 可信识别并桥接 Herdr blocked）、@getpipher/vision 0.5.3 [Image-#N] 粘贴、pi-mobile 0.4.0 与 pi-away 0.1.4。"
             ],
             paths: ["~/.pi/agent/pi-atelier.json", "~/.pi/agent/compact-tools.json", "~/.pi/agent/extensions/herdr-question-blocked.ts"],
@@ -1229,7 +1229,7 @@ const CONTENT = {
             lead: "第一层通过 tree-sitter-bash 解析复合命令并匹配确定性 allow/ask/deny 规则；第二层将待定请求交由自动审批模型（codex preset）评估，网络异常或敏感路径写入一律 fail-closed 回落人工确认。",
             analogy: "引入原生 shellTools 映射后，对比基准测试中审批总耗时下降 94.6%（684.8s → 37.0s），同时保持 external_directory 与 path_write 严格人工把关。",
             bullets: [
-              "pi-permission-system 44.0.2 完整解析复合管道、rtk 改写命令与 codemode 嵌套调用，避免规则绕过。",
+              "pi-permission-system 45.0.0 完整解析复合管道、rtk 改写命令与 codemode 嵌套调用，避免规则绕过。",
               "pi-permission-auto-review 1.0.2 对接网关 9 级有序回退路由组，消除单一上游抖动导致的审批阻塞。",
               "两份脱敏权限模板已纳入 akis-pi core 模块，通过 scripts/render.mjs 一致渲染。"
             ],
@@ -1241,12 +1241,12 @@ const CONTENT = {
           },
           {
             id: "if-cap", name: "Web、浏览器与桌面 I/O", tag: "按传输分级",
-            short: "多源检索与本地 PDF 解析、浏览器自动化 CLI 0.44.0、无头 macOS 辅助功能控制。",
+            short: "多源检索与本地 PDF 解析、浏览器自动化 CLI 0.45.0、无头 macOS 辅助功能控制。",
             lead: "按场景隔离无状态网页/PDF 抓取、有状态浏览器自动化与 macOS Accessibility 桌面操控，避免轻量请求拉起重型运行时。",
             analogy: "为每类外部 I/O 匹配最小必要传输层：静态内容走 HTTP + PyMuPDF，JS 渲染站点走浏览器 CLI，原生桌面操作走 Accessibility API。",
             bullets: [
               "pi-web-access 0.48.0 支持 Exa/Brave/Bocha/Gemini 多源搜索回退及可选本地 PyMuPDF PDF 解析服务。",
-              "pi-agent-browser-native 0.9.42 配套 agent-browser CLI 0.44.0，另有 @injaneity/pi-computer-use 0.5.1 与 pi-powerpoint 1.0.0。"
+              "pi-agent-browser-native 0.9.46 配套 agent-browser CLI 0.45.0，另有 @injaneity/pi-computer-use 0.5.1 与 pi-powerpoint 1.0.0。"
             ],
             paths: ["~/.pi/agent/web-search.json", "~/.pi/agent/extensions/pi-computer-use.json"],
             links: [
@@ -1360,17 +1360,17 @@ const CONTENT = {
       {
         id: "memory", step: "04", pos: "pos-s4", color: "var(--sage)",
         tag: "04 · 记忆分层", title: "双轨隔离记忆",
-        sub: "项目压缩（MC 0.49.76）· 隔离知识库 · 数据不作指令",
+        sub: "项目压缩（MC 0.49.87）· 隔离知识库 · 数据不作指令",
         intro: "将项目会话压缩与个人知识索引做物理隔离，所有检索结果均严格作为非授权参考数据注入。",
         children: [
           {
-            id: "mem-mc", name: "项目长会话压缩（Magic Context 0.49.76）", tag: "400k 阈值",
+            id: "mem-mc", name: "项目长会话压缩（Magic Context 0.49.87）", tag: "400k 阈值",
             short: "跨周长对话后台异步归档，支持 ctx_expand 原文回溯。",
             lead: "在不中断交互的前提下异步归档早期对话片段，并通过 ctx_search / ctx_expand 按需检索项目决策与原文。",
             analogy: "在控制活跃上下文长度的同时保留无损原文回溯路径，适配跨周持续推进的项目线程。",
             bullets: [
               "生产参数：400k 触发阈值、3,000 token 注入预算、600s historian 超时。",
-              "v0.49.76 修复 Gemini 缓存失效边界、大记忆库摘要膨胀与软链安全问题，无需 SQLite 迁移。"
+              "v0.49.87 修复 Pi 退出时本地 embedding 崩溃与端到端稳定性问题，无需 SQLite 迁移。"
             ],
             paths: ["~/.config/cortexkit/magic-context.jsonc"],
             links: [{ name: "@cortexkit/pi-magic-context", url: "https://www.npmjs.com/package/@cortexkit/pi-magic-context" }]
@@ -1438,7 +1438,7 @@ const CONTENT = {
             analogy: "把插件升级引发的静默破坏前置为确定性红绿灯检查，避免带病进入日常工作会话。",
             bullets: [
               "内置 5 项升级回归探针：AST 权限解析、rtk 改写、atelier 渲染、vision 粘贴与 pi-knowledge 兼容性。",
-              "配套 pi-mox 0.3.1 与 pi-schedule 0.6.1 承担会话内定时提醒与周期只读巡检。"
+              "配套 pi-mox 0.5.0 与 pi-schedule 0.6.1 承担会话内定时提醒与周期只读巡检。"
             ],
             paths: ["scripts/doctor.mjs", "scripts/deploy-check.mjs"],
             links: [
@@ -1462,25 +1462,25 @@ const CONTENT = {
       }
     ],
     directory: [
-      { name: "akis-pi", ver: "Pi 1.6.1", domain: "infra", child: "in-akis", desc: "经隐私门禁导出的 Pi 工作台配置包，含部署脚本与自动化测试", url: REPO_URL },
+      { name: "akis-pi", ver: "Pi 1.7.0", domain: "infra", child: "in-akis", desc: "经隐私门禁导出的 Pi 工作台配置包，含部署脚本与自动化测试", url: REPO_URL },
       { name: "pi-codex-exec", ver: "v1.4.0 · MIT", domain: "core", child: "core-exec", desc: "可选单轨 PTY 执行扩展（exec_command + pty_session + write_stdin）+ macOS 专用 Seatbelt 与 /sandbox 热切换", url: CODEX_EXEC_URL },
       { name: "Magpie Gateway", ver: "必装", domain: "infra", child: "in-magpie", desc: "本地模型路由、出站 PII/密钥脱敏、媒体 MCP 与技能索引路由", url: "https://github.com/yetone/magpie" },
       { name: "pi-subagents", ver: "v0.90.0", domain: "orchestration", child: "sub-exec", desc: "5 角色子代理编排，支持 FleetView 与 toolBudget 预算护栏", url: "https://github.com/nicobailon/pi-subagents" },
-      { name: "pi-permission-system", ver: "v44.0.2", domain: "interface", child: "if-perm", desc: "基于 tree-sitter-bash 的 AST 命令与路径权限门，支持 shellTools 映射", url: "https://github.com/gotgenes/pi-packages/tree/main/packages/pi-permission-system" },
+      { name: "pi-permission-system", ver: "v45.0.0", domain: "interface", child: "if-perm", desc: "基于 tree-sitter-bash 的 AST 命令与路径权限门，支持 shellTools 映射", url: "https://github.com/gotgenes/pi-packages/tree/main/packages/pi-permission-system" },
       { name: "pi-permission-auto-review", ver: "v1.0.2", domain: "interface", child: "if-perm", desc: "自动审批模型插件，异常时 fail-closed 回落人工", url: "https://github.com/mzwing/pi-packages/tree/main/packages/pi-permission-auto-review" },
-      { name: "@cortexkit/pi-magic-context", ver: "v0.49.76", domain: "memory", child: "mem-mc", desc: "长会话异步归档压缩与项目记忆原文检索", url: "https://www.npmjs.com/package/@cortexkit/pi-magic-context" },
+      { name: "@cortexkit/pi-magic-context", ver: "v0.49.87", domain: "memory", child: "mem-mc", desc: "长会话异步归档压缩与项目记忆原文检索", url: "https://www.npmjs.com/package/@cortexkit/pi-magic-context" },
       { name: "pi-knowledge (+4 补丁)", ver: "v0.15.0", domain: "memory", child: "mem-personal", desc: "离线语义/混合检索个人笔记与历史会话归档", url: "https://github.com/nczz/pi-knowledge" },
-      { name: "pi-atelier", ver: "v0.21.0", domain: "interface", child: "if-host", desc: "终端侧栏/底栏实时遥测（上下文、缓存命中、费用、子代理）", url: "https://github.com/michaelmjhhhh/pi-atelier" },
+      { name: "pi-atelier", ver: "v0.22.0", domain: "interface", child: "if-host", desc: "终端侧栏/底栏实时遥测（上下文、缓存命中、费用、子代理）", url: "https://github.com/michaelmjhhhh/pi-atelier" },
       { name: "pi-compact-tools", ver: "v0.18.0", domain: "interface", child: "if-host", desc: "折叠冗长工具输出，默认保持 edit diff 展开", url: "https://github.com/nedleeds/pi-compact-tools" },
       { name: "pi-native-questions", ver: "v0.2.0", domain: "interface", child: "if-host", desc: "Pi 原生结构化提问（ask_user_question），受权限自动评审可信识别", url: "https://www.npmjs.com/package/pi-native-questions" },
       { name: "@getpipher/vision", ver: "v0.5.3", domain: "interface", child: "if-host", desc: "剪贴板图像直接作为图像块粘贴进 Pi 提示", url: "https://github.com/getpipher/vision" },
       { name: "pi-mobile", ver: "v0.4.0", domain: "interface", child: "if-host", desc: "桌面活跃会话的端到端加密移动端续接", url: "https://github.com/jkeskikangas/pi-mobile" },
       { name: "pi-away", ver: "v0.1.4", domain: "interface", child: "if-host", desc: "离席返回会话时生成简明进展摘要", url: "https://github.com/pringled/pi-extensions/tree/main/packages/pi-away" },
       { name: "pi-web-access", ver: "v0.48.0", domain: "interface", child: "if-cap", desc: "多源搜索回退、公开网页抓取与本地 PDF 解析集成", url: "https://github.com/nicobailon/pi-web-access" },
-      { name: "pi-agent-browser-native", ver: "v0.9.42", domain: "interface", child: "if-cap", desc: "浏览器自动化适配层（配套 agent-browser CLI 0.44.0）", url: "https://github.com/fitchmultz/pi-agent-browser-native" },
+      { name: "pi-agent-browser-native", ver: "v0.9.46", domain: "interface", child: "if-cap", desc: "浏览器自动化适配层（配套 agent-browser CLI 0.45.0）", url: "https://github.com/fitchmultz/pi-agent-browser-native" },
       { name: "pi-computer-use", ver: "v0.5.1", domain: "interface", child: "if-cap", desc: "无头 macOS Accessibility UI 观察与交互", url: "https://github.com/injaneity/pi-computer-use" },
       { name: "pi-powerpoint", ver: "v1.0.0", domain: "interface", child: "if-cap", desc: "命令行幻灯片生成与编辑", url: "https://github.com/tmustier/powerpoint-cli" },
-      { name: "pi-mox", ver: "v0.3.1", domain: "infra", child: "in-gov", desc: "会话内轻量定时器与延迟提醒", url: "https://github.com/jals1212/pi-mox" },
+      { name: "pi-mox", ver: "v0.5.0", domain: "infra", child: "in-gov", desc: "会话内轻量定时器与延迟提醒", url: "https://github.com/jals1212/pi-mox" },
       { name: "pi-schedule", ver: "v0.6.1", domain: "infra", child: "in-gov", desc: "定时只读巡检与周期触发器", url: "https://github.com/pungggi/pi-schedule" }
     ]
   }

@@ -16,14 +16,14 @@ AkiyamaRin 的自用 [Pi coding agent](https://pi.dev) 配置分享包：既能�
 
 ```mermaid
 flowchart TD
-    U[终端 / TUI / 无头 pi -p] --> PI[Pi 1.6.1 + Node 24.22.3]
-    PI --> UI[显示层: pi-atelier 0.21.0 + pi-compact-tools 0.18.0 + vision 0.5.3]
+    U[终端 / TUI / 无头 pi -p] --> PI[Pi 1.7.0 + Node 24.22.3]
+    PI --> UI[显示层: pi-atelier 0.22.0 + pi-compact-tools 0.18.0 + vision 0.5.3]
     PI --> CM[模型工具面: codemode.mode = only / 6 个直出工具]
     CM --> SUB[子代理: pi-subagents 0.90.0<br/>explore / implement / lead / analyze / review]
     CM --> SHELL[命令通道: bash + rtk.ts 重写]
-    SHELL & SUB --> PERM[权限门禁: pi-permission-system 44.0.2<br/>AST 规则 + external_directory/path_write 守护]
+    SHELL & SUB --> PERM[权限门禁: pi-permission-system 45.0.0<br/>AST 规则 + external_directory/path_write 守护]
     PERM --> REV[自动评审: pi-permission-auto-review 1.0.2]
-    PI --> MEM1[项目记忆与压缩: Magic Context 0.49.76]
+    PI --> MEM1[项目记忆与压缩: Magic Context 0.49.87]
     PI --> MEM2[个人知识库: resident-memory + pi-knowledge 0.15.0 + 4 补丁]
     PI --> MG[Magpie 网关: 模型路由 / 脱敏 / 生图 / 技能路由]
 ```
@@ -33,7 +33,7 @@ flowchart TD
 | 项 | 基准版本 | 说明 |
 | --- | --- | --- |
 | Node.js | `24.22.3` | 避开 `24.19.0–24.21.x`（`better-sqlite3` GC `SIGABRT`，`nodejs/node#65446`）。 |
-| Pi | `1.6.1` | 官方 managed 安装器或按 npm 精确复现。 |
+| Pi | `1.7.0` | 官方 managed 安装器或按 npm 精确复现。 |
 | Git | 现代版本 | 原生 Windows 必须装 Git for Windows（Git Bash）。 |
 | Magpie | 本地运行 | 必装：负责模型路由、脱敏、媒体生成、抓取兜底与 `rtk`。 |
 | Python | `3.9+` | 仅可选 `pdf` 模块需要。 |
@@ -61,7 +61,7 @@ flowchart TD
 | 模块 | 内容 | 安装建议 | 详细文档 |
 | --- | --- | --- | --- |
 | **core** | `settings.json`、`AGENTS.md`、`APPEND_SYSTEM.md`、5 个子代理角色、`compact-tools.json`、`pi-permission-system` 与 `pi-permission-auto-review` 配置、`web-search.json`、`rtk.ts` | 必装 | [DEPLOY.md](DEPLOY.md) |
-| **memory** | Magic Context `0.49.76`、`resident-memory.ts`、`RESIDENT.template.md`、`pi-knowledge` `0.15.0` + 4 补丁（QML 可选） | 必装 | [modules/memory](modules/memory/README.md) |
+| **memory** | Magic Context `0.49.87`、`resident-memory.ts`、`RESIDENT.template.md`、`pi-knowledge` `0.15.0` + 4 补丁（QML 可选） | 必装 | [modules/memory](modules/memory/README.md) |
 | **magpie** | Magpie 网关扩展、`mcp.json.example`、路由与脱敏说明 | 必装 | [modules/magpie](modules/magpie/README.md) |
 | **macos** | `herdr-agent-state.ts`、`herdr-question-blocked.ts`、`ego-gc.ts`（仅 darwin） | macOS 必装 | [modules/macos](modules/macos/README.md) |
 | **pdf** | 本地 PyMuPDF PDF → Markdown 端点及各平台后台服务适配 | 可选 | [modules/pdf](modules/pdf/README.md) |
@@ -70,7 +70,7 @@ flowchart TD
 
 - **维护范围**：仅承诺在 **macOS arm64** 上跟进与验证，其它平台按上表支持级别使用。
 - **权限门禁自查**：`settings.json` 默认 `defaultProjectTrust: "always"`，安全边界由 `pi-permission-system` 与 `pi-permission-auto-review` 承担；启用自动审批前请审阅 `config/pi-permission-system/config.json` 与 `config/pi-permission-auto-review/config.json` 中的路径规则。
-- **外部 CLI 需单独安装**：`agent-browser` CLI（`pi-agent-browser-native@0.9.42` 要求 `≥0.44.0`）与 `rtk`（`≥1.1.0`）不在 npm 插件包内。
+- **外部 CLI 需单独安装**：`agent-browser` CLI（`pi-agent-browser-native@0.9.46` 要求 `≥0.45.0`）与 `rtk`（`≥1.1.0`）不在 npm 插件包内。
 - **定位边界**：本仓库负责初始可复现配置；装完后的持续升级与快照回滚建议放到独立的本地维护项目中，参考 [docs/upgrade.md](docs/upgrade.md)。
 
 ## 参考与致谢
