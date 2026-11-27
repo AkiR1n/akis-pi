@@ -64,7 +64,7 @@
         "+extensions/index.ts"
       ]
     },
-    "npm:pi-ask-user@0.17.2",
+    "npm:pi-native-questions@0.2.0",
     "npm:pi-powerpoint@1.0.0",
     "npm:pi-subagents@0.90.0",
     {

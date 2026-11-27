@@ -30,7 +30,7 @@
       "subagent",
       "subagents_enable",
       "bg_wait",
-      "ask_user",
+      "ask_user_question",
       "run_agent",
       "run_workflow"
     ]

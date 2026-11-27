@@ -9,6 +9,7 @@ Linux、WSL2 与原生 Windows 因此没有 Herdr/Rex pane、tmux inspector、la
 | 组件 | 生效触发条件 | 未安装时的影响 |
 | --- | --- | --- |
 | `herdr-agent-state.ts` | 仅在检测到环境变量 `HERDR_ENV=1` 且存在 `HERDR_SOCKET_PATH` / `HERDR_PANE_ID` 时生效 | herdr 面板无法实时显示 Pi 的代理工作状态 |
+| `herdr-question-blocked.ts` | 交互 TUI 中调用 `ask_user_question` 时触发 | herdr 0.9.x 不会将原生问题弹窗标为 `blocked`，`pi-atelier` 不会触发 `rpiv:ask-user:blocked` 桌面提醒 |
 | `ego-gc.ts` | 仅在后台检测到 `ego lite` 浏览器进程正在运行时介入 | 异常中断或子代理遗留的浏览器窗口无法自动回收（每个窗口约占用 0.4–0.8 GB 内存） |
 | Keychain 凭据规范 | 搜索及外部插件读取 API Key 时 | 只能将凭据置于纯环境变量中 |
 
@@ -20,6 +21,13 @@ Linux、WSL2 与原生 Windows 因此没有 Herdr/Rex pane、tmux inspector、la
 若需添加自定义钩子，建议在同级目录下建独立扩展文件，避免在更新时被覆盖。
 
 安装路径：`~/.pi/agent/extensions/herdr-agent-state.ts`（由 Pi 自动加载）。
+
+
+## herdr-question-blocked.ts
+
+`pi-native-questions` 通过 Pi 原生 OSC 7501 报告 `blocked` 状态；在尚未原生解析 OSC 7501 的 terminal Herdr（0.9.x）下，该桥接扩展监听 `tool_execution_start` / `tool_execution_end`（以及 `agent_end` / `agent_settled` / `session_shutdown` 兜底释放），在 `ask_user_question` 弹窗期间向 `herdr:blocked` 总线同步状态，并同时向 `pi-atelier` 补发 `rpiv:ask-user:blocked` 提醒事件。
+
+安装路径：`~/.pi/agent/extensions/herdr-question-blocked.ts`（由 Pi 自动加载）。
 
 
 ## ego-gc.ts

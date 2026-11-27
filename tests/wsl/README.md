@@ -48,7 +48,7 @@ bash <仓库>/tests/wsl/run.sh --step summary --out "$out"
 - `render`：dry run 有 create/unchanged/diff；`--apply` 后关键产物齐全（settings、AGENTS、APPEND_SYSTEM、compact-tools、rtk 扩展、subagent 配置，memory 另含 resident-memory 与 MC 配置），5 个角色文件都在；第二次 `--apply` 不再新建文件。
 - `knowledge`：补丁按 `0001`→`0004` 顺序 `git am` 成功，`npm ci`、`npm run build` 通过，`dist/index.js` 存在。
 - `packages`：从 manifest 安装所选模块的 npm 插件，失败即停止；不把渲染成功当成插件已安装。
-- `stub`：三次 `pi --print` 都退出 0 并返回 `stub-ok`，每个请求的直接工具恰为 `ask_user,codemode,contact_supervisor,subagent,subagent_supervisor,tool_search`。memory 用独立 HOME 中的合成 RESIDENT，逐条断言 `<resident_memory>` 与合成标记；不会读取用户记忆。MC 配置从部署目录复制，XDG、存储与日志均隔离，避免切 HOME 后跑成上游默认配置。
+- `stub`：三次 `pi --print` 都退出 0 并返回 `stub-ok`，每个请求的直接工具恰为 `ask_user_question,codemode,contact_supervisor,subagent,subagent_supervisor,tool_search`。memory 用独立 HOME 中的合成 RESIDENT，逐条断言 `<resident_memory>` 与合成标记；不会读取用户记忆。MC 配置从部署目录复制，XDG、存储与日志均隔离，避免切 HOME 后跑成上游默认配置。
 - `doctor`：`--json` 解析后 FAIL 必须为 0；WARN 逐条解释（未实测平台的 platform verification WARN 属正常）。
 
 ## 退出期调查

@@ -1,6 +1,6 @@
 # 工具通道
 
-- 直接声明给你的工具只有少数几个：下面列出的 4 个（codemode、ask_user、subagent、tool_search），加上 pi-subagents 注册的通信与等待工具（contact_supervisor、subagent_supervisor，以及异步等待用的 bg_wait，它们不写在这段文字里但 schema 会下发）。
+- 直接声明给你的工具只有少数几个：下面列出的 4 个（codemode、ask_user_question、subagent、tool_search），加上 pi-subagents 注册的通信与等待工具（contact_supervisor、subagent_supervisor，以及异步等待用的 bg_wait，它们不写在这段文字里但 schema 会下发）。
 - 脚本里找工具用全局 `searchTools("动词 名词")` 和 `describeTool(name)`，它们不在 `tools` 上。`bash`/`read`/`edit`/`grep` 常被 3000 token 预算挤出描述，不确定返回结构时先 `describeTool` 看声明。
 - 返回值按声明取：
   - `bash` → 字符串（或带 `output` 字段的对象）；退出码非零会报错。

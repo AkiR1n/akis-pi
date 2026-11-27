@@ -1,7 +1,7 @@
 {
   "name": "akis-pi",
   "schemaVersion": 2,
-  "generatedAt": "2026-11-26T07:03:52.172Z",
+  "generatedAt": "2026-11-27T05:44:21.036Z",
   "generatedFrom": "live Pi configuration, read-only (see NEVER_COPIED in export-akis-pi.mjs)",
   "verifiedOn": {
     "os": "macOS 27.2.1",
@@ -163,9 +163,9 @@
       "verified": []
     },
     {
-      "id": "pi-ask-user",
-      "source": "npm:pi-ask-user@0.17.2",
-      "version": "0.17.2",
+      "id": "pi-native-questions",
+      "source": "npm:pi-native-questions@0.2.0",
+      "version": "0.2.0",
       "level": "pinned",
       "module": "core",
       "platforms": [
@@ -174,11 +174,8 @@
         "win32",
         "wsl"
       ],
-      "lastVerified": "2026-11-13",
-      "verified": [
-        "darwin-arm64",
-        "wsl-x64"
-      ]
+      "lastVerified": "2026-11-25",
+      "verified": []
     },
     {
       "id": "pi-powerpoint",
@@ -365,7 +362,7 @@
     },
     {
       "id": "herdr",
-      "source": "extensions/herdr-agent-state.ts (installed by herdr)",
+      "source": "extensions/herdr-agent-state.ts (installed by herdr) + extensions/herdr-question-blocked.ts",
       "version": "integration 9",
       "level": "pinned",
       "module": "macos",
@@ -373,7 +370,7 @@
         "darwin"
       ],
       "lastVerified": "2026-11-12",
-      "note": "only active when HERDR_ENV, HERDR_SOCKET_PATH and HERDR_PANE_ID are set; inert otherwise.",
+      "note": "herdr-agent-state.ts is active only when HERDR_ENV, HERDR_SOCKET_PATH and HERDR_PANE_ID are set; herdr-question-blocked.ts bridges ask_user_question to herdr:blocked and pi-atelier rpiv:ask-user:blocked.",
       "verified": [
         "darwin-arm64"
       ]

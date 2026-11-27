@@ -262,7 +262,7 @@ PowerShell 的单引号让 `$BRAVE_API_KEY` 保持引用文本，不会被当前
 pi install npm:pi-web-access@0.48.0
 pi install npm:pi-agent-browser-native@0.9.42
 pi install npm:pi-atelier@0.21.0
-pi install npm:pi-ask-user@0.17.2
+pi install npm:pi-native-questions@0.2.0
 pi install npm:pi-powerpoint@1.0.0
 pi install npm:pi-subagents@0.90.0
 pi install npm:pi-compact-tools@0.18.0
@@ -370,7 +370,7 @@ core-only 现在开新会话（不要用旧会话或 `/reload`）。选 memory �
 pi --print 'answer with the number of tools you can call directly, and nothing else'
 ```
 
-**期望**：Pi 1.6.1 + pi-subagents 0.90.0 下有 **6 个直接工具**：ask_user / codemode / contact_supervisor / subagent / subagent_supervisor / tool_search。模型自报工具数不准，以 stub 捕获并由 `deploy-check.mjs stub-requests` 校验的集合为准。
+**期望**：Pi 1.6.1 + pi-subagents 0.90.0 下有 **6 个直接工具**：ask_user_question / codemode / contact_supervisor / subagent / subagent_supervisor / tool_search。模型自报工具数不准，以 stub 捕获并由 `deploy-check.mjs stub-requests` 校验的集合为准。
 **失败怎么办**：出约 50 个工具核对 `codemode.mode = only`；为 0 回步骤 5 查插件与 Pi 版本。
 
 ## 9. memory 模块（必装）
@@ -487,7 +487,7 @@ node "$REPO/scripts/render.mjs" --home "$HOME" --agent-dir "$PI_CODING_AGENT_DIR
 export MODULES="$MODULES,macos"
 ```
 
-herdr-agent-state.ts 由 herdr 管理，仅 HERDR_ENV、HERDR_SOCKET_PATH、HERDR_PANE_ID 齐备时工作；检查方式是在 herdr 中跑 Pi 看状态。manifest 的 herdr 仅为来源描述，无公开下载 URL，本仓库不提供未经核实的获取链接。
+herdr-agent-state.ts 由 herdr 管理，仅 HERDR_ENV、HERDR_SOCKET_PATH、HERDR_PANE_ID 齐备时工作；配套的 `herdr-question-blocked.ts` 将 `ask_user_question` 桥接到 `herdr:blocked` 与 `pi-atelier` 提醒总线。检查方式是在 herdr 中跑 Pi 看状态。manifest 的 herdr 仅为来源描述，无公开下载 URL，本仓库不提供未经核实的获取链接。
 
 ### 10.2 ego 窗口回收
 
@@ -603,4 +603,4 @@ node "$REPO/scripts/deploy-check.mjs" stub-requests
 node "$REPO/scripts/deploy-check.mjs" stub-resident
 ```
 
-**期望**：tools 集合准确为 ask_user / codemode / contact_supervisor / subagent / subagent_supervisor / tool_search；`stub-requests` 逐条检查，缺项或多项时打印实际集合、缺项、多项并以非零码退出。系统提示含所选模块注入（配了 RESIDENT 方有 resident_memory）。Ctrl-C 关闭 stub。此步仅验证扩展、请求体与系统提示；不证明真实模型、桌面操控、embedding 或长会话压缩。隔离环境不要设置真实 key，不可用 `--offline` 代替隔离。
+**期望**：tools 集合准确为 ask_user_question / codemode / contact_supervisor / subagent / subagent_supervisor / tool_search；`stub-requests` 逐条检查，缺项或多项时打印实际集合、缺项、多项并以非零码退出。系统提示含所选模块注入（配了 RESIDENT 方有 resident_memory）。Ctrl-C 关闭 stub。此步仅验证扩展、请求体与系统提示；不证明真实模型、桌面操控、embedding 或长会话压缩。隔离环境不要设置真实 key，不可用 `--offline` 代替隔离。

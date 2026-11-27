@@ -28,7 +28,7 @@ const REQUIRED_CORE = [
   'skills/pi-workflow-notes/SKILL.md',
 ];
 const REQUIRED_MEMORY = ['extensions/resident-memory.ts'];
-const REQUIRED_MACOS = ['extensions/ego-gc.ts', 'extensions/herdr-agent-state.ts'];
+const REQUIRED_MACOS = ['extensions/ego-gc.ts', 'extensions/herdr-agent-state.ts', 'extensions/herdr-question-blocked.ts'];
 const REQUIRED_MAGPIE = ['extensions/magpie.ts'];
 
 // Files whose content is checked for unresolved placeholders: a literal {{MODEL}} in a deployed

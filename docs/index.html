@@ -836,7 +836,7 @@ const CONTENT = {
     pills: [
       { val: "$0.2–0.7/day", lbl: "~98% prompt cache hit", color: "var(--sage)" },
       { val: "5 Roles", lbl: "Tool-isolated delegation", color: "" },
-      { val: "24/24 Guards", lbl: "36-file SHA-256 snapshot", color: "var(--terra)" }
+      { val: "24/24 Guards", lbl: "37-file SHA-256 snapshot", color: "var(--terra)" }
     ],
     stories: {
       overview: { label: "Topology", active: null, fault: false, text: "<strong>Data &amp; control flow:</strong> 01 Interface &amp; Permissions → 02 Main Loop (<code>codemode: only</code>) → 03 Specialist Subagents / 04 Dual-Track Memory → 05 Gateway, Fallback &amp; Governance." },
@@ -866,7 +866,7 @@ const CONTENT = {
       openNote: "Architecture note ↑",
       localOnly: "Bundled / Local",
       footLeft: `Pi 1.6.1 · Magic Context 0.49.76 · Source: <a href="${REPO_URL}" target="_blank" rel="noopener">akis-pi</a>`,
-      footRight: "Verified baseline 2026-11-25"
+      footRight: "Verified baseline 2026-11-27"
     },
     domains: [
       {
@@ -882,13 +882,13 @@ const CONTENT = {
             analogy: "Keeps the terminal session inspectable under long runs without bloating the model prompt—UI state stays strictly client-side.",
             bullets: [
               "pi-atelier 0.21.0 sidebar/footer + pi-compact-tools 0.18.0 (edit diffs expanded by default; verbose tool stdout folded).",
-              "pi-ask-user 0.17.2 keyboard choice prompts, @getpipher/vision 0.5.3 [Image-#N] paste, pi-mobile 0.4.0, and pi-away 0.1.4."
+              "pi-native-questions 0.2.0 native TUI questions (trusted by auto-review, bridged to Herdr blocked), @getpipher/vision 0.5.3 [Image-#N] paste, pi-mobile 0.4.0, and pi-away 0.1.4."
             ],
-            paths: ["~/.pi/agent/pi-atelier.json", "~/.pi/agent/compact-tools.json"],
+            paths: ["~/.pi/agent/pi-atelier.json", "~/.pi/agent/compact-tools.json", "~/.pi/agent/extensions/herdr-question-blocked.ts"],
             links: [
               { name: "pi-atelier", url: "https://github.com/michaelmjhhhh/pi-atelier" },
               { name: "pi-compact-tools", url: "https://github.com/nedleeds/pi-compact-tools" },
-              { name: "pi-ask-user", url: "https://github.com/edlsh/pi-ask-user" },
+              { name: "pi-native-questions", url: "https://www.npmjs.com/package/pi-native-questions" },
               { name: "@getpipher/vision", url: "https://github.com/getpipher/vision" },
               { name: "pi-mobile", url: "https://github.com/jkeskikangas/pi-mobile" }
             ]
@@ -1104,7 +1104,7 @@ const CONTENT = {
           {
             id: "in-gov", name: "Automated Guards & Config Snapshots", tag: "24/24 PASS",
             short: "Single-command verification of config drift, tool-surface budgets, redaction, and regression suites.",
-            lead: "Validates directSchemaChars budget, redaction flags, model-role alignment, permission probes, and declarative 36-file SHA-256 config snapshots on every change.",
+            lead: "Validates directSchemaChars budget, redaction flags, model-role alignment, permission probes, and declarative 37-file SHA-256 config snapshots on every change.",
             analogy: "Converts silent plugin-upgrade breakage into deterministic CI-style checks before touching active working sessions.",
             bullets: [
               "Covers 5 upgrade regression probes: AST permission parsing, rtk rewrite, atelier UI hooks, vision paste, and pi-knowledge compatibility.",
@@ -1142,7 +1142,7 @@ const CONTENT = {
       { name: "pi-knowledge (+4 patches)", ver: "v0.15.0", domain: "memory", child: "mem-personal", desc: "Offline semantic/hybrid search over personal notes and session archives", url: "https://github.com/nczz/pi-knowledge" },
       { name: "pi-atelier", ver: "v0.21.0", domain: "interface", child: "if-host", desc: "TUI sidebar and footer telemetry (context, cache hit, cost, subagents)", url: "https://github.com/michaelmjhhhh/pi-atelier" },
       { name: "pi-compact-tools", ver: "v0.18.0", domain: "interface", child: "if-host", desc: "Folds verbose tool output while keeping edit diffs expanded by default", url: "https://github.com/nedleeds/pi-compact-tools" },
-      { name: "pi-ask-user", ver: "v0.17.2", domain: "interface", child: "if-host", desc: "Structured keyboard selection prompts inside the terminal", url: "https://github.com/edlsh/pi-ask-user" },
+      { name: "pi-native-questions", ver: "v0.2.0", domain: "interface", child: "if-host", desc: "Pi-native structured questions (ask_user_question) trusted by permission auto-review", url: "https://www.npmjs.com/package/pi-native-questions" },
       { name: "@getpipher/vision", ver: "v0.5.3", domain: "interface", child: "if-host", desc: "Pastes clipboard images directly into Pi prompts as image blocks", url: "https://github.com/getpipher/vision" },
       { name: "pi-mobile", ver: "v0.4.0", domain: "interface", child: "if-host", desc: "End-to-end encrypted mobile handoff for active desktop sessions", url: "https://github.com/jkeskikangas/pi-mobile" },
       { name: "pi-away", ver: "v0.1.4", domain: "interface", child: "if-host", desc: "Concise catch-up summary on returning to an idle session", url: "https://github.com/pringled/pi-extensions/tree/main/packages/pi-away" },
@@ -1166,7 +1166,7 @@ const CONTENT = {
     pills: [
       { val: "$0.2–0.7/天", lbl: "~98% Prompt Cache 命中", color: "var(--sage)" },
       { val: "5 个角色", lbl: "工具面隔离 · 读写分离", color: "" },
-      { val: "24/24 守卫", lbl: "36 文件 SHA-256 快照", color: "var(--terra)" }
+      { val: "24/24 守卫", lbl: "37 文件 SHA-256 快照", color: "var(--terra)" }
     ],
     stories: {
       overview: { label: "全景拓扑", active: null, fault: false, text: "<strong>控制流与数据流：</strong>01 终端入口与权限门禁 → 02 主循环（<code>codemode: only</code>）→ 03 五角色子代理 / 04 双轨记忆 → 05 本地网关、降级路径与自动化治理。" },
@@ -1196,7 +1196,7 @@ const CONTENT = {
       openNote: "架构说明 ↑",
       localOnly: "内置 / 本地",
       footLeft: `Pi 1.6.1 · Magic Context 0.49.76 · 仓库：<a href="${REPO_URL}" target="_blank" rel="noopener">akis-pi</a>`,
-      footRight: "实测验证基线 2026-11-25"
+      footRight: "实测验证基线 2026-11-27"
     },
     domains: [
       {
@@ -1212,13 +1212,13 @@ const CONTENT = {
             analogy: "所有状态展示与交互控件完全停留在客户端渲染层，不向模型系统提示注入额外 UI 噪音。",
             bullets: [
               "pi-atelier 0.21.0 侧栏/底栏状态面板 + pi-compact-tools 0.18.0（edit diff 默认展开，冗长命令输出自动折叠）。",
-              "pi-ask-user 0.17.2 结构化键盘交互、@getpipher/vision 0.5.3 [Image-#N] 粘贴、pi-mobile 0.4.0 与 pi-away 0.1.4。"
+              "pi-native-questions 0.2.0 原生结构化提问（受 auto-review 可信识别并桥接 Herdr blocked）、@getpipher/vision 0.5.3 [Image-#N] 粘贴、pi-mobile 0.4.0 与 pi-away 0.1.4。"
             ],
-            paths: ["~/.pi/agent/pi-atelier.json", "~/.pi/agent/compact-tools.json"],
+            paths: ["~/.pi/agent/pi-atelier.json", "~/.pi/agent/compact-tools.json", "~/.pi/agent/extensions/herdr-question-blocked.ts"],
             links: [
               { name: "pi-atelier", url: "https://github.com/michaelmjhhhh/pi-atelier" },
               { name: "pi-compact-tools", url: "https://github.com/nedleeds/pi-compact-tools" },
-              { name: "pi-ask-user", url: "https://github.com/edlsh/pi-ask-user" },
+              { name: "pi-native-questions", url: "https://www.npmjs.com/package/pi-native-questions" },
               { name: "@getpipher/vision", url: "https://github.com/getpipher/vision" },
               { name: "pi-mobile", url: "https://github.com/jkeskikangas/pi-mobile" }
             ]
@@ -1434,7 +1434,7 @@ const CONTENT = {
           {
             id: "in-gov", name: "自动化守卫与配置快照", tag: "24/24 PASS",
             short: "单命令核验配置漂移、工具面字节预算、脱敏开关与回归测试。",
-            lead: "在每次升级或改动后校验 directSchemaChars 预算、脱敏标志、模型角色对齐、权限探针以及 36 文件声明式 SHA-256 快照。",
+            lead: "在每次升级或改动后校验 directSchemaChars 预算、脱敏标志、模型角色对齐、权限探针以及 37 文件声明式 SHA-256 快照。",
             analogy: "把插件升级引发的静默破坏前置为确定性红绿灯检查，避免带病进入日常工作会话。",
             bullets: [
               "内置 5 项升级回归探针：AST 权限解析、rtk 改写、atelier 渲染、vision 粘贴与 pi-knowledge 兼容性。",
@@ -1472,7 +1472,7 @@ const CONTENT = {
       { name: "pi-knowledge (+4 补丁)", ver: "v0.15.0", domain: "memory", child: "mem-personal", desc: "离线语义/混合检索个人笔记与历史会话归档", url: "https://github.com/nczz/pi-knowledge" },
       { name: "pi-atelier", ver: "v0.21.0", domain: "interface", child: "if-host", desc: "终端侧栏/底栏实时遥测（上下文、缓存命中、费用、子代理）", url: "https://github.com/michaelmjhhhh/pi-atelier" },
       { name: "pi-compact-tools", ver: "v0.18.0", domain: "interface", child: "if-host", desc: "折叠冗长工具输出，默认保持 edit diff 展开", url: "https://github.com/nedleeds/pi-compact-tools" },
-      { name: "pi-ask-user", ver: "v0.17.2", domain: "interface", child: "if-host", desc: "终端内结构化键盘选择交互", url: "https://github.com/edlsh/pi-ask-user" },
+      { name: "pi-native-questions", ver: "v0.2.0", domain: "interface", child: "if-host", desc: "Pi 原生结构化提问（ask_user_question），受权限自动评审可信识别", url: "https://www.npmjs.com/package/pi-native-questions" },
       { name: "@getpipher/vision", ver: "v0.5.3", domain: "interface", child: "if-host", desc: "剪贴板图像直接作为图像块粘贴进 Pi 提示", url: "https://github.com/getpipher/vision" },
       { name: "pi-mobile", ver: "v0.4.0", domain: "interface", child: "if-host", desc: "桌面活跃会话的端到端加密移动端续接", url: "https://github.com/jkeskikangas/pi-mobile" },
       { name: "pi-away", ver: "v0.1.4", domain: "interface", child: "if-host", desc: "离席返回会话时生成简明进展摘要", url: "https://github.com/pringled/pi-extensions/tree/main/packages/pi-away" },

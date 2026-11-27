@@ -96,7 +96,7 @@ const commands = {
     const file = process.argv[3] || path.join(temporaryAgent(), 'stub-requests.jsonl');
     const rows = fs.readFileSync(file, 'utf8').split(/\r?\n/).filter((line) => line.trim()).map(JSON.parse);
     if (!rows.length) throw Error('no captured stub requests');
-    const expected = ['ask_user', 'codemode', 'contact_supervisor', 'subagent', 'subagent_supervisor', 'tool_search'];
+    const expected = ['ask_user_question', 'codemode', 'contact_supervisor', 'subagent', 'subagent_supervisor', 'tool_search'];
     for (const [index, row] of rows.entries()) {
       const actual = [...new Set((row.tools || []).map((t) => t.function?.name ?? null))].sort();
       const missing = expected.filter((name) => !actual.includes(name));

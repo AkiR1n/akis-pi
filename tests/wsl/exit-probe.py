@@ -16,7 +16,7 @@ import sqlite3
 import subprocess
 import time
 
-EXPECTED = sorted(['ask_user', 'codemode', 'contact_supervisor', 'subagent', 'subagent_supervisor', 'tool_search'])
+EXPECTED = sorted(['ask_user_question', 'codemode', 'contact_supervisor', 'subagent', 'subagent_supervisor', 'tool_search'])
 PROMPTS = [('smoke', 'hi'), ('roles', 'delegate nothing; list the subagent roles you can use'), ('tools', 'answer with the number of tools you can call directly')]
 MARKER = 'AKIS_STUB_RESIDENT_SENTINEL'
 

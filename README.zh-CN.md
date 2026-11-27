@@ -63,7 +63,7 @@ flowchart TD
 | **core** | `settings.json`、`AGENTS.md`、`APPEND_SYSTEM.md`、5 个子代理角色、`compact-tools.json`、`pi-permission-system` 与 `pi-permission-auto-review` 配置、`web-search.json`、`rtk.ts` | 必装 | [DEPLOY.md](DEPLOY.md) |
 | **memory** | Magic Context `0.49.76`、`resident-memory.ts`、`RESIDENT.template.md`、`pi-knowledge` `0.15.0` + 4 补丁（QML 可选） | 必装 | [modules/memory](modules/memory/README.md) |
 | **magpie** | Magpie 网关扩展、`mcp.json.example`、路由与脱敏说明 | 必装 | [modules/magpie](modules/magpie/README.md) |
-| **macos** | `herdr-agent-state.ts`、`ego-gc.ts`（仅 darwin） | macOS 必装 | [modules/macos](modules/macos/README.md) |
+| **macos** | `herdr-agent-state.ts`、`herdr-question-blocked.ts`、`ego-gc.ts`（仅 darwin） | macOS 必装 | [modules/macos](modules/macos/README.md) |
 | **pdf** | 本地 PyMuPDF PDF → Markdown 端点及各平台后台服务适配 | 可选 | [modules/pdf](modules/pdf/README.md) |
 
 ## 边界与限制

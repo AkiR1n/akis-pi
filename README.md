@@ -63,7 +63,7 @@ flowchart TD
 | **core** | `settings.json`, `AGENTS.md`, `APPEND_SYSTEM.md`, 5 subagent roles, `compact-tools.json`, `pi-permission-system` + `pi-permission-auto-review` configs, `web-search.json`, `rtk.ts` | Required | [DEPLOY.md](DEPLOY.md) |
 | **memory** | Magic Context `0.49.76`, `resident-memory.ts`, `RESIDENT.template.md`, `pi-knowledge` `0.15.0` + 4 patches (optional QML grammar) | Required | [modules/memory](modules/memory/README.md) |
 | **magpie** | Magpie gateway extension, `mcp.json.example`, routing & redaction guide | Required | [modules/magpie](modules/magpie/README.md) |
-| **macos** | `herdr-agent-state.ts`, `ego-gc.ts` (darwin only) | Required on macOS | [modules/macos](modules/macos/README.md) |
+| **macos** | `herdr-agent-state.ts`, `herdr-question-blocked.ts`, `ego-gc.ts` (darwin only) | Required on macOS | [modules/macos](modules/macos/README.md) |
 | **pdf** | Local PyMuPDF PDF → Markdown endpoint + launchd / systemd / Windows task adapters | Optional | [modules/pdf](modules/pdf/README.md) |
 
 ## Boundaries & Honest Limits

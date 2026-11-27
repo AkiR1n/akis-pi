@@ -97,7 +97,7 @@ test('stub-resident checks every system prompt and refuses absent or user-only f
   assert.equal(run().status, 1);
 });
 
-const expectedTools = ['ask_user', 'codemode', 'contact_supervisor', 'subagent', 'subagent_supervisor', 'tool_search'];
+const expectedTools = ['ask_user_question', 'codemode', 'contact_supervisor', 'subagent', 'subagent_supervisor', 'tool_search'];
 function stubFixture(t) {
   const agent = fs.mkdtempSync(path.join(os.tmpdir(), 'akis-stub-check-'));
   t.after(() => fs.rmSync(agent, { recursive: true, force: true }));
@@ -137,7 +137,7 @@ test('stub-requests rejects missing tools and prints actual, missing and extra s
 
 test('stub-requests rejects extra tools even when the count remains six', (t) => {
   const f = stubFixture(t);
-  for (const actual of [[...expectedTools, 'read'], [...expectedTools.filter((name) => name !== 'ask_user'), 'read']]) {
+  for (const actual of [[...expectedTools, 'read'], [...expectedTools.filter((name) => name !== 'ask_user_question'), 'read']]) {
     f.write([actual]);
     const result = f.run();
     assert.equal(result.status, 1);

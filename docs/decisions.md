@@ -8,7 +8,7 @@
 
 ## 1. `codemode.mode: "only"`：压缩常驻开销，且经 13 天生产复查无退步
 
-**决策**：在 `settings.json` 中固定 `{"codemode":{"mode":"only"}}`。在 Pi `1.6.0` + `pi-subagents 0.90.0` 下，模型顶层仅直接可见 **6 个工具**（`ask_user`、`codemode`、`contact_supervisor`、`subagent`、`subagent_supervisor`、`tool_search`），其余 50+ 工具收进 QuickJS 沙箱按需发现。
+**决策**：在 `settings.json` 中固定 `{"codemode":{"mode":"only"}}`。在 Pi `1.6.1` + `pi-subagents 0.90.0` 下，模型顶层仅直接可见 **6 个工具**（`ask_user_question`、`codemode`、`contact_supervisor`、`subagent`、`subagent_supervisor`、`tool_search`），其余 50+ 工具收进 QuickJS 沙箱按需发现。
 
 **静态与生产实测数据**：
 

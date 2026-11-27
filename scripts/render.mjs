@@ -41,6 +41,7 @@ const PLAN = [
   { from: 'modules/memory/resident-memory.ts', module: 'memory', to: (p) => p.agent('extensions/resident-memory.ts') },
   { from: 'modules/memory/RESIDENT.template.md', module: 'memory', to: (p) => p.agent('memory/RESIDENT.template.md') },
   { from: 'modules/macos/herdr-agent-state.ts', module: 'macos', to: (p) => p.agent('extensions/herdr-agent-state.ts') },
+  { from: 'modules/macos/herdr-question-blocked.ts', module: 'macos', to: (p) => p.agent('extensions/herdr-question-blocked.ts') },
   { from: 'modules/macos/ego-gc.ts', module: 'macos', to: (p) => p.agent('extensions/ego-gc.ts') },
   { from: 'modules/pdf/server.py', module: 'pdf', to: (p) => p.home('.local/share/pi-pdf-parse/server.py') },
   { from: 'modules/pdf/requirements.txt', module: 'pdf', to: (p) => p.home('.local/share/pi-pdf-parse/requirements.txt') },
